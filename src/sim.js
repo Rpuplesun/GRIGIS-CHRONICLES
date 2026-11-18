@@ -27,8 +27,9 @@
   // ── 던전 격자: 0 바닥(건물 자리), 1 길(악마가 걷는 칸), 2 벽(통과·사격 불가) ──
   DD.defaultGrid = function () {
     const gr = new Uint8Array(GW * GH);
-    for (let y = 1; y < GH; y++) gr[key(C.ENT_T[0], y)] = 1;
-    for (let x = 1; x < GW - 1; x++) gr[key(x, GH >> 1)] = 1;
+    // 기본 길은 ㄹ 모양: 입구(아래 가운데) → 왼쪽 → 위 → 오른쪽으로 가로질러 → 위 → 심장(위 가운데)
+    const mx = C.ENT_T[0], L = 3, R = GW - 4, row = (y, a, b) => { for (let x = a; x <= b; x++) gr[key(x, y)] = 1; }, col = (x, a, b) => { for (let y = a; y <= b; y++) gr[key(x, y)] = 1; };
+    col(mx, GH - 2, GH - 1); row(GH - 3, L, mx); col(L, GH >> 1, GH - 3); row(GH >> 1, L, R); col(R, 2, GH >> 1); row(2, mx, R); col(mx, 1, 2);
     return gr;
   };
   function flow(gr) { // 심장에서 길을 따라 퍼지는 거리. -1은 심장에 닿지 않는 칸

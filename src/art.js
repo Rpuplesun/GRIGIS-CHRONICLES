@@ -31,7 +31,7 @@
   DD.icon = (id) => icons[id] || (icons[id] = DD.frame(id, 0, 0).toDataURL());
   // 스테이지 색조를 입힌 타일
   const TINT = { cave: [1, 1, 1.06], fire: [1.3, 0.78, 0.74], water: [0.72, 0.96, 1.3], forest: [0.78, 1.12, 0.82], wild: [1.18, 0.98, 0.72], abyss: [1.08, 0.74, 1.26] };
-  const BASE = { floor: [0.74, 0.72, 0.92], road: [1.2, 1.1, 0.98], wall: [0.98, 0.96, 1.1], void: [0.6, 0.55, 0.8] }; // 바닥은 어둡고 차갑게, 길은 밝고 따뜻하게
+  const BASE = { floor: [0.5, 0.5, 0.72], road: [1.32, 1.2, 1.02], wall: [0.98, 0.96, 1.1], void: [0.6, 0.55, 0.8] }; // 바닥은 어둡고 차갑게, 길은 밝고 따뜻하게
   DD.tile = function (name, stage) {
     const k = 'tile|' + name + '|' + stage;
     if (cache[k]) return cache[k];

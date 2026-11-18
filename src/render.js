@@ -91,6 +91,15 @@
       x.drawImage(tl(v === 1 ? 'road' : v === 2 ? 'wall' : 'floor'), OX + cx * T, OY + cy * T);
       if (inside && v === 2) { x.fillStyle = P.K; x.fillRect(OX + cx * T, OY + cy * T + T - 1, T, 1); }
     }
+    // 길 가장자리: 어두운 턱과 밝은 테두리를 둘러 악마가 걷는 길을 또렷하게 한다
+    const isRoad = (cx, cy) => (cx >= 0 && cy >= 0 && cx < GW && cy < GH ? d.grid[cx + cy * GW] === 1 : cx === C.ENT_T[0] && cy >= GH);
+    for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) {
+      if (!isRoad(cx, cy)) continue; const X = OX + cx * T, Y = OY + cy * T;
+      [[0, -1, X, Y, T, 1, X, Y - 2, T, 2], [0, 1, X, Y + T - 1, T, 1, X, Y + T, T, 2], [-1, 0, X, Y, 1, T, X - 2, Y, 2, T], [1, 0, X + T - 1, Y, 1, T, X + T, Y, 2, T]].forEach(([dx, dy, lx, ly, lw, lh, kx, ky, kw, kh]) => {
+        if (isRoad(cx + dx, cy + dy) || (cx + dx === C.HEART_T[0] && cy + dy === C.HEART_T[1])) return;
+        x.fillStyle = P.K; x.fillRect(kx, ky, kw, kh); x.fillStyle = P.w1; x.fillRect(lx, ly, lw, lh);
+      });
+    }
     dither(x, 7, 'K', OX, OY, GW * T, 3);
     // 색감: 가장자리 어둠 + 심장·화로의 따뜻한 빛, 소환소의 푸른 빛, 입구의 붉은 기운
     for (const [w, lv] of [[10, 6], [22, 3]]) { dither(x, lv, 'K', OX, OY, w, GH * T); dither(x, lv, 'K', OX + GW * T - w, OY, w, GH * T); dither(x, lv, 'K', OX, OY + GH * T - w, GW * T, w); }
@@ -125,6 +134,13 @@
     for (const sx of [-1, 1]) { DD.blit(ctx, 't_brazier', 0, C.HEART.x + sx * 22, C.HEART.y + 10); const f = ((TT * 8 + sx) | 0) % 3; ctx.fillStyle = P.g1; ctx.fillRect(C.HEART.x + sx * 22 - (f === 2 ? 1 : 0), C.HEART.y - 9 - (f === 1 ? 1 : 0), 1, 2); }
     { const low = d.heart.hp / d.heart.mhp < 0.3; dotted(ctx, C.HEART.x, C.HEART.y - 2, 17 + (((TT * 2) | 0) % 2), low ? 'r1' : 'r3', 28);
       const c = DD.blit(ctx, 'f_heart', ((TT * 4) | 0) % 4, C.HEART.x, C.HEART.y + 12, false, flash && d.heart.hit > 0.06); bar(ctx, C.HEART.x - 14, C.HEART.y + 12 - c.height - 3, 28, d.heart.hp / d.heart.mhp, 'r2'); }
+    // 길 위의 진행 방향 화살표(악마가 걷는 쪽으로 흐른다)
+    d.path.forEach(([cx, cy], i) => {
+      if ((i + 300 - ((TT * 3) | 0) % 3) % 3) return;
+      const nx = i + 1 < d.path.length ? d.path[i + 1] : C.HEART_T, dx = nx[0] - cx, dy = nx[1] - cy, X = tcx(cx), Y = tcy(cy);
+      ctx.fillStyle = P.w4;
+      for (let k = -3; k <= 3; k++) { const a = 3 - Math.abs(k); if (dx) { ctx.fillRect(X + dx * a - 1, Y + k, 2, 1); } else { ctx.fillRect(X + k, Y + dy * a - 1, 1, 2); } }
+    });
     const all = d.blds.concat(d.units, d.demons).sort((a, b) => (a.k === 'b' ? a.y + 8 : a.y) - (b.k === 'b' ? b.y + 8 : b.y));
     for (const e of all) {
       if (e.k === 'b') {

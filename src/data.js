@@ -159,7 +159,7 @@
     abyss: { id: 'abyss', home: null, name: '악마성', desc: '게이트 너머', mods: { human: { hp: 0.9 }, dragon: { hp: 0.9 }, beast: { hp: 0.9 }, spirit: { hp: 0.9 }, merfolk: { hp: 0.9 } } },
   };
   DD.HOME = { human: 'cave', dragon: 'fire', beast: 'wild', spirit: 'forest', merfolk: 'water' };
-  DD.STAGE_MUL = [0.75, 1.2, 1.6, 2.1, 2.7, 3.4]; // 차례가 뒤로 갈수록 악마가 강해진다
+  DD.STAGE_MUL = [0.8, 1.2, 1.6, 2.1, 2.7, 3.4]; // 차례가 뒤로 갈수록 악마가 강해진다
   // 종족별 스테이지 순서: 고향 → 다른 네 종족의 땅 → 악마성
   DD.stageOrder = (race) => [DD.HOME[race]].concat(DD.RACE_IDS.filter((r) => r !== race).map((r) => DD.HOME[r]), ['abyss']);
   DD.stageOf = (race, pos) => Object.assign({}, DD.LANDS[DD.stageOrder(race)[pos]], { mul: DD.STAGE_MUL[pos] });
