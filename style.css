@@ -9,7 +9,6 @@ html,body{margin:0;background:#000;color:var(--tx);font:22px/1.35 "Galmuri11","N
 .px,canvas{image-rendering:pixelated;image-rendering:crisp-edges}
 body.app{overflow:hidden;height:100vh}
 #root,#root *{cursor:url(art/cursor.png) 0 0,auto}
-#root #cv{cursor:url(art/cursor_cross.png) 14 16,crosshair}
 #root{position:absolute;left:50%;top:50%;width:2560px;height:1440px;transform-origin:center;background:var(--bg);overflow:hidden;font-size:33px}
 button,.btn{font:inherit;color:var(--tx);background:var(--pn3);border:4px solid var(--edge);box-shadow:var(--btn);padding:10px 22px 14px;cursor:pointer;text-decoration:none;display:inline-block}
 button:hover:not(:disabled),.btn:hover{background:#4a3960}
