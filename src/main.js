@@ -44,7 +44,7 @@
       <span></span><span></span>
       <footer><button class="start" data-m="start:1">출전</button><button data-m="story:1">이야기</button><button data-m="tutorial:1">튜토리얼</button>
         <details class="help"><summary>조작법</summary>
-        <p><b>유닛</b> 클릭·드래그 선택 → 바닥 클릭 배치 · Q W R 소환 · T 영웅</p>
+        <p><b>유닛</b> 클릭·드래그 선택 → 바닥 클릭 배치 · Q W R 소환 · T 영웅 · 소환소나 제단을 누르면 집결지 지정</p>
         <p><b>건물</b> A S D F G → 칸 클릭 · 건물은 바닥, 방벽은 길 위 · 거점 위는 체력 +25%</p>
         <p><b>길 편집</b> E · 길 최대 ${C.ROAD_MAX}, 벽 최대 ${C.WALL_MAX} · 입구↔심장 연결 필수</p>
         <p><b>기타</b> 1 2 3 속도 · Space 일시정지 · Tab 지도 · Esc 취소</p></details></footer>`;
@@ -73,7 +73,7 @@
     if (!tutorial && menu.mode === 'multi') for (let i = 0; i < menu.allies - 1; i++) players.push({ race: others[i], bot: true });
     if (!tutorial && save.bonusGold) { save.bonusGold = 0; persist(); }
     G = DD.newGame({ players, stage: tutorial ? 0 : menu.stage, tutorial: !!tutorial, seed: (Date.now() & 0xffff) + 1 });
-    ui = { sel: new Set(), selB: null, ghost: null, box: null, view: 0, build: -1, veil: 16, flash: save.opt.flash, edit: false, tool: 1, hover: null };
+    ui = { sel: new Set(), selB: null, ghost: null, box: null, view: 0, build: -1, veil: 16, flash: save.opt.flash, edit: false, tool: 1, hover: null, rally: null };
     DD.Audio.ambience(G.st.id);
     speed = 1; paused = false; acc = 0; lastHtml = {}; dlg = null; drawDlg(); setGoal('');
     for (const id of ['#title', '#story', '#menu', '#result']) $(id).hidden = true;
@@ -148,7 +148,7 @@
   // 핫바 칸 하나. tip은 마우스를 올리면 오른쪽 설명 상자에 뜬다.
   const slot = (act, body, tip, o) => `<button class="slot ${o.on ? 'on' : ''} ${o.cls || ''}" data-a="${act}" data-tip="${tip.replace(/"/g, '&quot;')}" ${o.dim ? 'data-dim="1"' : ''}>${o.key ? `<kbd>${o.key}</kbd>` : ''}${body}</button>`;
   const grp = (name, slots) => `<div class="grp"><h3>${name}</h3><div class="slots">${slots}</div></div>`;
-  const nextWave = () => { if (G.wave >= C.WAVES) return '마지막 웨이브'; const c = {}; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => `${icon(DD.DEMONS[t].spr, 1)}${c[t]}`).join(' '); };
+  const nextWave = () => { if (G.wave >= C.WAVES) return '마지막 웨이브'; const c = {}; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => `${icon(DD.DEMONS[t].spr, 2)}${c[t]}`).join(' '); };
   const UKEY = ['Q', 'W', 'R'], BKEY = ['A', 'S', 'D', 'F', 'G'];
   function drawHud() {
     const d = me(), R = d.R, own = d.units.filter((u) => u.own === d.i).length, hp = d.heart.hp / d.heart.mhp;
@@ -164,7 +164,7 @@
     if (G.dungeons.length > 1) set('#allies', `<button class="${ui.world ? 'on' : ''}" data-a="world:1">지도 <kbd>Tab</kbd></button>` + G.dungeons.map((x) => `<button class="${ui.view === x.i && !ui.world ? 'on' : ''} ${x.alive ? '' : 'dead'}" data-a="view:${x.i}">${x.i + 1} ${x.i === G.human ? '나' : x.R.name} <small>${x.alive ? '♥' + pct(x.heart.hp / x.heart.mhp) + '%' : '함락'}</small></button>`).join(''));
     else set('#allies', '');
     const gc = DD.gridCount(d.grid), no = (c) => d.gold < c.g || d.mat < c.m;
-    let maze = slot('edit:1', `<b class="glyph">▦</b><em>${ui.edit ? '끝내기' : '편집'}</em><span class="cost">${gc.road}/${C.ROAD_MAX}</span>`, `<b>길 편집</b>길 ${gc.road}/${C.ROAD_MAX} · 벽 ${gc.wall}/${C.WALL_MAX}<small>입구와 심장은 이어 둘 것</small>`, { on: ui.edit, key: 'E' });
+    let maze = slot('edit:1', `<b class="glyph">▦</b><em>편집</em><span class="cost">${gc.road}/${C.ROAD_MAX}</span>`, `<b>길 편집</b>길 ${gc.road}/${C.ROAD_MAX} · 벽 ${gc.wall}/${C.WALL_MAX}<small>입구와 심장은 이어 둘 것</small>`, { on: ui.edit, key: 'E' });
     if (ui.edit) maze += [[1, '길', '악마가 걷는 칸'], [2, '벽', '통과·사격 차단'], [0, '지움', '바닥으로 되돌림']].map(([t, n, tip]) => slot('tool:' + t, `<b class="glyph">${['✕', '═', '▣'][t]}</b><em>${n}</em>`, `<b>${n}</b>${tip}`, { on: ui.tool === t })).join('');
     const units = R.units.map((u, i) => { const f = DD.reqFail(d, u); return slot('summon:' + i, `${icon(u.spr, 2)}${cost(u, d)}`, `<b>${u.name}</b>● ${u.g}${u.m ? ' ◆ ' + u.m : ''}<br>체력 ${u.hp} · 공격 ${u.atk} · 사거리 ${u.rng}${u.heal ? ' · 치유 ' + u.heal : ''}${f ? `<small class="bad">${f}</small>` : ''}`, { dim: f || no(u), key: UKEY[i], cls: f ? 'lock' : '' }); }).join('')
       + slot('hero:1', `${icon('f_altar', 2)}<span class="cost">${d.heroT <= 0 ? '준비!' : mmss(d.heroT)}</span>`, `<b>영웅 소환</b>${d.heroT <= 0 ? '누가 올지는 모른다' : '대기 ' + mmss(d.heroT)}`, { dim: d.heroT > 0, key: 'T', cls: d.heroT <= 0 ? 'ready' : '' });
@@ -178,6 +178,7 @@
     let info = '유닛 선택 → 바닥 클릭으로 배치';
     if (ui.world) info = '<b>지도</b> · 요새를 누르면 들어간다';
     else if (ui.view !== G.human) info = `<b>${G.dungeons[ui.view].R.name}</b> 관전 중`;
+    else if (ui.rally) info = `<b>${ui.rally === 'H' ? '영웅 제단' : '소환소'}</b> · 새로 오는 ${ui.rally === 'H' ? '영웅' : '유닛'}이 모일 자리를 클릭 <button data-a="rallyclear:${ui.rally}">기본 배치로</button>`;
     else if (ui.edit) info = '<b>길 편집</b> · 드래그로 칠하기 · 노란 점 = 악마 경로';
     else if (ui.build >= 0) info = `<b>${R.blds[ui.build].name}</b> · 놓을 칸 클릭 · Shift 연속 · Esc 취소`;
     else if (ui.sel.size) {
@@ -208,7 +209,8 @@
     else if (k === 'world') setWorld(!ui.world);
     else if (k === 'view') { ui.veil = 12; ui.world = false; ui.view = +v; ui.sel.clear(); ui.selB = null; ui.build = -1; ui.ghost = null; }
     else if (ui.view !== G.human || ui.world) toast('내 요새에서만 조작', 'bad');
-    else if (k === 'edit') { ui.edit = !ui.edit; ui.build = -1; ui.ghost = null; ui.sel.clear(); ui.selB = null; }
+    else if (k === 'rallyclear') { act({ a: 'rally', which: v }); ui.rally = null; ui.hover = null; }
+    else if (k === 'edit') { ui.rally = null; ui.edit = !ui.edit; ui.build = -1; ui.ghost = null; ui.sel.clear(); ui.selB = null; }
     else if (k === 'tool') ui.tool = +v;
     else if (k === 'resetmaze') { const def = DD.defaultGrid(), d = me(); // 길을 먼저 깔고 나머지를 지운다(연결이 끊기지 않게)
       for (const pass of [1, 0]) for (let i = 0; i < def.length; i++) if ((def[i] === 1) === (pass === 1) && d.grid[i] !== def[i]) G.cmd(G.human, { a: 'tile', cx: i % C.GW, cy: (i / C.GW) | 0, t: def[i] }); }
@@ -241,6 +243,7 @@
   cv.addEventListener('pointerdown', (ev) => { if (!G) return; if (ui.world) { const p = pos(ev), i = DD.worldPick(G, p.x, p.y); if (i >= 0) setWorld(false, i); return; } if (ui.view !== G.human) return; if (ui.edit) { painting = true; paintErr = ''; paint(ev); return; } cv.setPointerCapture(ev.pointerId); down = Object.assign(pos(ev), { btn: ev.button, shift: ev.shiftKey }); });
   cv.addEventListener('pointermove', (ev) => {
     if (!G || ui.world) return; const p = pos(ev), tt = DD.tileAt(p.x, p.y);
+    if (ui.rally) { ui.hover = [Math.round(p.x), Math.round(p.y)]; return; }
     if (ui.edit) { ui.hover = tt; if (painting) paint(ev); return; }
     if (ui.build >= 0) ui.ghost = { cx: tt[0], cy: tt[1], b: me().R.blds[ui.build] };
     else if (down && down.btn === 0 && Math.hypot(p.x - down.x, p.y - down.y) > 5) ui.box = { x0: down.x, y0: down.y, x1: p.x, y1: p.y };
@@ -248,6 +251,8 @@
   cv.addEventListener('pointerup', (ev) => {
     painting = false; hudT = 0; // 입력 직후 HUD를 바로 갱신한다
     if (!G || !down) return; const p = pos(ev), d = me(), dn = down, tt = DD.tileAt(p.x, p.y); down = null;
+    if (dn.btn === 2 && ui.rally) { ui.rally = null; ui.hover = null; return; }
+    if (ui.rally) { if (act({ a: 'rally', which: ui.rally, x: p.x, y: p.y })) { ui.rally = null; ui.hover = null; } return; }
     if (dn.btn === 2) { if (ui.build >= 0) { ui.build = -1; ui.ghost = null; } else if (ui.sel.size) act({ a: 'move', ids: [...ui.sel], x: p.x, y: p.y }); return; }
     if (ui.build >= 0) { const ok = act({ a: 'build', b: ui.build, cx: tt[0], cy: tt[1] }); if (ok && !ev.shiftKey) { ui.build = -1; ui.ghost = null; } hudT = 0; return; }
     if (ui.box) {
@@ -258,6 +263,8 @@
     let hit = null, bd = 170;
     d.units.forEach((u) => { if (u.own !== d.i) return; const q = (u.x - p.x) ** 2 + (u.y - 9 - p.y) ** 2; if (q < bd) { bd = q; hit = u; } });
     if (hit) { if (!dn.shift) ui.sel.clear(); ui.sel.add(hit.id); ui.selB = null; return; }
+    const fac = tt[0] === C.SUMMON_T[0] && tt[1] === C.SUMMON_T[1] ? 'U' : tt[0] === C.ALTAR_T[0] && tt[1] === C.ALTAR_T[1] ? 'H' : null;
+    if (fac) { ui.rally = fac; ui.sel.clear(); ui.selB = null; return; } // 소환소·제단을 누르면 집결지를 고른다
     if (ui.sel.size) { act({ a: 'move', ids: [...ui.sel], x: p.x, y: p.y }); return; }
     const b = tt[0] >= 0 && tt[0] < C.GW ? d.occ[tt[0] + tt[1] * C.GW] : null;
     ui.selB = b ? b.id : null;
@@ -271,7 +278,7 @@
     lastHtml = {};
     if (ev.key === 'e' && !ui.world && ui.view === G.human) { ui.edit = !ui.edit; ui.build = -1; ui.ghost = null; lastHtml = {}; }
     else if (ev.key === 'Tab' || ev.key === 'm') { setWorld(!ui.world); ev.preventDefault(); }
-    else if (ev.key === 'Escape') { ui.edit = false; ui.build = -1; ui.ghost = null; ui.sel.clear(); ui.selB = null; }
+    else if (ev.key === 'Escape') { ui.rally = null; ui.edit = false; ui.build = -1; ui.ghost = null; ui.sel.clear(); ui.selB = null; }
     else if (!ui.world && ui.view === G.human && 'qwr'.includes(ev.key) && ev.key.length === 1 && !ev.ctrlKey) act({ a: 'summon', u: 'qwr'.indexOf(ev.key) });
     else if (!ui.world && ui.view === G.human && ev.key === 't') act({ a: 'hero' });
     else if (!ui.world && ui.view === G.human && 'asdfg'.includes(ev.key) && ev.key.length === 1 && !ev.ctrlKey && !ev.metaKey) { const i = 'asdfg'.indexOf(ev.key); ui.build = ui.build === i ? -1 : i; ui.ghost = null; ui.edit = false; ui.sel.clear(); }

@@ -143,6 +143,10 @@
         if (e.fast) { ctx.fillStyle = P.g1; ctx.fillRect(x0 - 7, y0 - 16 - (((TT * 6) | 0) % 2), 1, 2); }
       }
     }
+    // 집결지 깃발(소환소는 푸른색, 제단은 금색)과 선택한 시설 표시
+    [[d.rallyU, 'b2'], [d.rallyH, 'g1']].forEach(([r, col]) => { if (!r) return; const X = Math.round(r.x), Y = Math.round(r.y), w = ((TT * 4) | 0) % 2;
+      ctx.fillStyle = P.K; ctx.fillRect(X - 1, Y - 15, 3, 16); ctx.fillRect(X + 1, Y - 15 + w, 10, 8); ctx.fillStyle = P.w1; ctx.fillRect(X, Y - 14, 1, 14); ctx.fillStyle = P[col]; ctx.fillRect(X + 2, Y - 14 + w, 8, 6); ctx.fillStyle = P.W; ctx.fillRect(X + 4, Y - 12 + w, 3, 2); });
+    if (ui.rally) { const f = ui.rally === 'H' ? C.ALTAR : C.SUMMON; dotted(ctx, f.x, f.y, 15 + (((TT * 4) | 0) % 2), 'n1', 24); if (ui.hover) { ctx.fillStyle = P.n1; const [hx, hy] = ui.hover; ctx.fillRect(hx - 3, hy, 7, 1); ctx.fillRect(hx, hy - 3, 1, 7); } }
     for (const s of d.shots) drawShot(ctx, s);
     for (const f of d.fx) drawFx(ctx, f);
     motes(ctx, TT, G.st);

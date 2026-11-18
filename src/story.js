@@ -17,7 +17,7 @@
   // 프롤로그. 한 장에 그림 하나(web/art/prologue_<art>.png). false면 코드로 그린 지도가 나온다.
   DD.PROLOGUE_ART = { land: true, gate: true, invade: true, flags: true };
   DD.STORY = [
-    { art: 'land', lines: ['그리기스.', '다섯 종족이 서로의 땅을 넘보지 않고 살던 대륙.'] },
+    { art: 'land', lines: ['그리기스.', '다섯 종족이 평화롭게 살던 대륙.'] },
     { art: 'gate', lines: ['어느 날, 대륙 한복판에 문이 열렸다.', '악마가 쏟아져 나왔다.'] },
     { art: 'invade', lines: ['왕국이 불탔다. 숲이 꺾였다. 바다가 끓었다.', '혼자 버틴 종족은 없었다.'] },
     { art: 'flags', lines: ['인간, 용, 수인, 정령, 어인.', '다섯 깃발이 처음으로 같은 쪽을 향했다.'] },

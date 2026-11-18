@@ -6,7 +6,7 @@
     TILE: 24, GW: 21, GH: 13, OX: 24, OY: 24, W: 552, H: 360,
     WAVES: 20, WAVE_T: 60, FIRST_WAVE: 20, POP: 40, BLD_CAP: 24,
     ROAD_MAX: 70, WALL_MAX: 30, PLOT_HP: 1.25,
-    HEART_T: [10, 0], SUMMON_T: [1, 0], ALTAR_T: [19, 0], ENT_T: [10, 12],
+    HEART_T: [10, 0], SUMMON_T: [8, 0], ALTAR_T: [12, 0], ENT_T: [10, 12],
     PLOTS: [[4, 3], [16, 3], [4, 9], [16, 9]],
   };
 

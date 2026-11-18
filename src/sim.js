@@ -48,7 +48,7 @@
     const n = DD.gridCount(gr);
     if (n.road > C.ROAD_MAX) return `길 타일 한도 초과 (${C.ROAD_MAX})`;
     if (n.wall > C.WALL_MAX) return `벽 타일 한도 초과 (${C.WALL_MAX})`;
-    if (flow(gr)[key(C.ENT_T[0], C.ENT_T[1])] < 0) return '입구와 심장이 끊긴다';
+    if (flow(gr)[key(C.ENT_T[0], C.ENT_T[1])] < 0) return '입구와 심장은 이어져 있어야 합니다.';
     return null;
   };
   function applyGrid(d, gr) {
@@ -101,7 +101,7 @@
     const d = {
       i, race: p.race, R, bot: !!p.bot, alive: true, gold: 150 + 30 * (m.sGold || 0) + (p.bonusGold || 0), mat: 0, kills: 0,
       units: [], blds: [], demons: [], shots: [], fx: [], snd: {}, queue: [], occ: {}, bc: {}, ver: 0, walls: 0,
-      up: { atk: 0, hp: 0, bld: 0 }, altarLv: 1, heroN: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0,
+      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0,
       mod: {
         atk: (sm.atk || 1) * (1 + 0.05 * (m.uAtk || 0)), hp: (sm.hp || 1) * (1 + 0.05 * (m.uHp || 0)), spd: sm.spd || 1,
         bhp: (1 + 0.08 * (m.bHp || 0)) * (p.race === 'human' ? 1.2 : 1), gold: 1 + 0.05 * (m.gold || 0), hcd: 1 - 0.04 * (m.hCd || 0),
@@ -140,7 +140,7 @@
     if (!inG(cx, cy) || is(C.HEART_T, cx, cy) || is(C.SUMMON_T, cx, cy) || is(C.ALTAR_T, cx, cy)) return '지을 수 없는 위치';
     if (d.occ[key(cx, cy)]) return '건물이 있는 칸';
     const gv = d.grid[key(cx, cy)];
-    if (b.kind === 'wall') return gv !== 1 ? '방벽은 길 위에만' : is(C.ENT_T, cx, cy) ? '입구는 못 막는다' : null;
+    if (b.kind === 'wall') return gv !== 1 ? '방벽은 길 위에만 세울 수 있습니다' : is(C.ENT_T, cx, cy) ? '입구는 못 막는다' : null;
     return gv === 1 ? '길 위에는 방벽만' : gv === 2 ? '벽 위에는 못 짓는다' : null;
   };
   const pay = (d, c) => { if (d.gold < c.g || d.mat < c.m) return false; d.gold -= c.g; d.mat -= c.m; return true; };
@@ -154,12 +154,15 @@
     d.shots.push({ x: src.x, y: src.y - 8, tx: t.x, ty: t.y - 6, t: TT, T: TT, c, k });
   }
   const OFF = [[-6, -5], [6, -5], [-6, 6], [6, 6]];
-  function homeSlot(d, ranged) {
+  const RING = [[0, 0], [-12, 0], [12, 0], [0, -11], [0, 11], [-12, -11], [12, -11], [-12, 11], [12, 11], [-24, 0], [24, 0], [0, -22], [0, 22]];
+  function homeSlot(d, ranged, hero) {
+    const r = hero ? d.rallyH : d.rallyU;
+    if (r) { const o = RING[r.n++ % RING.length]; return { x: r.x + o[0], y: r.y + o[1] }; }
     const list = ranged ? d.sr : d.sm, n = d.slot++, t = list[(n >> 2) % list.length], o = OFF[n & 3];
     return { x: tcx(t[0]) + o[0], y: tcy(t[1]) + o[1] };
   }
   function addUnit(G, d, def, hero) {
-    const h = homeSlot(d, def.rng > 30), src = hero ? C.ALTAR : C.SUMMON;
+    const h = homeSlot(d, def.rng > 30, !!hero), src = hero ? C.ALTAR : C.SUMMON;
     const mhp = def.hp * d.mod.hp * (1 + 0.1 * d.up.hp);
     const u = { id: G.nid++, k: 'u', def, x: src.x + (G.rnd() - 0.5) * 10, y: src.y + 14, hx: h.x, hy: h.y, hp: mhp, mhp, cd: 0, rt: 0, tg: null, own: d.i, kills: 0, hero: hero || null, face: 1, hit: 0, r: 7 };
     d.units.push(u);
@@ -202,6 +205,10 @@
       for (const e of d.demons) { const ex = tx(e.x), ey = ty(e.y); if (inG(ex, ey) && nd[key(ex, ey)] < 0) return '악마가 서 있는 길'; }
       if (t === 2 && d.units.some((u) => tx(u.x) === cx && ty(u.y) === cy)) return '유닛이 서 있는 칸';
       applyGrid(d, ng); d.walls = DD.gridCount(ng).wall; snd(d, 'build');
+    } else if (c.a === 'rally') { // which: 'U' 소환소, 'H' 영웅 제단. x가 없으면 기본 배치로 되돌린다
+      const k = c.which === 'H' ? 'rallyH' : 'rallyU';
+      if (c.x === undefined) d[k] = null;
+      else { if (wallAt(d, c.x, c.y)) return '벽 위에는 세울 수 없습니다'; d[k] = { x: Math.max(C.OX + 8, Math.min(C.OX + GW * T - 8, c.x)), y: Math.max(C.OY + 12, Math.min(C.OY + GH * T - 4, c.y)), n: 0 }; }
     } else if (c.a === 'sell') {
       const b = d.blds.find((x) => x.id === c.id); if (!b) return '없음';
       d.gold += Math.floor(b.paid.g * 0.5 * (b.hp / b.mhp)); b.hp = 0;
