@@ -61,7 +61,7 @@
       cx = nx; cy = ny;
     }
     d.path = path;
-    // 기본 배치: 근접은 길 중간 두 칸에 뭉치고, 원거리는 바로 뒤(심장 쪽) 세 칸
+    // 기본 배치: 근접은 길 중간 두 칸, 원거리는 바로 뒤(심장 쪽) 세 칸(칸마다 여섯 자리)
     const L = path.length, a = Math.max(0, Math.min(L - 2, Math.floor(L * 0.45)));
     d.sm = path.slice(a, a + 2); d.sr = path.slice(a + 2, a + 5).length ? path.slice(a + 2, a + 5) : d.sm;
   }
@@ -153,12 +153,12 @@
     const TT = Math.max(0.1, Math.min(0.32, Math.hypot(t.x - src.x, t.y - src.y) / 260));
     d.shots.push({ x: src.x, y: src.y - 8, tx: t.x, ty: t.y - 6, t: TT, T: TT, c, k });
   }
-  const OFF = [[-6, -5], [6, -5], [-6, 6], [6, 6]];
+  const OFF = [[-7, -6], [0, -6], [7, -6], [-7, 5], [0, 5], [7, 5]];
   const RING = [[0, 0], [-12, 0], [12, 0], [0, -11], [0, 11], [-12, -11], [12, -11], [-12, 11], [12, 11], [-24, 0], [24, 0], [0, -22], [0, 22]];
   function homeSlot(d, ranged, hero) {
     const r = hero ? d.rallyH : d.rallyU;
     if (r) { const o = RING[r.n++ % RING.length]; return { x: r.x + o[0], y: r.y + o[1] }; }
-    const list = ranged ? d.sr : d.sm, n = d.slot++, t = list[(n >> 2) % list.length], o = OFF[n & 3];
+    const list = ranged ? d.sr : d.sm, n = d.slot++, t = list[Math.floor(n / 6) % list.length], o = OFF[n % 6];
     return { x: tcx(t[0]) + o[0], y: tcy(t[1]) + o[1] };
   }
   function addUnit(G, d, def, hero) {

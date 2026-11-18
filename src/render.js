@@ -157,6 +157,13 @@
       for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) if (DD.isFixed(cx, cy)) dither(ctx, 4, 'K', OX + cx * T, OY + cy * T, T, T);
       if (ui.hover) { const [cx, cy] = ui.hover, X = OX + cx * T, Y = OY + cy * T; ctx.fillStyle = P[ui.tool === 1 ? 'g1' : ui.tool === 2 ? 's1' : 'r1']; ctx.fillRect(X, Y, T, 1); ctx.fillRect(X, Y + T - 1, T, 1); ctx.fillRect(X, Y, 1, T); ctx.fillRect(X + T - 1, Y, 1, T); }
     }
+    if (ui.build >= 0 && d.R.blds[ui.build]) { // 지을 수 있는 칸을 초록으로 깔아 보여 준다(건물은 바닥, 방벽은 길 위)
+      const bb = d.R.blds[ui.build];
+      for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) if (!DD.buildErr(d, bb, cx, cy)) {
+        const X = OX + cx * T, Y = OY + cy * T; dither(ctx, 4, 'n2', X + 1, Y + 1, T - 2, T - 2);
+        ctx.fillStyle = P[DD.isPlot(cx, cy) ? 'g1' : 'n1']; ctx.fillRect(X + 1, Y + 1, 3, 1); ctx.fillRect(X + 1, Y + 1, 1, 3); ctx.fillRect(X + T - 4, Y + T - 2, 3, 1); ctx.fillRect(X + T - 2, Y + T - 4, 1, 3);
+      }
+    }
     if (ui.ghost) {
       const { cx, cy, b } = ui.ghost, ok = !DD.buildErr(d, b, cx, cy), X = OX + cx * T, Y = OY + cy * T;
       DD.blit(ctx, b.spr + '@' + d.race, 0, X + 12, Y + 25);
