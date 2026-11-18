@@ -43,12 +43,12 @@
   DD.gridCount = (gr) => { let r = 0, w = 0; for (const v of gr) { if (v === 1) r++; else if (v === 2) w++; } return { road: r, wall: w }; };
   DD.gridCheck = function (gr) { // 규칙 위반 사유 또는 null
     if (gr.length !== GW * GH) return '격자 크기가 다릅니다';
-    for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) if (DD.isFixed(cx, cy) && gr[key(cx, cy)]) return '고정 칸은 바꿀 수 없습니다';
-    if (gr[key(C.ENT_T[0], C.ENT_T[1])] !== 1) return '입구 칸은 길이어야 합니다';
+    for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) if (DD.isFixed(cx, cy) && gr[key(cx, cy)]) return '바꿀 수 없는 칸';
+    if (gr[key(C.ENT_T[0], C.ENT_T[1])] !== 1) return '입구는 길이어야 한다';
     const n = DD.gridCount(gr);
     if (n.road > C.ROAD_MAX) return `길 타일 한도 초과 (${C.ROAD_MAX})`;
     if (n.wall > C.WALL_MAX) return `벽 타일 한도 초과 (${C.WALL_MAX})`;
-    if (flow(gr)[key(C.ENT_T[0], C.ENT_T[1])] < 0) return '입구와 심장이 길로 이어져야 합니다';
+    if (flow(gr)[key(C.ENT_T[0], C.ENT_T[1])] < 0) return '입구와 심장이 끊긴다';
     return null;
   };
   function applyGrid(d, gr) {
@@ -138,10 +138,10 @@
   // 건설 불가 사유 또는 null. 방벽(바리케이드)은 길 위에만, 나머지 건물은 바닥에만.
   DD.buildErr = function (d, b, cx, cy) {
     if (!inG(cx, cy) || is(C.HEART_T, cx, cy) || is(C.SUMMON_T, cx, cy) || is(C.ALTAR_T, cx, cy)) return '지을 수 없는 위치';
-    if (d.occ[key(cx, cy)]) return '이미 건물이 있습니다';
+    if (d.occ[key(cx, cy)]) return '건물이 있는 칸';
     const gv = d.grid[key(cx, cy)];
-    if (b.kind === 'wall') return gv !== 1 ? '방벽은 길 위에만 세울 수 있습니다' : is(C.ENT_T, cx, cy) ? '입구는 막을 수 없습니다' : null;
-    return gv === 1 ? '길 위에는 방벽만 세울 수 있습니다' : gv === 2 ? '벽 타일에는 지을 수 없습니다' : null;
+    if (b.kind === 'wall') return gv !== 1 ? '방벽은 길 위에만' : is(C.ENT_T, cx, cy) ? '입구는 못 막는다' : null;
+    return gv === 1 ? '길 위에는 방벽만' : gv === 2 ? '벽 위에는 못 짓는다' : null;
   };
   const pay = (d, c) => { if (d.gold < c.g || d.mat < c.m) return false; d.gold -= c.g; d.mat -= c.m; return true; };
 
@@ -170,7 +170,7 @@
   function recount(d) { d.bc = {}; d.blds.forEach((b) => (d.bc[b.def.id] = (d.bc[b.def.id] || 0) + 1)); }
 
   function cmd(G, d, c) {
-    if (G.over || !d.alive) return '진행 중이 아닙니다';
+    if (G.over || !d.alive) return '지금은 안 된다';
     if (c.a === 'summon') {
       const u = d.R.units[c.u], f = DD.reqFail(d, u);
       if (f) return f;
@@ -193,14 +193,14 @@
       fx(d, 'dust', e.x, e.y + 8, 0.42, { c: 'e' }); snd(d, 'build');
     } else if (c.a === 'tile') { // 길·벽 편집. t: 0 바닥, 1 길, 2 벽
       const { cx, cy, t } = c;
-      if (!inG(cx, cy) || DD.isFixed(cx, cy) || is(C.ENT_T, cx, cy)) return '바꿀 수 없는 칸입니다';
+      if (!inG(cx, cy) || DD.isFixed(cx, cy) || is(C.ENT_T, cx, cy)) return '바꿀 수 없는 칸';
       if (d.grid[key(cx, cy)] === t) return null;
-      if (d.occ[key(cx, cy)]) return '건물이 있는 칸입니다';
+      if (d.occ[key(cx, cy)]) return '건물이 있는 칸';
       const ng = Uint8Array.from(d.grid); ng[key(cx, cy)] = t;
       const e0 = DD.gridCheck(ng); if (e0) return e0;
       const nd = flow(ng);
-      for (const e of d.demons) { const ex = tx(e.x), ey = ty(e.y); if (inG(ex, ey) && nd[key(ex, ey)] < 0) return '악마가 서 있는 길은 끊을 수 없습니다'; }
-      if (t === 2 && d.units.some((u) => tx(u.x) === cx && ty(u.y) === cy)) return '유닛이 서 있는 칸입니다';
+      for (const e of d.demons) { const ex = tx(e.x), ey = ty(e.y); if (inG(ex, ey) && nd[key(ex, ey)] < 0) return '악마가 서 있는 길'; }
+      if (t === 2 && d.units.some((u) => tx(u.x) === cx && ty(u.y) === cy)) return '유닛이 서 있는 칸';
       applyGrid(d, ng); d.walls = DD.gridCount(ng).wall; snd(d, 'build');
     } else if (c.a === 'sell') {
       const b = d.blds.find((x) => x.id === c.id); if (!b) return '없음';
@@ -234,7 +234,7 @@
       d.heroT = (DD.HERO_CD.base + DD.HERO_CD.inc * d.heroN) * DD.ALTAR[d.altarLv - 1].cd * d.mod.hcd;
       G.events.push({ t: 'hero', d: d.i, name: pick[0], grade: gr.id, spr: 'p_' + d.race + '_' + pick[1] });
     } else if (c.a === 'support') {
-      const to = G.dungeons[c.to]; if (!to || !to.alive || to === d) return '지원할 수 없는 대상';
+      const to = G.dungeons[c.to]; if (!to || !to.alive || to === d) return '보낼 수 없는 곳';
       const us = d.units.filter((u) => c.ids.includes(u.id));
       if (!us.length) return '선택된 유닛 없음';
       d.units = d.units.filter((u) => !us.includes(u));

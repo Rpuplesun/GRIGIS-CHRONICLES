@@ -96,7 +96,7 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #story .art{height:800px;display:flex;align-items:center;justify-content:center}
 #story .art h1{font:176px/1 "Galmuri14";letter-spacing:24px;color:var(--gold);text-shadow:8px 8px 0 var(--blood)}
 #story .gate{width:600px;animation:pulse 1.2s steps(4) infinite alternate}#story .cap{width:1370px}
-#story .map{width:1600px;height:800px;box-shadow:0 0 0 8px var(--edge),0 0 0 12px var(--ln)}#story .art-img{object-fit:cover}
+#story .map{width:1600px;height:800px;object-fit:cover;image-rendering:auto;box-shadow:0 0 0 8px var(--edge),0 0 0 12px var(--ln)}#story .art-img{object-fit:cover}
 @keyframes pulse{from{filter:brightness(.8)}to{filter:brightness(1.25)}}
 #story .txt p{font:55px/1.5 "Galmuri14";margin:0;opacity:0;animation:line .8s steps(8) forwards}
 @keyframes line{to{opacity:1}}
@@ -105,7 +105,7 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #dialog img{width:560px;height:560px;margin-right:-40px;position:relative;z-index:1;filter:drop-shadow(8px 8px 0 #07050a)}
 #dialog .box{flex:1;margin-bottom:24px;min-height:300px;background:#1c1526f2;box-shadow:var(--frame);padding:30px 50px 30px 70px;position:relative}
 #dialog .box b{font:55px/1 "Galmuri14";color:var(--gold)}#dialog .box small{display:inline;margin-left:18px;font-size:28px}
-#dialog .box p{font-size:40px;line-height:1.5;margin:20px 0 0}
+#dialog .box p{font-size:40px;line-height:1.5;margin:20px 0 0}#dialog .fx{color:var(--dim);font-size:33px}#dialog .fx .good{color:var(--good)}
 #dialog .next{position:absolute;right:36px;bottom:24px;color:var(--dim);font-size:26px;animation:pulse 0.8s steps(2) infinite alternate}
 #goal{position:absolute;left:120px;top:110px;background:#1c1526e6;box-shadow:inset 0 0 0 4px var(--gold),inset 0 0 0 8px var(--edge);padding:14px 30px 18px;font-size:33px;color:var(--gold)}
 #goal small{display:inline;margin-right:16px;color:var(--dim)}

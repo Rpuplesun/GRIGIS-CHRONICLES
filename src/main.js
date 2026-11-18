@@ -98,10 +98,10 @@
     const d = me(), race = d.race, land = G.st, steps = [];
     if (G.tutorial) DD.TUTORIAL.forEach((st) => steps.push(Object.assign({ adv: 'human' }, st)));
     else {
-      const mods = `${d.R.name}은 이 땅에서 ${modText(land, race)}`;
-      if (!save.seen['race_' + race]) steps.push({ adv: race, say: DD.RACE_INTRO[race].concat(land.home === race ? ['고향 땅입니다. ' + mods] : []), mark: 'race_' + race });
-      if (land.id === 'abyss') { if (!save.seen['abyss_' + race]) steps.push({ adv: race, say: [DD.TIPS.final, mods], mark: 'abyss_' + race }); }
-      else if (land.home !== race && !save.seen['land_' + race + land.id]) steps.push({ adv: land.home, say: [DD.LAND_HOST[land.id], mods], mark: 'land_' + race + land.id });
+      const m = land.mods[race] ? [`<span class="fx">${d.R.name} · ${modText(land, race)}</span>`] : [];
+      if (!save.seen['race_' + race]) steps.push({ adv: race, say: DD.RACE_INTRO[race].concat(land.home === race ? m : []), mark: 'race_' + race });
+      if (land.id === 'abyss') { if (!save.seen['abyss_' + race]) steps.push({ adv: race, say: [DD.TIPS.final].concat(m), mark: 'abyss_' + race }); }
+      else if (land.home !== race && !save.seen['land_' + race + land.id]) steps.push({ adv: land.home, say: [DD.LAND_HOST[land.id]].concat(m), mark: 'land_' + race + land.id });
     }
     if (!save.seen.tip_heart) steps.push({ adv: race, when: (g, x) => x.heart.hp < x.heart.mhp * 0.5, say: [DD.TIPS.heart], mark: 'tip_heart' });
     script = { steps, i: 0, goal: null, el: 0 };
@@ -121,15 +121,15 @@
   }
   function showStory(onEnd) {
     let i = 0, t0 = 0, raf = 0; const el = $('#story'); $('#menu').hidden = true; el.hidden = false;
+    const src = (k) => (k === 'capsule' ? 'art/capsule.png' : DD.PROLOGUE_ART[k] ? `art/prologue_${k}.png` : null);
+    DD.STORY.forEach((sl) => { const u = src(sl.art); if (u) new Image().src = u; }); // 넘길 때 빈 화면이 보이지 않게 미리 받는다
     const draw = () => {
-      const sl = DD.STORY[i], cap = sl.art === 'capsule'; cancelAnimationFrame(raf);
-      el.innerHTML = `<div class="art">${cap ? '<img class="px cap" src="art/capsule.png">' : '<canvas class="px map" width="320" height="160"></canvas>'}</div><div class="txt">${sl.lines.map((l, n) => `<p style="animation-delay:${n * 1.1}s">${l}</p>`).join('')}</div><div class="nav"><button id="skip">건너뛰기</button><button id="next" class="on">${i === DD.STORY.length - 1 ? '시작' : '다음 ▸'}</button></div>`;
+      const sl = DD.STORY[i], u = src(sl.art); cancelAnimationFrame(raf);
+      el.innerHTML = `<div class="art">${u ? `<img class="map" src="${u}">` : '<canvas class="px map" width="320" height="160"></canvas>'}</div><div class="txt">${sl.lines.map((l, n) => `<p style="animation-delay:${n * 1.1}s">${l}</p>`).join('')}</div><div class="nav"><button id="skip">건너뛰기</button><button id="next" class="on">${i === DD.STORY.length - 1 ? '시작' : '다음 ▸'}</button></div>`;
       $('#next').onclick = () => { DD.Audio.play('click'); if (++i >= DD.STORY.length) end(); else draw(); }; $('#skip').onclick = end;
-      if (cap) return;
-      const cvs = el.querySelector('canvas'), cx = cvs.getContext('2d'); t0 = performance.now();
+      if (u) return;
+      const cx = el.querySelector('canvas').getContext('2d'); t0 = performance.now();
       const tick = (now) => { DD.prologue(cx, sl.art, (now - t0) / 1000); raf = requestAnimationFrame(tick); }; tick(t0);
-      if (!DD.PROLOGUE_ART[sl.art]) return;
-      const im = new Image(); im.onload = () => { cancelAnimationFrame(raf); cvs.replaceWith(im); }; im.className = 'map art-img'; im.src = `art/prologue_${sl.art}.png`; // 받은 아트가 있으면 그걸 쓴다
     };
     const end = () => { cancelAnimationFrame(raf); el.hidden = true; save.storySeen = 1; persist(); onEnd(); };
     draw();
@@ -164,19 +164,19 @@
     if (G.dungeons.length > 1) set('#allies', `<button class="${ui.world ? 'on' : ''}" data-a="world:1">지도 <kbd>Tab</kbd></button>` + G.dungeons.map((x) => `<button class="${ui.view === x.i && !ui.world ? 'on' : ''} ${x.alive ? '' : 'dead'}" data-a="view:${x.i}">${x.i + 1} ${x.i === G.human ? '나' : x.R.name} <small>${x.alive ? '♥' + pct(x.heart.hp / x.heart.mhp) + '%' : '함락'}</small></button>`).join(''));
     else set('#allies', '');
     const gc = DD.gridCount(d.grid), no = (c) => d.gold < c.g || d.mat < c.m;
-    let maze = slot('edit:1', `<b class="glyph">▦</b><em>${ui.edit ? '끝내기' : '편집'}</em><span class="cost">${gc.road}/${C.ROAD_MAX}</span>`, `<b>길 편집</b>길 ${gc.road}/${C.ROAD_MAX} · 벽 ${gc.wall}/${C.WALL_MAX}<small>입구와 심장은 길로 이어져야 한다</small>`, { on: ui.edit, key: 'E' });
+    let maze = slot('edit:1', `<b class="glyph">▦</b><em>${ui.edit ? '끝내기' : '편집'}</em><span class="cost">${gc.road}/${C.ROAD_MAX}</span>`, `<b>길 편집</b>길 ${gc.road}/${C.ROAD_MAX} · 벽 ${gc.wall}/${C.WALL_MAX}<small>입구와 심장은 이어 둘 것</small>`, { on: ui.edit, key: 'E' });
     if (ui.edit) maze += [[1, '길', '악마가 걷는 칸'], [2, '벽', '통과·사격 차단'], [0, '지움', '바닥으로 되돌림']].map(([t, n, tip]) => slot('tool:' + t, `<b class="glyph">${['✕', '═', '▣'][t]}</b><em>${n}</em>`, `<b>${n}</b>${tip}`, { on: ui.tool === t })).join('');
     const units = R.units.map((u, i) => { const f = DD.reqFail(d, u); return slot('summon:' + i, `${icon(u.spr, 2)}${cost(u, d)}`, `<b>${u.name}</b>● ${u.g}${u.m ? ' ◆ ' + u.m : ''}<br>체력 ${u.hp} · 공격 ${u.atk} · 사거리 ${u.rng}${u.heal ? ' · 치유 ' + u.heal : ''}${f ? `<small class="bad">${f}</small>` : ''}`, { dim: f || no(u), key: UKEY[i], cls: f ? 'lock' : '' }); }).join('')
-      + slot('hero:1', `${icon('f_altar', 2)}<span class="cost">${d.heroT <= 0 ? '준비!' : mmss(d.heroT)}</span>`, `<b>영웅 소환</b>${d.heroT <= 0 ? '무작위 영웅이 합류한다' : '대기 ' + mmss(d.heroT)}`, { dim: d.heroT > 0, key: 'T', cls: d.heroT <= 0 ? 'ready' : '' });
+      + slot('hero:1', `${icon('f_altar', 2)}<span class="cost">${d.heroT <= 0 ? '준비!' : mmss(d.heroT)}</span>`, `<b>영웅 소환</b>${d.heroT <= 0 ? '누가 올지는 모른다' : '대기 ' + mmss(d.heroT)}`, { dim: d.heroT > 0, key: 'T', cls: d.heroT <= 0 ? 'ready' : '' });
     const blds = R.blds.map((b, i) => { const c = DD.bldCost(d, b); return slot('build:' + i, `${icon(b.spr + '@' + d.race, 2)}${cost(c, d)}`, `<b>${b.name}</b>● ${c.g}${c.m ? ' ◆ ' + c.m : ''}<br>${b.desc}<small>${b.kind === 'wall' ? '길 위에 건설' : '바닥에 건설'}</small>`, { dim: no(c), on: ui.build === i, key: BKEY[i] }); }).join('');
     const ac = DD.upCost(d, 'altar'), ap = DD.ALTAR[d.altarLv - 1].p;
     const ups = ['atk', 'hp', 'bld'].map((k) => { const u = DD.UPGRADES[k], c = DD.upCost(d, k); return slot('up:' + k, `<b class="glyph">${{ atk: '⚔', hp: '♥', bld: '▲' }[k]}<sub>${d.up[k]}</sub></b><em>${u.name.replace(' 강화', '')}</em>${c ? cost(c, d) : '<span class="cost">최대</span>'}`, `<b>${u.name} Lv.${d.up[k]}</b>${u.desc}`, { dim: !c || no(c) }); }).join('')
       + slot('up:altar', `<b class="glyph">★<sub>${d.altarLv}</sub></b><em>제단</em>${ac ? cost(ac, d) : '<span class="cost">최대</span>'}`, `<b>영웅 제단 Lv.${d.altarLv}</b>R ${pct(ap[0])}% · SR ${pct(ap[1])}% · SSR ${pct(ap[2])}%<small>강화하면 등급↑ 대기↓</small>`, { dim: !ac || no(ac) });
     set('#bar', grp('유닛', units) + grp('건물', blds) + grp('강화', ups) + grp('길', maze));
-    set('#tip', ui.tip || '<small>칸에 마우스를 올리면 설명이 나옵니다</small>');
+    set('#tip', ui.tip || '<small>칸에 마우스를 올리면 설명</small>');
     // 아래 정보 줄: 편집 안내 > 선택 > 기본 안내
     let info = '유닛 선택 → 바닥 클릭으로 배치';
-    if (ui.world) info = '<b>지도</b> · 요새를 클릭하면 들어갑니다';
+    if (ui.world) info = '<b>지도</b> · 요새를 누르면 들어간다';
     else if (ui.view !== G.human) info = `<b>${G.dungeons[ui.view].R.name}</b> 관전 중`;
     else if (ui.edit) info = '<b>길 편집</b> · 드래그로 칠하기 · 노란 점 = 악마 경로';
     else if (ui.build >= 0) info = `<b>${R.blds[ui.build].name}</b> · 놓을 칸 클릭 · Shift 연속 · Esc 취소`;
@@ -317,8 +317,8 @@
     rs.shards += sh;
     let unlocked = '';
     const tut = G.tutorial && !G.quit && !save.tutorialDone;
-    if (tut) { save.tutorialDone = 1; save.bonusGold = DD.TUTORIAL_GOLD; unlocked = `<p class="gold">튜토리얼 완료 보상 · 전쟁 자금 ●${DD.TUTORIAL_GOLD}</p><p>이제 이끌 종족을 고르십시오, 사령관.</p>`; }
-    else if (!G.tutorial && G.win && rs.stage === G.stage && G.stage < 5) { rs.stage++; unlocked = DD.DEMO ? '<p>데모는 여기까지입니다. 다른 종족으로도 싸워 보세요.</p>' : `<p class="good">해금 · ${DD.stageOf(d.race, rs.stage).name}</p>`; }
+    if (tut) { save.tutorialDone = 1; save.bonusGold = DD.TUTORIAL_GOLD; unlocked = `<p class="gold">튜토리얼 완료 보상 · 전쟁 자금 ●${DD.TUTORIAL_GOLD}</p><p>이끌 종족을 고르십시오, 사령관.</p>`; }
+    else if (!G.tutorial && G.win && rs.stage === G.stage && G.stage < 5) { rs.stage++; unlocked = DD.DEMO ? '<p>데모는 여기까지. 다른 종족도 기다립니다.</p>' : `<p class="good">해금 · ${DD.stageOf(d.race, rs.stage).name}</p>`; }
     if (!G.tutorial) save.layout = Array.from(d.grid); // 다음 판에도 같은 길로 시작한다
     persist();
     DD.Audio.stopAmbience(); if (!G.quit) DD.Audio.play(G.win ? 'win' : 'lose');
