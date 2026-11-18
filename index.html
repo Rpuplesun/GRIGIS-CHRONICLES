@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>그리기스 연대기 — 악마 침공 방어전</title>
+<meta name="description" content="그리기스 연대기 — 다섯 종족이 악마의 침공을 막아내는 픽셀 디펜스">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="app">
+<!-- 화면 전체를 2560×1440 기준으로 만들고 창 크기에 맞춰 통째로 줄인다 -->
+<div id="root">
+  <div id="title" hidden></div>
+  <div id="story" hidden></div>
+  <div id="menu" hidden></div>
+  <div id="game" hidden>
+    <div id="field">
+      <canvas id="cv" width="2208" height="1440"></canvas>
+      <div id="allies"></div>
+      <div id="banner"></div>
+      <div id="herocard"></div>
+      <div id="feed"></div>
+      <div id="info"></div>
+      <div id="goal" hidden></div>
+      <div id="dialog" hidden></div>
+    </div>
+    <aside id="side">
+      <div id="top"></div>
+      <div id="bar"></div>
+      <div id="tip"></div>
+      <div id="sys"></div>
+    </aside>
+  </div>
+  <div id="result" hidden></div>
+</div>
+<script src="src/data.js"></script>
+<script src="src/fx_sprites.js"></script>
+<script src="src/sprites.js"></script>
+<script src="src/sim.js"></script>
+<script src="src/story.js"></script>
+<script src="src/atlas.js"></script>
+<script src="src/art.js"></script>
+<script src="src/render.js"></script>
+<script src="src/prologue.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/main.js"></script>
+</body>
+</html>
