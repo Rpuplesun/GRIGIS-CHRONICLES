@@ -364,7 +364,7 @@
     if (d.heroT > 0) d.heroT -= DT;
     while (d.queue.length && d.queue[0].at <= G.t) {
       const q = d.queue.shift(), def = DD.DEMONS[q.t], mhp = def.hp * q.hp;
-      d.demons.push({ id: G.nid++, k: 'd', def, x: tcx(C.ENT_T[0]) + (G.rnd() - 0.5) * 12, y: C.OY + GH * T + 14 + G.rnd() * 8, hp: mhp, mhp, atk: def.atk * q.atk, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: q.t === 'boss' ? 12 : 7 });
+      d.demons.push({ id: G.nid++, k: 'd', def, x: tcx(C.ENT_T[0]) + (G.rnd() - 0.5) * 12, y: C.OY + GH * T - 12 + G.rnd() * 6, hp: mhp, mhp, atk: def.atk * q.atk, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: q.t === 'boss' ? 12 : 7 });
     }
     const drums = d.blds.filter((b) => b.def.haste), pools = d.blds.filter((b) => b.def.regen);
     // 유닛
