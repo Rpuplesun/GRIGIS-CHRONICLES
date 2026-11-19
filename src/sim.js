@@ -52,15 +52,28 @@
     if (flow(gr)[key(C.ENT_T[0], C.ENT_T[1])] < 0) return '입구와 심장은 이어져 있어야 합니다.';
     return null;
   };
-  function applyGrid(d, gr) {
-    d.grid = gr; d.dist = flow(gr); d.ver++;
+  function pathOf(dist) { // 입구에서 심장까지의 최단 경로(끊겨 있으면 빈 배열)
     const path = []; let [cx, cy] = C.ENT_T;
-    while (d.dist[key(cx, cy)] > 0) { // 입구에서 심장까지의 최단 경로
+    while (dist[key(cx, cy)] > 0) {
       path.push([cx, cy]);
-      const dv = d.dist[key(cx, cy)]; let nx = -1, ny = -1;
-      for (const [dx, dy] of NB) { const ax = cx + dx, ay = cy + dy; if (inG(ax, ay) && d.dist[key(ax, ay)] === dv - 1) { nx = ax; ny = ay; break; } }
+      const dv = dist[key(cx, cy)]; let nx = -1, ny = -1;
+      for (const [dx, dy] of NB) { const ax = cx + dx, ay = cy + dy; if (inG(ax, ay) && dist[key(ax, ay)] === dv - 1) { nx = ax; ny = ay; break; } }
       cx = nx; cy = ny;
     }
+    return path;
+  }
+  DD.gridPath = (gr) => { const dist = flow(gr); return { dist, path: pathOf(dist) }; }; // 편집 초안 미리보기용
+  // 진행 중인 요새에 격자 전체를 적용할 수 있는가. 사유 또는 null
+  DD.gridErr = function (d, gr) {
+    const e0 = DD.gridCheck(gr); if (e0) return e0;
+    for (const b of d.blds) if (gr[key(b.cx, b.cy)] !== (b.def.kind === 'wall' ? 1 : 0)) return '건물 아래 칸은 바꿀 수 없습니다';
+    const nd = flow(gr);
+    for (const e of d.demons) { const ex = tx(e.x), ey = ty(e.y); if (inG(ex, ey) && nd[key(ex, ey)] < 0) return '악마가 서 있는 길도 심장과 이어져 있어야 합니다'; }
+    return null;
+  };
+  function applyGrid(d, gr) {
+    d.grid = gr; d.dist = flow(gr); d.ver++;
+    const path = pathOf(d.dist);
     d.path = path;
     // 기본 배치: 근접은 길 중간 두 칸, 원거리는 바로 뒤(심장 쪽) 세 칸(칸마다 여섯 자리)
     const L = path.length, a = Math.max(0, Math.min(L - 2, Math.floor(L * 0.45)));
@@ -206,6 +219,16 @@
       for (const e of d.demons) { const ex = tx(e.x), ey = ty(e.y); if (inG(ex, ey) && nd[key(ex, ey)] < 0) return '악마가 서 있는 길'; }
       if (t === 2 && d.units.some((u) => tx(u.x) === cx && ty(u.y) === cy)) return '유닛이 서 있는 칸';
       applyGrid(d, ng); d.walls = DD.gridCount(ng).wall; snd(d, 'build');
+    } else if (c.a === 'grid') { // 편집한 격자 전체를 한 번에 적용한다
+      const ng = Uint8Array.from(c.grid);
+      if (ng.length === d.grid.length && ng.every((v, i) => v === d.grid[i])) return null;
+      const e0 = DD.gridErr(d, ng); if (e0) return e0;
+      applyGrid(d, ng); d.walls = DD.gridCount(ng).wall; snd(d, 'build');
+      for (const u of d.units) if (wallAt(d, u.hx, u.hy)) { const h = homeSlot(d, u.def.rng > 30, !!u.hero); u.hx = h.x; u.hy = h.y; } // 벽 속이 된 자리는 다시 잡는다
+    } else if (c.a === 'callwave') { // 전장이 비었으면 기다리지 않고 다음 웨이브를 부른다. 건너뛴 시간만큼의 기본 수입은 준다
+      const skip = DD.canCall(G); if (!skip) return '전장에 악마가 남아 있습니다';
+      G.t += skip;
+      for (const x of G.dungeons) if (x.alive) { x.gold += (2 + 1.5 * (x.bc.market || 0)) * skip; x.mat += ((x.race === 'spirit' ? 0.15 : 0) + 0.3 * (x.bc.crystal || 0)) * skip; x.heroT -= skip; }
     } else if (c.a === 'rally') { // which: 'U' 소환소, 'H' 영웅 제단. x가 없으면 기본 배치로 되돌린다
       const k = c.which === 'H' ? 'rallyH' : 'rallyU';
       if (c.x === undefined) d[k] = null;
@@ -453,6 +476,11 @@
     if (d.i === G.human || !rest.length) { G.over = true; G.win = false; }
   }
 
+  // 다음 웨이브(또는 마지막 웨이브 뒤의 종료)까지 건너뛸 수 있는 초. 악마가 남아 있으면 0
+  DD.canCall = function (G) {
+    if (G.over || G.dungeons.some((d) => d.alive && (d.demons.length || d.queue.length))) return 0;
+    const left = G.nextWaveIn() - 0.5; return left > 2 ? left : 0;
+  };
   function step(G) {
     if (G.over) return;
     G.t += DT;

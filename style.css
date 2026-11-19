@@ -113,6 +113,8 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #game.guide .slot.spot{filter:none;z-index:2;animation:spot .7s steps(2) infinite alternate}
 @keyframes spot{from{box-shadow:0 0 0 6px var(--gold),0 0 0 10px var(--edge)}to{box-shadow:0 0 0 12px var(--gold),0 0 0 16px var(--edge)}}
 #game.guide #goal{z-index:3;animation:spot .7s steps(2) infinite alternate}
+.call{width:100%;margin:2px 0 6px;padding:4px 0 8px;font-size:22px;background:#5a4320;color:var(--gold)}.call kbd{background:var(--gold);color:var(--edge);font:700 20px/1 "Galmuri11";padding:2px 6px 4px}
+.skiptut{position:absolute;left:70px;bottom:20px;font-size:24px;padding:4px 16px 8px;color:var(--dim)}
 #goal{position:absolute;left:120px;top:110px;background:#1c1526e6;box-shadow:inset 0 0 0 4px var(--gold),inset 0 0 0 8px var(--edge);padding:14px 30px 18px;font-size:33px;color:var(--gold)}
 #goal small{display:inline;margin-right:16px;color:var(--dim)}
 /* 갤러리 */

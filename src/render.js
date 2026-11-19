@@ -127,7 +127,9 @@
   DD.draw = function (ctx, G, d, ui) {
     const TT = G.t + (ui.clock || 0), flash = ui.flash !== false;
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(bg(G, d), 0, 0);
+    // 길 편집 중에는 초안 격자를 보여 준다
+    const gd = ui.draft ? Object.assign(Object.create(d), { grid: ui.draft.grid, ver: 'draft' + ui.draft.ver, path: ui.draft.path }) : d;
+    ctx.drawImage(bg(G, gd), 0, 0);
     DD.blit(ctx, 'f_summon', ((TT * 5) | 0) % 4, C.SUMMON.x, C.SUMMON.y + 12);
     DD.blit(ctx, 'f_altar', ((TT * 6) | 0) % 4, C.ALTAR.x, C.ALTAR.y + 12);
     if (d.heroT <= 0) { const fr = ((TT * 4) | 0) % 4; dotted(ctx, C.ALTAR.x, C.ALTAR.y, 13 + fr, 'g1', 20); }
@@ -136,9 +138,9 @@
       const c = DD.blit(ctx, 'f_heart', ((TT * 4) | 0) % 4, C.HEART.x, C.HEART.y + 12, false, flash && d.heart.hit > 0.06); bar(ctx, C.HEART.x - 14, C.HEART.y + 12 - c.height - 3, 28, d.heart.hp / d.heart.mhp, 'r2'); }
     DD.blit(ctx, 'gate_s', ((TT * 6) | 0) % 6, tcx(C.ENT_T[0]) + 2, OY + GH * T + 4); // 악마가 나오는 게이트
     // 길 위의 진행 방향 화살표(악마가 걷는 쪽으로 흐른다)
-    d.path.forEach(([cx, cy], i) => {
+    gd.path.forEach(([cx, cy], i) => {
       if ((i + 300 - ((TT * 3) | 0) % 3) % 3) return;
-      const nx = i + 1 < d.path.length ? d.path[i + 1] : C.HEART_T, dx = nx[0] - cx, dy = nx[1] - cy, X = tcx(cx), Y = tcy(cy);
+      const nx = i + 1 < gd.path.length ? gd.path[i + 1] : C.HEART_T, dx = nx[0] - cx, dy = nx[1] - cy, X = tcx(cx), Y = tcy(cy);
       ctx.fillStyle = P.w4;
       for (let k = -3; k <= 3; k++) { const a = 3 - Math.abs(k); if (dx) { ctx.fillRect(X + dx * a - 1, Y + k, 2, 1); } else { ctx.fillRect(X + k, Y + dy * a - 1, 1, 2); } }
     });
@@ -164,13 +166,18 @@
     [[d.rallyU, 'b2'], [d.rallyH, 'g1']].forEach(([r, col]) => { if (!r) return; const X = Math.round(r.x), Y = Math.round(r.y), w = ((TT * 4) | 0) % 2;
       ctx.fillStyle = P.K; ctx.fillRect(X - 1, Y - 15, 3, 16); ctx.fillRect(X + 1, Y - 15 + w, 10, 8); ctx.fillStyle = P.w1; ctx.fillRect(X, Y - 14, 1, 14); ctx.fillStyle = P[col]; ctx.fillRect(X + 2, Y - 14 + w, 8, 6); ctx.fillStyle = P.W; ctx.fillRect(X + 4, Y - 12 + w, 3, 2); });
     if (ui.rally) { const f = ui.rally === 'H' ? C.ALTAR : C.SUMMON; dotted(ctx, f.x, f.y, 15 + (((TT * 4) | 0) % 2), 'n1', 24); if (ui.hover) { ctx.fillStyle = P.n1; const [hx, hy] = ui.hover; ctx.fillRect(hx - 3, hy, 7, 1); ctx.fillRect(hx, hy - 3, 1, 7); } }
+    if (ui.ping) { const a = (performance.now() - ui.ping.r) / 400; if (a < 1) dotted(ctx, Math.round(ui.ping.x), Math.round(ui.ping.y), 3 + Math.round(a * 8), 'n1', 12); else ui.ping = null; } // 이동 지점 표시
+    for (const u of d.units) if (ui.sel.has(u.id)) { ctx.fillStyle = P.n1; ctx.fillRect(Math.round(u.hx) - 1, Math.round(u.hy), 3, 1); ctx.fillRect(Math.round(u.hx), Math.round(u.hy) - 1, 1, 3); } // 고른 유닛이 지키는 자리
     for (const s of d.shots) drawShot(ctx, s);
     for (const f of d.fx) drawFx(ctx, f);
     motes(ctx, TT, G.st);
     if (ui.edit) { // 길 편집: 칸 모서리 점, 악마의 최단 경로, 커서 칸
       ctx.fillStyle = P.e2;
       for (let cy = 0; cy <= GH; cy++) for (let cx = 0; cx <= GW; cx++) ctx.fillRect(OX + cx * T, OY + cy * T, 1, 1);
-      d.path.forEach(([cx, cy], i) => { ctx.fillStyle = P[(((TT * 6) | 0) + i) % 4 === 0 ? 'W' : 'g2']; ctx.fillRect(tcx(cx) - 1, tcy(cy) - 1, 3, 3); });
+      const rt = (performance.now() / 160) | 0; // 게임이 멈춰 있어도 흐르게
+      gd.path.forEach(([cx, cy], i) => { ctx.fillStyle = P[(rt + i) % 4 === 0 ? 'W' : 'g2']; ctx.fillRect(tcx(cx) - 1, tcy(cy) - 1, 3, 3); });
+      // 심장에 닿지 않는 길은 붉게 칠해 끊긴 곳을 보여 준다
+      if (ui.draft) for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) if (ui.draft.grid[cx + cy * GW] === 1 && ui.draft.dist[cx + cy * GW] < 0) dither(ctx, 8, 'r2', OX + cx * T, OY + cy * T, T, T);
       for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) if (DD.isFixed(cx, cy)) dither(ctx, 4, 'K', OX + cx * T, OY + cy * T, T, T);
       if (ui.hover) { const [cx, cy] = ui.hover, X = OX + cx * T, Y = OY + cy * T; ctx.fillStyle = P[ui.tool === 1 ? 'g1' : ui.tool === 2 ? 's1' : 'r1']; ctx.fillRect(X, Y, T, 1); ctx.fillRect(X, Y + T - 1, T, 1); ctx.fillRect(X, Y, 1, T); ctx.fillRect(X + T - 1, Y, 1, T); }
     }
