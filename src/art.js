@@ -32,6 +32,19 @@
   // 스테이지 색조를 입힌 타일
   const TINT = { cave: [1, 1, 1.06], fire: [1.3, 0.78, 0.74], water: [0.72, 0.96, 1.3], forest: [0.78, 1.12, 0.82], wild: [1.18, 0.98, 0.72], abyss: [1.08, 0.74, 1.26] };
   const BASE = { floor: [0.5, 0.5, 0.72], road: [1.32, 1.2, 1.02], wall: [0.98, 0.96, 1.1], void: [0.6, 0.55, 0.8] }; // 바닥은 어둡고 차갑게, 길은 밝고 따뜻하게
+  // 스테이지 타일셋(바닥·길·소품). 바닥은 어둡게, 길은 밝게 해서 길이 또렷이 보이게 한다
+  const LIGHT = { floor: 0.7, road: 1.12, prop: 0.78 }, WILD = [1.16, 1.0, 0.78];
+  DD.stageTiles = (stage, kind) => (A.frames['t_' + stage + '_' + kind] || []).length;
+  DD.stageTile = function (stage, kind, i) {
+    const k = 'st|' + stage + '|' + kind + '|' + i;
+    if (cache[k]) return cache[k];
+    const src = DD.frame('t_' + stage + '_' + kind, i, 0), c = document.createElement('canvas'), l = LIGHT[kind], t = stage === 'wild' ? WILD : [1, 1, 1];
+    c.width = src.width; c.height = src.height; const x = c.getContext('2d'); x.drawImage(src, 0, 0);
+    const d = x.getImageData(0, 0, c.width, c.height);
+    for (let p = 0; p < d.data.length; p += 4) for (let j = 0; j < 3; j++) d.data[p + j] = Math.min(255, d.data[p + j] * l * t[j]);
+    x.putImageData(d, 0, 0);
+    return (cache[k] = c);
+  };
   DD.tile = function (name, stage) {
     const k = 'tile|' + name + '|' + stage;
     if (cache[k]) return cache[k];

@@ -52,6 +52,15 @@
   }
   function drawFx(x, f) {
     const p = 1 - f.t / f.T, X = Math.round(f.x), Y = Math.round(f.y); // p: 0→1
+    const vfx = (name, ox, oy, flip) => { const n = DD.frames('v_' + name).length; DD.blit(x, 'v_' + name, Math.min(n - 1, (p * n) | 0), X + (ox || 0), Y + (oy || 0), flip); };
+    if (f.k === 'dust') return vfx('puff', 0, 5);
+    if (f.k === 'hit') return vfx('slash', 0, 9, f.c === 'r1');
+    if (f.k === 'boom') return vfx(f.c === 't2' || f.c === 'b1' || f.c === 'b2' ? 'ice' : 'explode', 0, 12);
+    if (f.k === 'heal') return vfx('healfx', 0, 12);
+    if (f.k === 'summon') return vfx('pillar', 0, 5);
+    if (f.k === 'collapse') return vfx('collapse', 0, 13);
+    if (f.k === 'smoke') return vfx('smoke', 0, 5);
+    if (f.k === 'hero') vfx('burst', 0, 5);
     if (f.k === 'corpse') { const n = DD.frames(f.s).length; DD.blit(x, f.s, Math.min(n - 1, 9 + ((p * 3) | 0)), X, Y + 3, f.face < 0); }
     else if (f.k === 'dust') { const a = DD.fxArt('dust', Math.min(4, (p * 5) | 0), f.c); x.drawImage(a.c, X - 8, Y - 12); }
     else if (f.k === 'hit') { x.fillStyle = P[f.c]; if (p < 0.5) { x.fillRect(X - 1, Y, 3, 1); x.fillRect(X, Y - 1, 1, 3); } else { [[-2, -2], [2, -2], [-2, 2], [2, 2], [-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => x.fillRect(X + a, Y + b, 1, 1)); } }
@@ -88,7 +97,13 @@
       const inside = cx >= 0 && cy >= 0 && cx < GW && cy < GH, ent = cx === C.ENT_T[0] && cy >= GH;
       if (cy > GH && !ent) continue;
       const v = inside ? d.grid[cx + cy * GW] : ent ? 1 : 2;
-      x.drawImage(tl(v === 1 ? 'road' : v === 2 ? 'wall' : 'floor'), OX + cx * T, OY + cy * T);
+      const h = ((cx * 73856093) ^ (cy * 19349663) ^ (st.length * 83492791)) >>> 0; // 칸마다 고정된 무작위 값
+      let img;
+      if (v === 2) img = tl('wall');
+      else if (v === 1) img = DD.stageTile(st, 'road', h % DD.stageTiles(st, 'road'));
+      else { const nf = DD.stageTiles(st, 'floor'), np = DD.stageTiles(st, 'prop'); // 바닥: 대부분 기본 무늬, 가끔 변형, 드물게 소품
+        img = inside && h % 100 < 6 && !DD.isFixed(cx, cy) ? DD.stageTile(st, 'prop', (h >> 8) % np) : DD.stageTile(st, 'floor', h % 10 < 5 ? 0 : 1 + ((h >> 4) % (nf - 1))); }
+      x.drawImage(img, OX + cx * T, OY + cy * T);
       if (inside && v === 2) { x.fillStyle = P.K; x.fillRect(OX + cx * T, OY + cy * T + T - 1, T, 1); }
     }
     // 길 가장자리: 어두운 턱과 밝은 테두리를 둘러 악마가 걷는 길을 또렷하게 한다

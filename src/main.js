@@ -11,6 +11,7 @@
   DD.Audio.setVol(save.opt.vol); DD.Music.setVol(save.opt.bgm);
   const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* 무시 */ } };
   const icon = (id, m) => { const f = DD.frames(id)[0]; return `<img class="px" src="${DD.icon(id)}" style="width:${f[2] * m}px;height:${f[3] * m}px">`; };
+  const ic = (id) => `<img class="px ic" src="${DD.icon(id)}" alt="">`; // UI 시트의 아이콘(글자 높이에 맞춘다)
   const pct = (v) => Math.round(v * 100);
 
   // ───────── 메뉴 ─────────
@@ -35,15 +36,15 @@
         <div class="cards">${DD.RACE_IDS.map((id) => { const r = DD.RACES[id]; return `
         <button class="card ${menu.race === id ? 'on' : ''}" data-m="race:${id}">
           <div class="icons">${r.units.map((u) => icon(u.spr, 3)).join('')}</div>
-          <b>${r.name}</b><small>${r.trait}</small><small class="gold">◈ ${save.races[id].shards} · 스테이지 ${save.races[id].stage + 1}</small>
+          <b>${r.name}</b><small>${r.trait}</small><small class="gold">${ic('ui_shard')} ${save.races[id].shards} · 스테이지 ${save.races[id].stage + 1}</small>
         </button>`; }).join('')}</div></section>
       <section><h2>스테이지</h2><div class="cards c3">${DD.stageOrder(menu.race).map((id, i) => { const st = DD.stageOf(menu.race, i), lock = i > rs.stage, demo = DD.DEMO && i > 0; return `
         <button class="card ${menu.stage === i ? 'on' : ''}" ${lock || demo ? 'disabled' : ''} data-m="stage:${i}">
           <b>${i + 1}. ${st.name}</b><small>${demo ? '정식 버전에서' : lock ? '잠김' : st.desc} · 악마 ×${st.mul}</small><small>${modText(st, menu.race)}</small>${best[i] ? `<small class="rec">${best[i] > C.WAVES ? '✔ 클리어' : `최고 웨이브 ${best[i]}/${C.WAVES}`}</small>` : ''}
         </button>`; }).join('')}</div></section>
-      <section><h2>영구 강화 <span class="gold">◈ ${rs.shards}</span></h2><div class="cards c3">${DD.META.map((m) => { const fmt = fmtMeta(m), lv = rs.meta[m.k] || 0, cost = DD.metaCost(lv), max = lv >= DD.META_MAX; return `
+      <section><h2>영구 강화 <span class="gold">${ic('ui_shard')} ${rs.shards}</span></h2><div class="cards c3">${DD.META.map((m) => { const fmt = fmtMeta(m), lv = rs.meta[m.k] || 0, cost = DD.metaCost(lv), max = lv >= DD.META_MAX; return `
         <button class="card" ${max || rs.shards < cost ? 'disabled' : ''} data-m="meta:${m.k}">
-          <b>${m.name}</b><small>Lv.${lv}/${DD.META_MAX} · ${fmt(lv)}${max ? '' : ` → <span class="good">${fmt(lv + 1)}</span>`}</small><small class="gold">${max ? '최대' : '◈ ' + cost}</small>
+          <b>${m.name}</b><small>Lv.${lv}/${DD.META_MAX} · ${fmt(lv)}${max ? '' : ` → <span class="good">${fmt(lv + 1)}</span>`}</small><small class="gold">${max ? '최대' : ic('ui_shard') + ' ' + cost}</small>
         </button>`; }).join('')}</div></section>
       <span></span><span></span>
       <footer><button class="start" data-m="start:1">출전</button><button data-m="story:1">이야기</button><button data-m="tutorial:1">튜토리얼</button><button data-m="settings:1">설정</button>
@@ -127,6 +128,7 @@
   document.addEventListener('click', (ev) => { const b = ev.target.closest('[data-lang]'); if (!b) return; DD.Audio.play('click'); DD.setLang(b.dataset.lang); document.querySelectorAll('[data-lang]').forEach((x) => x.classList.toggle('on', x.dataset.lang === DD.lang)); });
   function showTitle() {
     DD.Music.play('title'); DD.Music.preload(['menu']);
+    const rs0 = document.documentElement.style; for (const k of ['panel', 'btn_gold', 'btn_dark', 'btn_blue']) rs0.setProperty('--ui-' + k.replace('_', '-'), `url(${DD.icon('ui_' + k)})`); // UI 시트의 패널·버튼을 CSS 테두리 그림으로
     $('#loading').hidden = true; $('#title').hidden = false;
     $('#title').innerHTML = `<div><h1>${DD.TITLE.name}</h1><div class="en">${DD.TITLE.ko}</div><p>${DD.TITLE.sub}${DD.DEMO ? ' · 데모' : ''}</p><button class="start" id="begin">게임 시작</button><div class="langs">${langRow()}</div></div>`;
     $('#begin').onclick = () => { DD.Audio.play('click'); $('#title').hidden = true; if (!save.tutorialDone) showStory(() => startGame(true)); else showMenu(); };
@@ -149,14 +151,14 @@
 
   function toast(t, cls) { const e = document.createElement('div'); e.textContent = t; if (cls) e.className = cls; const f = $('#feed'); f.prepend(e); while (f.children.length > 4) f.lastChild.remove(); setTimeout(() => e.remove(), 4000); }
   function banner(title, sub, boss) { $('#banner').innerHTML = `<div class="${boss ? 'boss' : ''}"><b>${title}</b><span>${sub}</span></div>`; }
-  function heroCard(e) { $('#herocard').innerHTML = `<div class="g${['R', 'SR', 'SSR'].indexOf(e.grade)}"><img class="px" src="${DD.icon(e.spr)}"><span><b>${e.grade} · ${e.name}</b>영웅 합류</span></div>`; }
+  function heroCard(e) { $('#herocard').innerHTML = `<div class="g${['R', 'SR', 'SSR'].indexOf(e.grade)}"><img class="px" src="${DD.icon(e.spr)}"><img class="px badge" src="${DD.icon('ui_grade' + e.grade)}"><span><b>${e.grade} · ${e.name}</b>영웅 합류</span></div>`; }
   function callWave() { const err = G.cmd(G.human, { a: 'callwave' }); if (err) { toast(err, 'bad'); DD.Audio.play('err'); } }
   function togglePause() { if (ui.edit) { if (applyEdit()) paused = false; } else paused = !paused; }
   function setSpeed(sp) { if (applyEdit()) { speed = sp; paused = false; } }
   function act(c) { if (c.a === 'move') { ui.moved = true; ui.ping = { x: c.x, y: c.y, r: performance.now() }; }
     const err = G.cmd(G.human, c); if (err) { toast(err, 'bad'); DD.Audio.play('err'); } return !err; }
   function set(id, html) { if (lastHtml[id] !== html) { lastHtml[id] = html; $(id).innerHTML = html; } }
-  const cost = (c, d) => `<span class="cost"><i class="g ${d.gold < c.g ? 'no' : ''}">${c.g}</i>${c.m ? `<i class="m ${d.mat < c.m ? 'no' : ''}">${c.m}</i>` : ''}</span>`;
+  const cost = (c, d) => `<span class="cost"><i class="g ${d.gold < c.g ? 'no' : ''}">${ic('ui_coin')}${c.g}</i>${c.m ? `<i class="m ${d.mat < c.m ? 'no' : ''}">${ic('ui_crate')}${c.m}</i>` : ''}</span>`;
   const mmss = (s) => { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
   // 핫바 칸 하나. tip은 마우스를 올리면 정보 줄에 뜬다.
@@ -173,8 +175,8 @@
       <div class="wave"><b>WAVE ${G.wave}<small style="display:inline">/${C.WAVES}</small></b><small>다음 ${mmss(next)}</small></div>${DD.canCall(G) ? `<button class="call" data-a="callwave:1"><kbd>N</kbd> ${G.wave >= C.WAVES ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'} <span class="gold">+●${DD.callBonus(G)}</span></button>` : `<button class="call" disabled><kbd>N</kbd> ${G.wave >= C.WAVES ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'}</button>`}
       <div class="nextw">${nextWave()}</div>
       <div class="prog"><i style="width:${Math.round(Math.max(0, 1 - next / span) * 50) * 2}%"></i></div>
-      <div class="res"><span class="gold">● ${Math.floor(d.gold)}</span><span class="mat">◆ ${Math.floor(d.mat)}</span><span class="pop">인구 ${own}/${C.POP}</span></div>
-      <div class="heart">♥ ${Math.ceil(d.heart.hp)}<i class="hpbar"><i style="width:${Math.max(0, hp * 100)}%"></i></i></div>`);
+      <div class="res"><span class="gold">${ic('ui_coin')} ${Math.floor(d.gold)}</span><span class="mat">${ic('ui_crate')} ${Math.floor(d.mat)}</span><span class="pop">${ic('ui_pop')} 인구 ${own}/${C.POP}</span></div>
+      <div class="heart">${ic('ui_heart')} ${Math.ceil(d.heart.hp)}<i class="hpbar"><i style="width:${Math.max(0, hp * 100)}%"></i></i></div>`);
     set('#sys', `${[1, 2, 4].map((sp, i) => `<button class="${speed === sp && !paused ? 'on' : ''}" data-a="speed:${sp}" data-tip="<b>${sp}배속</b>단축키 ${i + 1}">${sp}×</button>`).join('')}<button class="${paused ? 'on' : ''}" data-a="pause:1" data-tip="<b>일시정지</b>단축키 Space · 멈춘 동안에도 소환·건설·길 편집을 할 수 있다">Ⅱ</button>
       <button class="wide" data-a="settings:1" data-tip="<b>설정</b>배경음악·효과음 음량, 피격 번쩍임 · Esc">⚙ 설정</button><button class="wide" data-a="quit:1" data-tip="<b>나가기</b>이번 판을 포기한다(보상 없음)">나가기</button>`);
     if (G.dungeons.length > 1) set('#allies', `<button class="${ui.world ? 'on' : ''}" data-a="world:1">지도 <kbd>Tab</kbd></button>` + G.dungeons.map((x) => `<button class="${ui.view === x.i && !ui.world ? 'on' : ''} ${x.alive ? '' : 'dead'}" data-a="view:${x.i}">${x.i + 1} ${x.i === G.human ? '나' : x.R.name} <small>${x.alive ? '♥' + pct(x.heart.hp / x.heart.mhp) + '%' : '함락'}</small></button>`).join(''));
@@ -184,9 +186,9 @@
     let maze = slot('edit:1', `<b class="glyph">${ui.edit ? '✔' : '▦'}</b><em>${ui.edit ? '적용' : '길 편집'}</em>`, ui.edit ? `<b>적용하고 계속</b>${dr.err ? `<small class="bad">${dr.err}</small>` : '조건이 맞습니다'}` : `<b>길 편집</b>게임을 멈추고 길과 벽을 고친다<small>악마 경로 ${d.path.length}칸 · 길 ${gc.road}/${C.ROAD_MAX} · 벽 ${gc.wall}/${C.WALL_MAX}</small>`, { on: ui.edit, key: 'E', dim: ui.edit && !!dr.err });
     if (ui.edit) maze += [[1, '길 깔기', '악마가 걷는 칸을 만든다', 'Z'], [2, '벽 쌓기', '통과와 사격을 막는 칸', 'X'], [0, '지우기', '바닥으로 되돌린다 · 우클릭으로도 지운다', 'C']].map(([t, n, tip, key]) => slot('tool:' + t, `<b class="glyph">${['✕', '▤', '▣'][t]}</b><em>${n}</em>`, `<b>${n}</b>${tip}`, { on: ui.tool === t, key })).join('')
       + slot('resetmaze:1', `<b class="glyph">↺</b><em>기본 길</em>`, '<b>기본 길</b>ㄹ 모양으로 되돌린다', {}) + slot('undo:1', `<b class="glyph">↶</b><em>되돌리기</em>`, '<b>되돌리기</b>마지막으로 칠한 것을 되돌린다 · Ctrl+Z', { key: '^Z', dim: !dr.hist.length }) + slot('editcancel:1', `<b class="glyph">✖</b><em>취소</em>`, '<b>취소</b>고친 것을 버리고 나간다', { key: 'Esc' });
-    const units = R.units.map((u, i) => { const f = DD.reqFail(d, u); return slot('summon:' + i, `${icon(u.spr, 2)}${f ? '<span class="cost bad">잠김</span>' : cost(u, d)}`, `<b>${u.name}</b>● ${u.g}${u.m ? ' ◆ ' + u.m : ''} · 보유 ${d.units.filter((x) => x.def === u && x.own === d.i).length}기<br>체력 ${u.hp} · 공격 ${u.atk} · 사거리 ${u.rng}${u.heal ? ' · 치유 ' + u.heal : ''}${u.splash ? ' · 범위' : ''}${f ? `<small class="bad">${f}</small>` : ''}`, { dim: f || no(u), key: UKEY[i], cls: f ? 'lock' : '' }); }).join('')
+    const units = R.units.map((u, i) => { const f = DD.reqFail(d, u); return slot('summon:' + i, `<img class="px tier" src="${DD.icon('ui_tier' + u.tier)}" alt="">${icon(u.spr, 2)}${f ? '<span class="cost bad">잠김</span>' : cost(u, d)}`, `<b>${u.name}</b>${ic('ui_coin')} ${u.g}${u.m ? ' ' + ic('ui_crate') + ' ' + u.m : ''} · 보유 ${d.units.filter((x) => x.def === u && x.own === d.i).length}기<br>체력 ${u.hp} · 공격 ${u.atk} · 사거리 ${u.rng}${u.heal ? ' · 치유 ' + u.heal : ''}${u.splash ? ' · 범위' : ''}${f ? `<small class="bad">${f}</small>` : ''}`, { dim: f || no(u), key: UKEY[i], cls: f ? 'lock' : '' }); }).join('')
       + slot('hero:1', `${icon('f_altar', 2)}<span class="cost">${d.heroT <= 0 ? '준비!' : mmss(d.heroT)}</span>`, `<b>영웅 소환</b>${d.heroT <= 0 ? '누가 올지는 모른다' : '대기 ' + mmss(d.heroT)}`, { dim: d.heroT > 0, key: 'T', cls: d.heroT <= 0 ? 'ready' : '' });
-    const bslots = R.blds.map((b, i) => { const c = DD.bldCost(d, b); return slot('build:' + i, `${icon(b.spr + '@' + d.race, 2)}${cost(c, d)}`, `<b>${b.name}</b>● ${c.g}${c.m ? ' ◆ ' + c.m : ''} · 보유 ${d.bc[b.id] || 0}<br>${b.desc}${b.atk ? `<br>공격 ${b.atk} · 사거리 ${b.rng} · 간격 ${b.as}초${b.splash ? ' · 범위' : ''}` : ''}<small>${b.kind === 'wall' ? '길 위에만 세운다 · 악마를 붙잡아 둔다' : '바닥에 세운다'}</small>`, { dim: no(c), on: ui.build === i, key: BKEY[i] }); });
+    const bslots = R.blds.map((b, i) => { const c = DD.bldCost(d, b); return slot('build:' + i, `${icon(b.spr + '@' + d.race, 2)}${cost(c, d)}`, `<b>${b.name}</b>${ic('ui_coin')} ${c.g}${c.m ? ' ' + ic('ui_crate') + ' ' + c.m : ''} · 보유 ${d.bc[b.id] || 0}<br>${b.desc}${b.atk ? `<br>공격 ${b.atk} · 사거리 ${b.rng} · 간격 ${b.as}초${b.splash ? ' · 범위' : ''}` : ''}<small>${b.kind === 'wall' ? '길 위에만 세운다 · 악마를 붙잡아 둔다' : '바닥에 세운다'}</small>`, { dim: no(c), on: ui.build === i, key: BKEY[i] }); });
     const blds = bslots.filter((x, i) => i !== 3).join('');
     maze = bslots[3] + maze;
     const ac = DD.upCost(d, 'altar'), ap = DD.ALTAR[d.altarLv - 1].p;
@@ -445,7 +447,7 @@
       <p>${d.R.name} · ${G.st.name}</p>
       <div class="stats"><span><b>${d.wavesCleared}/${C.WAVES}</b>웨이브</span><span><b>${d.kills}</b>처치</span><span><b>${mmss(G.t)}</b>시간</span>
         <span><b>${d.nSum}</b>소환</span><span><b>${d.heroN}</b>영웅</span><span><b>${d.alive ? pct(d.heart.hp / d.heart.mhp) + '%' : '함락'}</b>심장</span></div>
-      <p class="gold">◈ 영혼석 +${sh}${sh && !G.tutorial ? ` (보유 ${rs.shards})` : ''}</p>${unlocked}${tipL ? `<p class="tip">팁 · ${tipL}</p>` : ''}
+      <p class="gold">${ic('ui_shard')} 영혼석 +${sh}${sh && !G.tutorial ? ` (보유 ${rs.shards})` : ''}</p>${unlocked}${tipL ? `<p class="tip">팁 · ${tipL}</p>` : ''}
       ${nextOk ? '<button id="next2" class="on">다음 스테이지 ▸</button> ' : ''}${tut || G.tutorial ? '' : `<button id="again" class="${nextOk ? '' : 'on'}">다시 도전</button> `}<button id="back">${tut ? '종족 선택' : '돌아가기'}</button>
       <small>Enter · ${nextOk ? '다음 스테이지' : tut || G.tutorial ? '종족 선택' : '다시 도전'}</small></div>`;
     $('#result').hidden = false;
