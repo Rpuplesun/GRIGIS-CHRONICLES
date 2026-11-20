@@ -58,7 +58,7 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 @keyframes card{0%{opacity:0;transform:translateX(120px)}8%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
 #feed{position:absolute;left:120px;bottom:112px;display:flex;flex-direction:column-reverse;gap:6px;pointer-events:none;font-size:26px}
 #feed div{background:#07050acc;border-left:6px solid var(--acc);padding:4px 16px 6px;animation:feed 4s steps(16) forwards;width:max-content}
-#feed .bad{border-color:var(--bad);color:var(--bad)}
+#feed .bad{border-color:var(--bad);color:var(--bad)}#feed .good{border-color:var(--good);color:var(--good)}#feed .info{border-color:#7cc4ff}
 @keyframes feed{0%,80%{opacity:1}100%{opacity:0}}
 #info{position:absolute;left:112px;right:112px;bottom:10px;height:76px;padding:14px 24px;background:#1c1526e6;box-shadow:var(--frame);font-size:28px;white-space:nowrap;overflow:hidden}
 #info button{padding:2px 16px 6px;margin-left:14px;font-size:26px}
@@ -127,3 +127,24 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 .gcard label{font-size:11px;margin:0 3px}
 .sw{display:inline-block;width:22px;height:22px;border:1px solid #000}
 .gcard.wide{width:auto;text-align:left}.gcard.wide .box{height:auto;min-height:60px;justify-content:flex-start;gap:6px;padding:6px;flex-wrap:wrap;align-items:flex-end}
+/* ── 보스 체력·일시정지·결과 보강 ── */
+#bossbar{position:absolute;right:112px;top:16px;width:720px;padding:10px 20px 14px;background:#07050ae6;box-shadow:inset 0 0 0 4px var(--blood),inset 0 0 0 8px var(--edge);display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;pointer-events:none;font-size:26px}
+#bossbar:empty{display:none}#bossbar b{color:var(--bad)}#bossbar>i{display:block;height:22px;background:#3d0f1a;border:4px solid var(--edge)}#bossbar>i>i{display:block;height:100%;background:linear-gradient(#ff6b6b 0 40%,#c9283e 40%)}
+#allies:not(:empty)~#bossbar{top:84px}
+#paused{position:absolute;left:50%;top:560px;transform:translateX(-50%);padding:24px 80px 30px;background:#07050ae6;box-shadow:var(--frame);text-align:center;pointer-events:none}
+#paused b{display:block;font:77px/1.1 "Galmuri14";color:var(--gold);letter-spacing:8px}#paused small{font-size:26px}
+.nextw span{display:inline-flex;align-items:flex-end;gap:2px}
+#result .stats{display:grid;grid-template-columns:repeat(3,auto);gap:8px 50px;justify-content:center;margin:20px 0;color:var(--dim);font-size:28px}#result .stats b{display:block;color:var(--tx);font:44px/1.1 "Galmuri14"}
+#result .tip{max-width:1100px;margin:24px auto 0;color:var(--tx);font-size:28px;background:var(--edge);padding:14px 24px 18px}
+#result button.on{background:var(--blood);color:#fff}
+.card .rec{color:var(--good)}
+/* ── 설정 ── */
+#settings{position:absolute;inset:0;background:#07050acc;display:flex;align-items:center;justify-content:center;z-index:20}
+#settings .box{background:var(--pn);box-shadow:var(--frame);padding:50px 80px 60px;min-width:1000px}
+#settings h2{font:66px/1 "Galmuri14";color:var(--acc);margin:0 0 40px}
+#settings .vol{display:grid;grid-template-columns:260px 1fr 100px;align-items:center;gap:30px;margin:0 0 34px;font-size:40px}
+#settings .vol b{text-align:right;color:var(--gold)}#settings .vol button{justify-self:start;min-width:200px}
+#settings .close{display:block;margin:20px auto 0;font-size:40px;padding:14px 60px 20px}
+#settings input[type=range]{-webkit-appearance:none;appearance:none;height:28px;background:var(--edge);box-shadow:inset 0 0 0 4px var(--ln);margin:0}
+#settings input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:36px;height:56px;background:var(--gold);box-shadow:inset 0 -6px 0 #b8892a,0 0 0 4px var(--edge)}
+#settings input[type=range]::-moz-range-thumb{width:36px;height:56px;border:0;border-radius:0;background:var(--gold);box-shadow:inset 0 -6px 0 #b8892a,0 0 0 4px var(--edge)}

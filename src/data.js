@@ -130,11 +130,11 @@
   };
 
   DD.DEMONS = {
-    imp: { name: '임프', hp: 42, atk: 6, rng: 12, as: 0.9, spd: 34, gold: 8, spr: 'd_imp' },
-    brute: { name: '악귀', hp: 170, atk: 16, rng: 15, as: 1.2, spd: 20, gold: 18, mat: 3, spr: 'd_brute' },
-    hound: { name: '지옥견', hp: 62, atk: 9, rng: 13, as: 0.7, spd: 54, gold: 10, spr: 'd_hound' },
-    warlock: { name: '흑마술사', hp: 72, atk: 14, rng: 72, as: 1.4, spd: 22, gold: 16, mat: 3, spr: 'd_warlock' },
-    boss: { name: '악마 군주', hp: 1500, atk: 40, rng: 20, as: 1.4, spd: 15, gold: 200, mat: 30, splash: 16, spr: 'd_boss' },
+    imp: { name: '임프', hp: 42, atk: 6, rng: 12, as: 0.9, spd: 34, gold: 8, spr: 'd_imp', desc: '약하지만 떼로 몰려온다' },
+    brute: { name: '악귀', hp: 170, atk: 16, rng: 15, as: 1.2, spd: 20, gold: 18, mat: 3, spr: 'd_brute', desc: '단단하다 · 자재(◆)를 흘린다' },
+    hound: { name: '지옥견', hp: 62, atk: 9, rng: 13, as: 0.7, spd: 54, gold: 10, spr: 'd_hound', desc: '매우 빠르다 · 길을 길게 늘여 붙잡자' },
+    warlock: { name: '흑마술사', hp: 72, atk: 14, rng: 72, as: 1.4, spd: 22, gold: 16, mat: 3, spr: 'd_warlock', desc: '원거리 · 길가 건물을 부순다 · 벽으로 시야를 막자' },
+    boss: { name: '악마 군주', hp: 1500, atk: 40, rng: 20, as: 1.4, spd: 15, gold: 200, mat: 30, splash: 16, spr: 'd_boss', desc: '광역 공격 · 건물도 부순다 · 다섯 웨이브마다' },
   };
   // 웨이브 w(1~20)의 구성
   DD.waveList = function (w) {
@@ -159,7 +159,7 @@
     abyss: { id: 'abyss', home: null, name: '악마성', desc: '게이트 너머', mods: { human: { hp: 0.9 }, dragon: { hp: 0.9 }, beast: { hp: 0.9 }, spirit: { hp: 0.9 }, merfolk: { hp: 0.9 } } },
   };
   DD.HOME = { human: 'cave', dragon: 'fire', beast: 'wild', spirit: 'forest', merfolk: 'water' };
-  DD.STAGE_MUL = [0.8, 1.2, 1.6, 2.1, 2.7, 3.4]; // 차례가 뒤로 갈수록 악마가 강해진다
+  DD.STAGE_MUL = [0.8, 1.1, 1.4, 1.75, 2.15, 2.6]; // 차례가 뒤로 갈수록 악마가 강해진다
   // 종족별 스테이지 순서: 고향 → 다른 네 종족의 땅 → 악마성
   DD.stageOrder = (race) => [DD.HOME[race]].concat(DD.RACE_IDS.filter((r) => r !== race).map((r) => DD.HOME[r]), ['abyss']);
   DD.stageOf = (race, pos) => Object.assign({}, DD.LANDS[DD.stageOrder(race)[pos]], { mul: DD.STAGE_MUL[pos] });
@@ -175,5 +175,6 @@
   ];
   DD.META_MAX = 10;
   DD.metaCost = (lv) => 10 + lv * 10;
+  DD.CALL_BONUS = 1; // 웨이브를 일찍 부르면 건너뛴 1초마다 주는 추가 골드
   DD.shardsFor = (stage, wavesCleared, win) => Math.round((wavesCleared * 2 + (win ? 30 : 0)) * (1 + stage * 0.5));
 })(typeof window !== 'undefined' ? window : globalThis);

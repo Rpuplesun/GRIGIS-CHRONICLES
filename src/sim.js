@@ -115,7 +115,7 @@
     const d = {
       i, race: p.race, R, bot: !!p.bot, alive: true, gold: 150 + 30 * (m.sGold || 0) + (p.bonusGold || 0), mat: 0, kills: 0,
       units: [], blds: [], demons: [], shots: [], fx: [], snd: {}, queue: [], occ: {}, bc: {}, ver: 0, walls: 0,
-      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0,
+      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, nSum: 0, nBld: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0,
       mod: {
         atk: (sm.atk || 1) * (1 + 0.05 * (m.uAtk || 0)), hp: (sm.hp || 1) * (1 + 0.05 * (m.uHp || 0)), spd: sm.spd || 1,
         bhp: (1 + 0.08 * (m.bHp || 0)) * (p.race === 'human' ? 1.2 : 1), gold: 1 + 0.05 * (m.gold || 0), hcd: 1 - 0.04 * (m.hCd || 0),
@@ -157,6 +157,9 @@
     if (b.kind === 'wall') return gv !== 1 ? '방벽은 길 위에만 세울 수 있습니다' : is(C.ENT_T, cx, cy) ? '입구는 못 막는다' : null;
     return gv === 1 ? '길 위에는 방벽만' : gv === 2 ? '벽 위에는 못 짓는다' : null;
   };
+  // 기본 수입(초당). 골드 수급 강화는 처치 골드와 기본 수입 모두에 붙는다
+  DD.income = (d) => ({ g: (2 + 1.5 * (d.bc.market || 0)) * d.mod.gold, m: (d.race === 'spirit' ? 0.15 : 0) + 0.3 * (d.bc.crystal || 0) });
+  DD.callBonus = (G) => Math.floor(DD.canCall(G) * DD.CALL_BONUS);
   const pay = (d, c) => { if (d.gold < c.g || d.mat < c.m) return false; d.gold -= c.g; d.mat -= c.m; return true; };
 
   // 연출 신호: fx(그림 효과)와 snd(이번 프레임에 난 소리 종류). 규칙에는 영향이 없다.
@@ -198,7 +201,7 @@
         let n = u.req.eat[1]; const src = d.R.units[u.req.eat[0]];
         d.units = d.units.filter((x) => !(n > 0 && x.def === src && x.own === d.i && n--));
       }
-      addUnit(G, d, u);
+      addUnit(G, d, u); d.nSum++;
     } else if (c.a === 'build') {
       const b = d.R.blds[c.b], cost = DD.bldCost(d, b), e0 = DD.buildErr(d, b, c.cx, c.cy);
       if (e0) return e0;
@@ -207,7 +210,7 @@
       const mhp = b.hp * d.mod.bhp * (1 + 0.15 * d.up.bld) * (DD.isPlot(c.cx, c.cy) ? C.PLOT_HP : 1);
       const e = { id: G.nid++, k: 'b', def: b, cx: c.cx, cy: c.cy, x: tcx(c.cx), y: tcy(c.cy), hp: mhp, mhp, cd: 0, hit: 0, r: 12, paid: cost };
       d.blds.push(e); d.occ[key(c.cx, c.cy)] = e; recount(d);
-      fx(d, 'dust', e.x, e.y + 8, 0.42, { c: 'e' }); snd(d, 'build');
+      fx(d, 'dust', e.x, e.y + 8, 0.42, { c: 'e' }); snd(d, 'build'); d.nBld++;
     } else if (c.a === 'tile') { // 길·벽 편집. t: 0 바닥, 1 길, 2 벽
       const { cx, cy, t } = c;
       if (!inG(cx, cy) || DD.isFixed(cx, cy) || is(C.ENT_T, cx, cy)) return '바꿀 수 없는 칸';
@@ -227,15 +230,22 @@
       for (const u of d.units) if (wallAt(d, u.hx, u.hy)) { const h = homeSlot(d, u.def.rng > 30, !!u.hero); u.hx = h.x; u.hy = h.y; } // 벽 속이 된 자리는 다시 잡는다
     } else if (c.a === 'callwave') { // 전장이 비었으면 기다리지 않고 다음 웨이브를 부른다. 건너뛴 시간만큼의 기본 수입은 준다
       const skip = DD.canCall(G); if (!skip) return '전장에 악마가 남아 있습니다';
+      const bonus = DD.callBonus(G);
       G.t += skip;
-      for (const x of G.dungeons) if (x.alive) { x.gold += (2 + 1.5 * (x.bc.market || 0)) * skip; x.mat += ((x.race === 'spirit' ? 0.15 : 0) + 0.3 * (x.bc.crystal || 0)) * skip; x.heroT -= skip; }
+      for (const x of G.dungeons) if (x.alive) { const inc = DD.income(x); x.gold += inc.g * skip + bonus; x.mat += inc.m * skip; x.heroT -= skip; }
+      G.events.push({ t: 'called', d: d.i, bonus });
     } else if (c.a === 'rally') { // which: 'U' 소환소, 'H' 영웅 제단. x가 없으면 기본 배치로 되돌린다
       const k = c.which === 'H' ? 'rallyH' : 'rallyU';
       if (c.x === undefined) d[k] = null;
       else { if (wallAt(d, c.x, c.y)) return '벽 위에는 세울 수 없습니다'; d[k] = { x: Math.max(C.OX + 8, Math.min(C.OX + GW * T - 8, c.x)), y: Math.max(C.OY + 12, Math.min(C.OY + GH * T - 4, c.y)), n: 0 }; }
     } else if (c.a === 'sell') {
       const b = d.blds.find((x) => x.id === c.id); if (!b) return '없음';
-      d.gold += Math.floor(b.paid.g * 0.5 * (b.hp / b.mhp)); b.hp = 0;
+      const k = 0.5 * (b.hp / b.mhp); d.gold += Math.floor(b.paid.g * k); d.mat += Math.floor(b.paid.m * k); b.hp = 0; snd(d, 'coin');
+    } else if (c.a === 'dismiss') { // 고른 유닛을 돌려보내 인구를 비운다(영웅 제외, 비용의 30% 환급)
+      const us = d.units.filter((u) => c.ids.includes(u.id) && u.own === d.i && !u.hero);
+      if (!us.length) return '해산할 유닛이 없습니다(영웅은 해산 불가)';
+      for (const u of us) { d.gold += Math.floor((u.def.g || 0) * 0.3); d.mat += Math.floor((u.def.m || 0) * 0.3); fx(d, 'dust', u.x, u.y, 0.42, { c: 's' }); }
+      d.units = d.units.filter((u) => !us.includes(u)); snd(d, 'coin');
     } else if (c.a === 'move') {
       const us = d.units.filter((u) => c.ids.includes(u.id) && u.own === d.i);
       const n = Math.ceil(Math.sqrt(us.length));
@@ -266,7 +276,7 @@
       G.events.push({ t: 'hero', d: d.i, name: pick[0], grade: gr.id, spr: 'p_' + d.race + '_' + pick[1] });
     } else if (c.a === 'support') {
       const to = G.dungeons[c.to]; if (!to || !to.alive || to === d) return '보낼 수 없는 곳';
-      const us = d.units.filter((u) => c.ids.includes(u.id));
+      const us = d.units.filter((u) => c.ids.includes(u.id) && u.own === d.i);
       if (!us.length) return '선택된 유닛 없음';
       d.units = d.units.filter((u) => !us.includes(u));
       us.forEach((u) => { const h = homeSlot(to, u.def.rng > 30); u.x = C.SUMMON.x; u.y = C.SUMMON.y + 14; u.hx = h.x; u.hy = h.y; u.tg = null; to.units.push(u); });
@@ -288,9 +298,9 @@
     t.hp -= amt; t.hit = 0.12;
     if (t.k === 'd' && t.hp <= 0 && !t.dead) {
       t.dead = true; d.kills++; if (src && src.k === 'u') src.kills++;
-      d.gold += t.def.gold * d.mod.gold * (1 + 0.2 * Math.min(3, d.bc.hoard || 0));
+      const kg = t.def.gold * d.mod.gold * (1 + 0.2 * Math.min(3, d.bc.hoard || 0)); d.gold += kg;
       d.mat += (t.def.mat || 0) + (G.rnd() < 0.1 ? 1 : 0);
-      fx(d, 'corpse', t.x, t.y, 0.5, { s: t.def.spr, face: t.face }); fx(d, 'gold', t.x, t.y - 14, 0.7, { n: Math.round(t.def.gold * d.mod.gold) });
+      fx(d, 'corpse', t.x, t.y, 0.5, { s: t.def.spr, face: t.face }); fx(d, 'gold', t.x, t.y - 14, 0.7, { n: Math.round(kg) });
       snd(d, t.def.spr === 'd_boss' ? 'bossdie' : 'die');
     }
     if (t.k === 'b' && t.def.thorn && src && src.k === 'd') hurt(G, d, null, src, t.def.thorn);
@@ -320,6 +330,7 @@
     if (!wallAt(d, p[0], p[1]) || wallAt(d, u.x, u.y)) { u.x = p[0]; u.y = p[1]; u.mv = true; }
     else if (!wallAt(d, p[0], u.y)) { u.x = p[0]; u.mv = true; } else if (!wallAt(d, u.x, p[1])) { u.y = p[1]; u.mv = true; }
   }
+  const prog = (d, e) => { const cx = tx(e.x), cy = ty(e.y), v = inG(cx, cy) ? d.dist[key(cx, cy)] : -1; return v < 0 ? 999 : v; }; // 심장까지 남은 칸
   const roadAt = (d, x, y) => { const cx = tx(x), cy = ty(y); return inG(cx, cy) ? d.grid[key(cx, cy)] === 1 : cy >= GH && cx === C.ENT_T[0]; };
   function nearest(e, list, maxD) {
     let best = null, bd = maxD * maxD;
@@ -382,8 +393,7 @@
   }
 
   function stepDungeon(G, d) {
-    d.gold += (2 + 1.5 * (d.bc.market || 0)) * DT;
-    d.mat += ((d.race === 'spirit' ? 0.15 : 0) + 0.3 * (d.bc.crystal || 0)) * DT;
+    const inc = DD.income(d); d.gold += inc.g * DT; d.mat += inc.m * DT;
     if (d.heroT > 0) d.heroT -= DT;
     while (d.queue.length && d.queue[0].at <= G.t) {
       const q = d.queue.shift(), def = DD.DEMONS[q.t], mhp = def.hp * q.hp;
@@ -429,8 +439,9 @@
       if (b.def.kind !== 'tower') continue;
       b.cd -= DT;
       if (b.cd <= 0) {
-        let t = null, bd = b.def.rng * b.def.rng;
-        for (const e of d.demons) { if (e.hp <= 0) continue; const q = d2(b, e); if (q < bd && los(d, b, e)) { bd = q; t = e; } }
+        // 사거리 안에서 심장에 가장 가까이 온 악마부터 쏜다(같으면 가까운 쪽)
+        let t = null, best = Infinity; const r2 = b.def.rng * b.def.rng;
+        for (const e of d.demons) { if (e.hp <= 0) continue; const q = d2(b, e); if (q >= r2) continue; const sc = prog(d, e) * 1e5 + q; if (sc < best && los(d, b, e)) { best = sc; t = e; } }
         if (t) { b.cd = b.def.as; strike(G, d, b, t, b.def.atk * (1 + 0.15 * d.up.bld) * d.mod.atk, b.def.splash, d.R.color); } else b.cd = 0.2;
       }
     }

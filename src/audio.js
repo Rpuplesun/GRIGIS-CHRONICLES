@@ -2,32 +2,27 @@
 // 합성음은 자리 표시용이다. 녹음을 구하면 EVENTS의 file만 채우면 바뀐다.
 (function () {
   const DD = window.DD;
+  // f = web/audio/sfx/Sfx_<f>.wav (tools/audio/make_sfx.py: CC0 악기 녹음 + 절차 합성). vary = 재생 속도 흔들림(반복감 줄이기)
+  const R = (f, vol, gap, vary) => ({ file: 'audio/sfx/Sfx_' + f + '.wav', vol, gap, vary: vary || 0 });
   const EVENTS = {
     click: { file: 'audio/sfx/Sfx_Thread_Snip.wav', vol: 0.5, gap: 0.05 },
     build: { file: 'audio/sfx/Sfx_Paper_FlapDrop.wav', vol: 0.9, gap: 0.1 },
-    melee: { gap: 0.07, vol: 0.35, syn: (a) => { a.noise(0.05, 0.5, 1800, 'highpass'); a.tone('square', 190, 80, 0.07, 0.35); } },
-    arrow: { gap: 0.08, vol: 0.3, syn: (a) => a.noise(0.09, 0.5, 2600, 'bandpass', 900) },
-    orb: { gap: 0.08, vol: 0.28, syn: (a) => a.tone('sine', 700, 1300, 0.11, 0.5) },
-    fire: { gap: 0.1, vol: 0.35, syn: (a) => { a.noise(0.18, 0.6, 700, 'lowpass'); a.tone('sawtooth', 160, 60, 0.15, 0.2); } },
-    heal: { gap: 0.2, vol: 0.25, syn: (a) => { a.tone('sine', 880, 880, 0.08, 0.5); a.tone('sine', 1320, 1320, 0.12, 0.4, 0.07); } },
-    die: { gap: 0.06, vol: 0.3, syn: (a) => a.tone('square', 240, 50, 0.16, 0.5) },
-    bossdie: { gap: 1, vol: 0.7, syn: (a) => { a.tone('sawtooth', 200, 30, 0.9, 0.6); a.noise(0.8, 0.6, 400, 'lowpass'); } },
-    udie: { gap: 0.15, vol: 0.4, syn: (a) => a.tone('triangle', 360, 100, 0.26, 0.6) },
-    summon: { gap: 0.08, vol: 0.35, syn: (a) => { a.tone('triangle', 440, 440, 0.07, 0.6); a.tone('triangle', 660, 660, 0.1, 0.6, 0.06); } },
-    hero: { gap: 0.5, vol: 0.55, syn: (a) => [523, 659, 784, 1047, 1319].forEach((f, i) => a.tone('square', f, f, i === 4 ? 0.35 : 0.09, 0.4, i * 0.08)) },
-    up: { gap: 0.1, vol: 0.4, syn: (a) => { a.tone('square', 660, 660, 0.06, 0.4); a.tone('square', 990, 990, 0.12, 0.4, 0.06); } },
-    err: { gap: 0.15, vol: 0.35, syn: (a) => a.tone('square', 150, 130, 0.13, 0.5) },
-    heart: { gap: 0.25, vol: 0.6, syn: (a) => { a.tone('sine', 90, 40, 0.3, 0.9); a.noise(0.08, 0.4, 300, 'lowpass'); } },
-    bfall: { gap: 0.2, vol: 0.55, syn: (a) => { a.noise(0.45, 0.8, 500, 'lowpass'); a.tone('sine', 120, 40, 0.3, 0.5); } },
-    wave: { gap: 1, vol: 0.5, syn: (a) => { a.tone('sawtooth', 110, 104, 0.9, 0.5, 0, 500); a.tone('sawtooth', 165, 156, 0.9, 0.3, 0.05, 700); } },
-    boss: { gap: 1, vol: 0.6, syn: (a) => { a.tone('sawtooth', 73, 65, 1.4, 0.6, 0, 400); a.tone('sawtooth', 110, 98, 1.4, 0.4, 0.1, 500); a.tone('sawtooth', 55, 55, 1.2, 0.4, 0.5, 300); } },
-    fall: { gap: 1, vol: 0.6, syn: (a) => [330, 262, 196, 131].forEach((f, i) => a.tone('triangle', f, f * 0.97, 0.3, 0.6, i * 0.22)) },
-    win: { gap: 1, vol: 0.6, syn: (a) => [523, 659, 784, 659, 784, 1047].forEach((f, i) => a.tone('square', f, f, i === 5 ? 0.6 : 0.13, 0.4, i * 0.13)) },
-    lose: { gap: 1, vol: 0.6, syn: (a) => [392, 370, 330, 262, 196].forEach((f, i) => a.tone('triangle', f, f, i === 4 ? 0.8 : 0.25, 0.6, i * 0.25)) },
+    melee: R('melee', 0.45, 0.07, 0.08), arrow: R('arrow', 0.25, 0.08, 0.1), fire: R('fire', 0.22, 0.1, 0.08),
+    orb: { gap: 0.08, vol: 0.28, syn: (a) => a.tone('sine', 700, 1300, 0.11, 0.5) }, // 마법 구슬은 합성음이 더 어울려 남긴다
+    heal: R('heal', 0.35, 0.2, 0.05), die: R('die', 0.32, 0.06, 0.1), bossdie: R('bossdie', 0.75, 1), udie: R('udie', 0.4, 0.15, 0.05),
+    summon: R('summon', 0.3, 0.08, 0.03), hero: R('hero', 0.7, 0.5), up: R('up', 0.45, 0.1), err: R('err', 0.5, 0.15),
+    heart: R('heart', 0.55, 0.25, 0.04), bfall: R('bfall', 0.7, 0.2, 0.05), wave: R('wave', 0.5, 1), boss: R('boss', 0.7, 1), fall: R('fall', 0.7, 1),
+    // 개선과 함께 생긴 순간들
+    coin: R('coin', 0.5, 0.15, 0.04), clear: R('clear', 0.5, 1), ready: R('ready', 0.45, 1), alert: R('alert', 0.55, 1), alarm: R('alarm', 0.7, 2), edit: R('edit', 0.4, 0.15),
   };
   const AMB = { water: 'audio/ambience/Amb_Ch1Corridor_RainLoop.ogg' };
   let ac = null, master = null, vol = 0.6, lastAt = {}, ambEl = null, ambNode = null, nbuf = null;
-  const pool = {};
+  const pool = {}, sbuf = {};
+  // 녹음 효과음은 디코딩해 두고 Web Audio로 낸다(겹쳐도 끊기지 않고 지연이 적다). fetch가 안 되는 file://에서는 <audio> 풀
+  function sload(id) {
+    const ev = EVENTS[id]; if (sbuf[id] !== undefined || !ac || location.protocol === 'file:') return;
+    sbuf[id] = null; fetch(ev.file).then((r) => r.arrayBuffer()).then((b) => new Promise((ok, no) => ac.decodeAudioData(b, ok, no))).then((x) => { sbuf[id] = x; }).catch(() => {});
+  }
   function ctx() {
     if (!ac) {
       const A = window.AudioContext || window.webkitAudioContext; if (!A) return null;
@@ -57,10 +52,13 @@
     EVENTS,
     get vol() { return vol; },
     setVol(v) { vol = v; if (master) master.gain.value = v; if (ambEl) ambEl.volume = Math.min(1, v * 0.7); if (ambNode) ambNode.g.gain.value = 0.05; },
+    preload() { if (ctx()) for (const id in EVENTS) if (EVENTS[id].file) sload(id); },
     play(id) {
       const ev = EVENTS[id]; if (!ev || vol <= 0) return;
       const now = performance.now() / 1000; if (now - (lastAt[id] || 0) < ev.gap) return; lastAt[id] = now;
-      if (ev.file) { // 녹음 파일: file:// 에서도 되도록 <audio> 풀을 쓴다
+      if (ev.file && ctx()) { sload(id); const bf = sbuf[id];
+        if (bf) { const src = ac.createBufferSource(), g = ac.createGain(); src.buffer = bf; src.playbackRate.value = 1 + (Math.random() * 2 - 1) * (ev.vary || 0); g.gain.value = ev.vol; src.connect(g); g.connect(master); src.start(); return; } }
+      if (ev.file) { // 녹음 파일: 버퍼가 아직 없거나 file:// 이면 <audio> 풀
         const p = (pool[id] = pool[id] || { i: 0, els: [0, 1, 2].map(() => new Audio(ev.file)) });
         const el = p.els[p.i++ % 3]; el.volume = Math.min(1, vol * ev.vol); try { el.currentTime = 0; el.play().catch(() => {}); } catch (e) { /* 무시 */ }
         return;
@@ -77,4 +75,53 @@
     },
     stopAmbience() { if (ambEl) { ambEl.pause(); ambEl = null; } if (ambNode) { try { ambNode.s.stop(); } catch (e) { /* 무시 */ } ambNode = null; } },
   };
+
+  // ── 배경음악: web/audio/bgm/<id>.ogg (tools/music/compose.py로 만든 곡) ──
+  // Web Audio 버퍼로 이음매 없이 반복하고 곡 사이를 겹쳐 넘긴다. 파일을 fetch할 수 없는 곳(file://)에서는 <audio>로 대신한다.
+  // 맵 곡에서 군주 곡으로 넘어갔다 돌아오면, 맵 곡은 멈췄던 자리부터 다시 흐른다.
+  const BGM = { title: 1, menu: 1, cave: 1, fire: 1, wild: 1, forest: 1, water: 1, abyss: 1, boss: 1, victory: 0, defeat: 0 }; // 1 = 반복
+  let mVol = 0.5, mGain = null, cur = null; const bufs = {}, resumeAt = {};
+  const url = (id) => 'audio/bgm/' + id + '.ogg';
+  function mctx() { const a = ctx(); if (a && !mGain) { mGain = a.createGain(); mGain.gain.value = mVol; mGain.connect(a.destination); } return a; }
+  function load(id) {
+    if (!bufs[id]) bufs[id] = fetch(url(id)).then((r) => { if (!r.ok) throw 0; return r.arrayBuffer(); }).then((b) => new Promise((ok, no) => ac.decodeAudioData(b, ok, no))).catch(() => null);
+    return bufs[id];
+  }
+  function fadeOut(c, sec) {
+    if (!c) return; c.dead = true;
+    if (c.src) { const t = ac.currentTime; if (c.loop) resumeAt[c.id] = (t - c.t0) % c.src.buffer.duration;
+      c.g.gain.cancelScheduledValues(t); c.g.gain.setValueAtTime(c.g.gain.value, t); c.g.gain.linearRampToValueAtTime(0, t + sec); c.src.stop(t + sec + 0.05); }
+    if (c.el) { const el = c.el; if (c.loop) resumeAt[c.id] = el.currentTime; let v = el.volume; const step = v / Math.max(1, sec * 20);
+      const iv = setInterval(() => { v -= step; if (v <= 0) { clearInterval(iv); el.pause(); } else el.volume = v; }, 50); }
+  }
+  function startEl(c, sec, off) {
+    const el = new Audio(url(c.id)); el.loop = c.loop; el.volume = 0; c.el = el;
+    try { if (off) el.currentTime = off; } catch (e) { /* 무시 */ }
+    el.play().catch(() => { c.blocked = true; }); // 첫 입력 전에는 막힌다 → unlock에서 다시
+    let v = 0; const iv = setInterval(() => { if (c.dead) return clearInterval(iv); v = Math.min(1, v + 1 / Math.max(1, sec * 20)); el.volume = v * mVol; if (v >= 1) clearInterval(iv); }, 50);
+  }
+  DD.Music = {
+    get vol() { return mVol; },
+    get id() { return cur && cur.id; },
+    setVol(v) { mVol = v; if (mGain) mGain.gain.value = v; if (cur && cur.el) cur.el.volume = v; },
+    // play(id, {fade, resume}): 같은 곡이면 그대로 둔다. resume이면 지난번 멈춘 자리부터
+    play(id, o) {
+      o = o || {}; if (!(id in BGM)) return; if (cur && cur.id === id && !cur.dead) return;
+      const sec = o.fade === undefined ? 1.2 : o.fade, c = { id, loop: !!BGM[id] }, off = o.resume ? resumeAt[id] || 0 : 0;
+      fadeOut(cur, sec); cur = c;
+      if (!mctx() || location.protocol === 'file:') return startEl(c, sec, off);
+      load(id).then((buf) => {
+        if (cur !== c) return;
+        if (!buf) return startEl(c, sec, off);
+        const src = ac.createBufferSource(), g = ac.createGain(), t = ac.currentTime;
+        src.buffer = buf; src.loop = c.loop; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + sec);
+        src.connect(g); g.connect(mGain); src.start(t, off % buf.duration); c.src = src; c.g = g; c.t0 = t - (off % buf.duration);
+      });
+    },
+    stop(sec) { fadeOut(cur, sec === undefined ? 1 : sec); cur = null; },
+    preload(ids) { if (mctx() && location.protocol !== 'file:') ids.forEach(load); },
+  };
+  // 브라우저는 첫 클릭·키 입력 전에는 소리를 막는다. 첫 입력에서 풀고, 막혀 있던 곡을 다시 튼다.
+  const unlock = () => { if (ac && ac.state === 'suspended') ac.resume(); else mctx(); if (cur && cur.el && cur.blocked) { cur.blocked = false; cur.el.play().catch(() => {}); } };
+  window.addEventListener('pointerdown', unlock, true); window.addEventListener('keydown', unlock, true);
 })();
