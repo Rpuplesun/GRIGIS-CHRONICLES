@@ -1,5 +1,5 @@
 // 프롤로그 그림: 코드로 그린 그리기스 대륙(시드 고정). 320×160 논리 픽셀.
-// web/art/prologue_<land|gate|invade|flags>.png 가 있으면 그 그림이 대신 쓰인다(main.js showStory).
+// web/art/prologue_<land|gate|invade|flags>.webp 가 있으면 그 그림이 대신 쓰인다(main.js showStory).
 (function () {
   const DD = window.DD, P = DD.PAL, W = 320, H = 160, CX = 160, CY = 80;
   const hash = (x, y) => { let n = (x * 374761393 + y * 668265263) | 0; n = (n ^ (n >>> 13)) * 1274126177; return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };

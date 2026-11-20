@@ -81,7 +81,7 @@
 
   // ── 어인족 ──
   const ME = { A: 'b2', B: 'b3', C: 'b4', D: 'o2', E: 'b1' };
-  add('u_merfolk_1', '멀록', { A: 'n1', B: 'n2', C: 'n3', D: 'o2', E: 'g1' }, [
+  add('u_merfolk_1', '갈퀴병', { A: 'n1', B: 'n2', C: 'n3', D: 'o2', E: 'g1' }, [
     '.....o......', '....oDo.....', '...oDDooo...', '..oAAAAAAo..', '.oAWWAAWWAo.', '.oAWeAAWeAo.',
     '.oAAAAAAAAo.', '..oAEEEEAoM.', '..oBBBBBBSM.', '.oBoBBBBo.M.', '.oo.oCoCo...', '....oo.oo...']);
   add('u_merfolk_2', '조수 주술사', { A: 't1', B: 'p2', C: 'p3', D: 'o2', E: 'g1', F: 'b1' }, [

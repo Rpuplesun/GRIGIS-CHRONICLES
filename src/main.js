@@ -95,7 +95,7 @@
   function drawDlg() {
     const el = $('#dialog'); el.hidden = !dlg; $('#info').style.visibility = dlg ? 'hidden' : ''; if (!dlg) return;
     const a = DD.ADVISORS[dlg.adv];
-    el.innerHTML = `<img src="art/adv_${dlg.adv}_${(dlg.i % 2) + 1}.png" alt=""><div class="box"><b>${a.name}</b><small>${a.title}</small><p>${dlg.lines[dlg.i]}</p><span class="next">${dlg.i + 1}/${dlg.lines.length} · 클릭 또는 Space ▸</span>${G && G.tutorial ? '<button class="skiptut" data-a="skiptut:1">안내 끄기</button>' : ''}</div>`;
+    el.innerHTML = `<img src="art/adv_${dlg.adv}_${(dlg.i % 2) + 1}.webp" alt=""><div class="box"><b>${a.name}</b><small>${a.title}</small><p>${dlg.lines[dlg.i]}</p><span class="next">${dlg.i + 1}/${dlg.lines.length} · 클릭 또는 Space ▸</span>${G && G.tutorial ? '<button class="skiptut" data-a="skiptut:1">안내 끄기</button>' : ''}</div>`;
   }
   function advance() { if (!dlg) return; DD.Audio.play('click'); if (++dlg.i >= dlg.lines.length) { const f = dlg.onEnd; dlg = null; drawDlg(); if (f) f(); } else drawDlg(); }
   $('#dialog').addEventListener('click', (ev) => { if (!ev.target.closest('[data-a]')) advance(); });
@@ -127,13 +127,13 @@
   document.addEventListener('click', (ev) => { const b = ev.target.closest('[data-lang]'); if (!b) return; DD.Audio.play('click'); DD.setLang(b.dataset.lang); document.querySelectorAll('[data-lang]').forEach((x) => x.classList.toggle('on', x.dataset.lang === DD.lang)); });
   function showTitle() {
     DD.Music.play('title'); DD.Music.preload(['menu']);
-    $('#title').hidden = false;
+    $('#loading').hidden = true; $('#title').hidden = false;
     $('#title').innerHTML = `<div><h1>${DD.TITLE.name}</h1><div class="en">${DD.TITLE.ko}</div><p>${DD.TITLE.sub}${DD.DEMO ? ' · 데모' : ''}</p><button class="start" id="begin">게임 시작</button><div class="langs">${langRow()}</div></div>`;
     $('#begin').onclick = () => { DD.Audio.play('click'); $('#title').hidden = true; if (!save.tutorialDone) showStory(() => startGame(true)); else showMenu(); };
   }
   function showStory(onEnd) {
     let i = 0, t0 = 0, raf = 0; const el = $('#story'); $('#menu').hidden = true; el.hidden = false; DD.Music.play('title');
-    const src = (k) => (k === 'capsule' ? 'art/capsule.png' : DD.PROLOGUE_ART[k] ? `art/prologue_${k}.png` : null);
+    const src = (k) => (k === 'capsule' ? 'art/capsule.webp' : DD.PROLOGUE_ART[k] ? `art/prologue_${k}.webp` : null);
     DD.STORY.forEach((sl) => { const u = src(sl.art); if (u) new Image().src = u; }); // 넘길 때 빈 화면이 보이지 않게 미리 받는다
     const draw = () => {
       const sl = DD.STORY[i], u = src(sl.art); cancelAnimationFrame(raf);
@@ -460,6 +460,8 @@
     $('#settings').innerHTML = `<div class="box"><h2>설정</h2>${row('bgm', '배경음악')}${row('vol', '효과음')}
       <label class="vol"><span>피격 번쩍임</span><button class="${o.flash ? 'on' : ''}" data-o="flash">${o.flash ? '켜짐' : '꺼짐'}</button></label>
       <div class="vol"><span>언어</span><span class="langs">${langRow()}</span></div>
+      <div class="vol"><span>화면</span><span class="langs"><button class="${document.fullscreenElement ? 'on' : ''}" data-o="fs">전체 화면</button></span></div>
+      <div class="vol"><span>저장</span><span class="langs"><button data-o="reset">처음부터 다시</button></span></div>
       <button class="close" data-o="close">닫기 · Esc</button></div>`;
   }
   function openSettings() {
@@ -480,6 +482,8 @@
     DD.Audio.play('click');
     if (b.dataset.o === 'flash') { save.opt.flash = !save.opt.flash; if (ui) ui.flash = save.opt.flash; persist(); drawSettings(); }
     else if (b.dataset.o === 'close') closeSettings();
+    else if (b.dataset.o === 'fs') { const el = document.documentElement; (document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen ? el.requestFullscreen() : Promise.reject()).then(drawSettings, () => {}); }
+    else if (b.dataset.o === 'reset') { if (confirm(DD.tr('모든 진행을 지우고 처음부터 다시 할까요?'))) { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* 무시 */ } location.reload(); } }
   });
   DD.debug = { get G() { return G; }, menu, startGame, save, get script() { return script; }, get dlg() { return dlg; } };
   resize();

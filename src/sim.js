@@ -241,6 +241,7 @@
     } else if (c.a === 'sell') {
       const b = d.blds.find((x) => x.id === c.id); if (!b) return '없음';
       const k = 0.5 * (b.hp / b.mhp); d.gold += Math.floor(b.paid.g * k); d.mat += Math.floor(b.paid.m * k); b.hp = 0; snd(d, 'coin');
+      delete d.occ[key(b.cx, b.cy)]; d.blds = d.blds.filter((x) => x !== b); recount(d); fx(d, 'dust', b.x, b.y + 6, 0.42, { c: 'e' }); // 멈춘 동안에도 바로 사라지게
     } else if (c.a === 'dismiss') { // 고른 유닛을 돌려보내 인구를 비운다(영웅 제외, 비용의 30% 환급)
       const us = d.units.filter((u) => c.ids.includes(u.id) && u.own === d.i && !u.hero);
       if (!us.length) return '해산할 유닛이 없습니다(영웅은 해산 불가)';
@@ -291,7 +292,7 @@
     let a = u.def.atk * o.mod.atk * (1 + 0.1 * o.up.atk);
     if (o.bc.forge && o.race === 'human') a *= 1.15;
     if (o.race === 'dragon') a *= 1 + Math.min(0.5, 0.02 * u.kills);
-    if (o.race === 'beast') a *= 1 + Math.min(0.3, 0.01 * d.units.length);
+    if (o.race === 'beast') a *= 1 + Math.min(0.4, 0.015 * d.units.length);
     return a;
   }
   function hurt(G, d, src, t, amt) {
@@ -324,8 +325,35 @@
     return [e.x + (dx / l) * s, e.y + (dy / l) * s];
   }
   const wallAt = (d, x, y) => { const cx = tx(x), cy = ty(y); return inG(cx, cy) && d.grid[key(cx, cy)] === 2; };
-  function moveUnit(d, u, x, y, spd) { // 유닛은 자유롭게 걷되 벽 타일은 넘지 못한다
-    const p = step2(u, x, y, spd); u.mv = false;
+  function clearLine(d, ax, ay, bx, by) { // 두 점 사이에 벽 타일이 없는가
+    const dx = bx - ax, dy = by - ay, n = Math.ceil(Math.hypot(dx, dy) / 6);
+    for (let i = 1; i <= n; i++) if (wallAt(d, ax + (dx * i) / n, ay + (dy * i) / n)) return false;
+    return true;
+  }
+  function navTarget(d, u, x, y) { // 벽에 막히면 벽이 아닌 칸을 따라 돌아가는 다음 지점을 준다. 길이 없으면 null
+    if (!d.walls || clearLine(d, u.x, u.y, x, y)) { u.nav = null; return [x, y]; }
+    const gx = tx(x), gy = ty(y), k = d.ver + ':' + gx + ',' + gy;
+    if (!u.nav || u.navK !== k) {
+      u.navK = k; u.nav = [];
+      const sx = tx(u.x), sy = ty(u.y), from = new Int16Array(GW * GH).fill(-1), q = [[sx, sy]];
+      if (inG(sx, sy) && inG(gx, gy) && d.grid[key(gx, gy)] !== 2) {
+        from[key(sx, sy)] = key(sx, sy);
+        for (let i = 0; i < q.length; i++) {
+          const [cx, cy] = q[i]; if (cx === gx && cy === gy) break;
+          for (const [dx, dy] of NB) { const ax = cx + dx, ay = cy + dy; if (inG(ax, ay) && d.grid[key(ax, ay)] !== 2 && from[key(ax, ay)] < 0) { from[key(ax, ay)] = key(cx, cy); q.push([ax, ay]); } }
+        }
+        if (from[key(gx, gy)] >= 0) for (let c = key(gx, gy); c !== key(sx, sy); c = from[c]) u.nav.unshift([c % GW, (c / GW) | 0]);
+      }
+    }
+    while (u.nav.length > 1 && clearLine(d, u.x, u.y, tcx(u.nav[1][0]), tcy(u.nav[1][1]))) u.nav.shift(); // 곧장 갈 수 있는 지점까지 건너뛴다
+    if (!u.nav.length) return null;
+    if (u.nav.length > 1 && Math.hypot(tcx(u.nav[0][0]) - u.x, tcy(u.nav[0][1]) - u.y) < 3) u.nav.shift();
+    return u.nav.length === 1 && clearLine(d, u.x, u.y, x, y) ? [x, y] : [tcx(u.nav[0][0]), tcy(u.nav[0][1])];
+  }
+  function moveUnit(d, u, x, y, spd) { // 유닛은 자유롭게 걷되 벽 타일은 넘지 못하고, 막히면 돌아간다
+    const tg = navTarget(d, u, x, y); u.mv = false;
+    if (!tg) return;
+    const p = step2(u, tg[0], tg[1], spd);
     if (!p) return;
     if (!wallAt(d, p[0], p[1]) || wallAt(d, u.x, u.y)) { u.x = p[0]; u.y = p[1]; u.mv = true; }
     else if (!wallAt(d, p[0], u.y)) { u.x = p[0]; u.mv = true; } else if (!wallAt(d, u.x, p[1])) { u.y = p[1]; u.mv = true; }

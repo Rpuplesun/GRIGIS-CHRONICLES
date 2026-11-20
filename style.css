@@ -24,7 +24,7 @@ small{display:block;color:var(--dim);font-size:22px}
 b{font-weight:700}
 kbd{font:inherit;font-size:22px;color:var(--dim)}
 /* ── 메뉴 ── */
-#menu{position:absolute;inset:0;padding:70px 110px;background:linear-gradient(#0d0912cc,#0d0912 62%),url(art/capsule.png) right top/1500px auto no-repeat;image-rendering:pixelated;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto 1fr auto;gap:26px 60px}
+#menu{position:absolute;inset:0;padding:70px 110px;background:linear-gradient(#0d0912cc,#0d0912 62%),url(art/capsule.webp) right top/1500px auto no-repeat;image-rendering:pixelated;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto 1fr auto;gap:26px 60px}
 #menu header{grid-column:1/3}
 #menu h1{font:700 88px/1 "Galmuri11";letter-spacing:6px;margin:0;color:var(--gold);text-shadow:0 -4px 0 var(--edge),4px 0 0 var(--edge),-4px 0 0 var(--edge),0 4px 0 var(--edge),4px 8px 0 var(--blood),4px 12px 0 var(--edge)}
 #menu .sub{color:var(--dim);margin:18px 0 0}
@@ -92,7 +92,7 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #result h1{font:132px/1 "Galmuri14";margin:0 0 30px;letter-spacing:12px;text-shadow:8px 8px 0 var(--edge)}#result h1.good{color:var(--gold)}#result h1.bad{color:var(--bad)}
 #result button{margin-top:30px;font-size:44px;padding:16px 60px 22px}
 /* ── 타이틀·이야기·참모 ── */
-#title{position:absolute;inset:0;background:linear-gradient(#0d091233,#0d0912 92%),url(art/capsule.png) center top/2560px auto no-repeat;image-rendering:pixelated;display:flex;align-items:flex-end;justify-content:center;text-align:center;padding-bottom:110px}
+#title{position:absolute;inset:0;background:linear-gradient(#0d091233,#0d0912 92%),url(art/capsule.webp) center top/2560px auto no-repeat;image-rendering:pixelated;display:flex;align-items:flex-end;justify-content:center;text-align:center;padding-bottom:110px}
 #title>div{width:100%;padding:50px 0 0;background:linear-gradient(transparent,#07050af2 22%,#07050af2)}
 #title h1{font:700 198px/1 "Galmuri11";letter-spacing:10px;margin:0;color:var(--gold);text-shadow:0 -8px 0 var(--edge),8px 0 0 var(--edge),-8px 0 0 var(--edge),0 8px 0 var(--edge),8px 16px 0 var(--blood),8px 24px 0 var(--edge)}
 #title .en{font:44px/1 "Galmuri14";letter-spacing:22px;color:var(--acc);margin:44px 0 0}
@@ -160,3 +160,4 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 :root:not([lang=ko]) #title h1{font-size:150px;letter-spacing:4px}:root:not([lang=ko]) #menu h1{letter-spacing:2px}
 :root[lang=en] .slot .cost.bad{font-size:18px}
 #top .wave{gap:10px}
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:44px/1 "Galmuri14";color:var(--dim);letter-spacing:6px}

@@ -14,7 +14,7 @@
     merfolk: { name: '마레아', title: '어인족 조류술사' },
   };
 
-  // 프롤로그. 한 장에 그림 하나(web/art/prologue_<art>.png). false면 코드로 그린 지도가 나온다.
+  // 프롤로그. 한 장에 그림 하나(web/art/prologue_<art>.webp). false면 코드로 그린 지도가 나온다.
   DD.PROLOGUE_ART = { land: true, gate: true, invade: true, flags: true };
   DD.STORY = [
     { art: 'land', lines: ['그리기스.', '다섯 종족이 평화롭게 살던 대륙.'] },
