@@ -1,6 +1,10 @@
 @font-face{font-family:"Galmuri11";src:url(fonts/Galmuri11.woff2) format("woff2");font-weight:400}
 @font-face{font-family:"Galmuri11";src:url(fonts/Galmuri11-Bold.woff2) format("woff2");font-weight:700}
 @font-face{font-family:"Galmuri14";src:url(fonts/Galmuri14.woff2) format("woff2")}
+/* 일본어 글자는 DotGothic16으로. 같은 글꼴 이름에 뒤에 선언한 것이 그 범위에서 먼저 쓰인다 */
+@font-face{font-family:"Galmuri11";src:url(fonts/DotGothic16-ja.woff2) format("woff2");font-weight:400;unicode-range:U+2E80-9FFF,U+FF00-FFEF}
+@font-face{font-family:"Galmuri11";src:url(fonts/DotGothic16-ja.woff2) format("woff2");font-weight:700;unicode-range:U+2E80-9FFF,U+FF00-FFEF}
+@font-face{font-family:"Galmuri14";src:url(fonts/DotGothic16-ja.woff2) format("woff2");unicode-range:U+2E80-9FFF,U+FF00-FFEF}
 :root{--bg:#0d0912;--pn:#1c1526;--pn2:#2a2037;--pn3:#3a2c4b;--ln:#56456c;--edge:#07050a;--tx:#f1e7d6;--dim:#a094b0;--gold:#ffd66b;--acc:#f2a93a;--mat:#8fe8cf;--good:#b9e36b;--bad:#ff7a6b;--blood:#a8243a;
   --frame:inset 0 0 0 4px var(--ln),inset 0 0 0 8px var(--edge);--btn:inset 0 4px 0 #5d4a76,inset 0 -6px 0 #1d1528}
 *{box-sizing:border-box}
@@ -63,7 +67,7 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #info{position:absolute;left:112px;right:112px;bottom:10px;height:76px;padding:14px 24px;background:#1c1526e6;box-shadow:var(--frame);font-size:28px;white-space:nowrap;overflow:hidden}
 #info button{padding:2px 16px 6px;margin-left:14px;font-size:26px}
 #side{width:352px;height:1440px;background:var(--pn);box-shadow:inset 8px 0 0 var(--edge),inset 12px 0 0 var(--ln);padding:14px 10px 14px 22px;display:flex;flex-direction:column;gap:10px}
-#top .stage{color:var(--dim);font-size:22px;text-align:center}
+#top .stage{color:var(--dim);font-size:22px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#top .wave{white-space:nowrap;overflow:hidden}
 #top .timer{font:77px/1 "Galmuri14";text-align:center;color:var(--tx);letter-spacing:4px}
 #top .wave{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px}#top .wave b{font:44px/1 "Galmuri14";color:var(--acc)}#top .wave small{font-size:22px}
 .nextw{display:flex;gap:10px;align-items:flex-end;font-size:22px;color:var(--dim);height:40px;overflow:hidden}.nextw img{margin-right:2px;max-height:40px;width:auto!important}
@@ -113,7 +117,7 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #game.guide .slot.spot{filter:none;z-index:2;animation:spot .7s steps(2) infinite alternate}
 @keyframes spot{from{box-shadow:0 0 0 6px var(--gold),0 0 0 10px var(--edge)}to{box-shadow:0 0 0 12px var(--gold),0 0 0 16px var(--edge)}}
 #game.guide #goal{z-index:3;animation:spot .7s steps(2) infinite alternate}
-.call{width:100%;margin:2px 0 6px;padding:4px 0 8px;font-size:22px;background:#5a4320;color:var(--gold)}.call kbd{background:var(--gold);color:var(--edge);font:700 20px/1 "Galmuri11";padding:2px 6px 4px}
+.call{width:100%;height:44px;margin:2px 0 6px;padding:4px 0 8px;font-size:22px;background:#5a4320;color:var(--gold);white-space:nowrap;overflow:hidden}.call:disabled{background:var(--pn2);color:var(--dim);opacity:.6}.call:disabled kbd{background:var(--dim)}.call kbd{background:var(--gold);color:var(--edge);font:700 20px/1 "Galmuri11";padding:2px 6px 4px}
 .skiptut{position:absolute;left:70px;bottom:20px;font-size:24px;padding:4px 16px 8px;color:var(--dim)}
 #goal{position:absolute;left:120px;top:110px;background:#1c1526e6;box-shadow:inset 0 0 0 4px var(--gold),inset 0 0 0 8px var(--edge);padding:14px 30px 18px;font-size:33px;color:var(--gold)}
 #goal small{display:inline;margin-right:16px;color:var(--dim)}
@@ -148,3 +152,11 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #settings input[type=range]{-webkit-appearance:none;appearance:none;height:28px;background:var(--edge);box-shadow:inset 0 0 0 4px var(--ln);margin:0}
 #settings input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:36px;height:56px;background:var(--gold);box-shadow:inset 0 -6px 0 #b8892a,0 0 0 4px var(--edge)}
 #settings input[type=range]::-moz-range-thumb{width:36px;height:56px;border:0;border-radius:0;background:var(--gold);box-shadow:inset 0 -6px 0 #b8892a,0 0 0 4px var(--edge)}
+
+/* 언어 */
+.langs{display:flex;gap:10px;justify-content:center}#title .langs{margin-top:34px}#title .langs button{font-size:28px;padding:6px 22px 10px}
+#settings .langs{justify-content:flex-start;grid-column:2/4}#settings .langs button{min-width:0;font-size:33px;padding:8px 22px 12px}
+:root[lang=en] #title .en{display:none}
+:root:not([lang=ko]) #title h1{font-size:150px;letter-spacing:4px}:root:not([lang=ko]) #menu h1{letter-spacing:2px}
+:root[lang=en] .slot .cost.bad{font-size:18px}
+#top .wave{gap:10px}

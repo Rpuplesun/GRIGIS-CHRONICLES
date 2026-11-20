@@ -122,10 +122,13 @@
 
   // ───────── 타이틀·이야기 ─────────
   function showMenu() { $('#menu').hidden = false; drawMenu(); DD.Music.play('menu'); }
+  // 언어 버튼(타이틀·설정). 누르면 화면의 글이 그 자리에서 바뀐다
+  const langRow = () => Object.keys(DD.LANGS).map((l) => `<button class="${DD.lang === l ? 'on' : ''}" data-lang="${l}" data-no-i18n>${DD.LANGS[l]}</button>`).join('');
+  document.addEventListener('click', (ev) => { const b = ev.target.closest('[data-lang]'); if (!b) return; DD.Audio.play('click'); DD.setLang(b.dataset.lang); document.querySelectorAll('[data-lang]').forEach((x) => x.classList.toggle('on', x.dataset.lang === DD.lang)); });
   function showTitle() {
     DD.Music.play('title'); DD.Music.preload(['menu']);
     $('#title').hidden = false;
-    $('#title').innerHTML = `<div><h1>${DD.TITLE.name}</h1><div class="en">${DD.TITLE.ko}</div><p>${DD.TITLE.sub}${DD.DEMO ? ' · 데모' : ''}</p><button class="start" id="begin">게임 시작</button></div>`;
+    $('#title').innerHTML = `<div><h1>${DD.TITLE.name}</h1><div class="en">${DD.TITLE.ko}</div><p>${DD.TITLE.sub}${DD.DEMO ? ' · 데모' : ''}</p><button class="start" id="begin">게임 시작</button><div class="langs">${langRow()}</div></div>`;
     $('#begin').onclick = () => { DD.Audio.play('click'); $('#title').hidden = true; if (!save.tutorialDone) showStory(() => startGame(true)); else showMenu(); };
   }
   function showStory(onEnd) {
@@ -167,7 +170,7 @@
     const d = me(), R = d.R, own = d.units.filter((u) => u.own === d.i).length, hp = d.heart.hp / d.heart.mhp;
     const next = G.nextWaveIn(), span = G.wave === 0 ? C.FIRST_WAVE : C.WAVE_T;
     set('#top', `<div class="stage">${G.st.name} · ${R.name}</div><div class="timer">${mmss(G.endT - G.t)}</div>
-      <div class="wave"><b>WAVE ${G.wave}<small style="display:inline">/${C.WAVES}</small></b><small>다음 ${mmss(next)}</small></div>${DD.canCall(G) ? `<button class="call" data-a="callwave:1"><kbd>N</kbd> ${G.wave >= C.WAVES ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'} <span class="gold">+●${DD.callBonus(G)}</span></button>` : ''}
+      <div class="wave"><b>WAVE ${G.wave}<small style="display:inline">/${C.WAVES}</small></b><small>다음 ${mmss(next)}</small></div>${DD.canCall(G) ? `<button class="call" data-a="callwave:1"><kbd>N</kbd> ${G.wave >= C.WAVES ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'} <span class="gold">+●${DD.callBonus(G)}</span></button>` : `<button class="call" disabled><kbd>N</kbd> ${G.wave >= C.WAVES ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'}</button>`}
       <div class="nextw">${nextWave()}</div>
       <div class="prog"><i style="width:${Math.round(Math.max(0, 1 - next / span) * 50) * 2}%"></i></div>
       <div class="res"><span class="gold">● ${Math.floor(d.gold)}</span><span class="mat">◆ ${Math.floor(d.mat)}</span><span class="pop">인구 ${own}/${C.POP}</span></div>
@@ -236,8 +239,9 @@
     return b ? { k: 'b', id: b.id } : null;
   }
 
-  $('#game').addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-a]'); if (!b || !G) return;
+  $('#game').addEventListener('pointerdown', (ev) => { // click은 패널이 다시 그려지면 사라진다(누른 버튼이 교체됨) → 누르는 순간 처리
+    if (ev.button !== 0) return;
+    const b = ev.target.closest('[data-a]'); if (!b || !G || b.disabled) return;
     if (b.dataset.tip) ui.tip = b.dataset.tip; // 터치 화면에서는 누르면 설명이 뜬다
     b.blur(); // 눌린 버튼에 초점이 남으면 Space·Enter가 그 버튼을 다시 누른다
     const [k, v] = b.dataset.a.split(':');
@@ -245,7 +249,7 @@
     if (k === 'speed') setSpeed(+v);
     else if (k === 'settings') openSettings();
     else if (k === 'pause') togglePause();
-    else if (k === 'quit') { if (confirm('포기하고 나갈까요?')) { G.over = true; G.win = false; G.quit = true; } }
+    else if (k === 'quit') { if (confirm(DD.tr('포기하고 나갈까요?'))) { G.over = true; G.win = false; G.quit = true; } }
     else if (k === 'world') setWorld(!ui.world);
     else if (k === 'callwave') callWave();
     else if (k === 'skiptut') { script = { steps: [], i: 0, goal: null, el: 0 }; dlg = null; drawDlg(); setGoal(''); }
@@ -455,6 +459,7 @@
     const o = save.opt, row = (k, name) => `<label class="vol"><span>${name}</span><input type="range" min="0" max="100" step="5" value="${Math.round(o[k] * 100)}" data-o="${k}"><b>${Math.round(o[k] * 100)}</b></label>`;
     $('#settings').innerHTML = `<div class="box"><h2>설정</h2>${row('bgm', '배경음악')}${row('vol', '효과음')}
       <label class="vol"><span>피격 번쩍임</span><button class="${o.flash ? 'on' : ''}" data-o="flash">${o.flash ? '켜짐' : '꺼짐'}</button></label>
+      <div class="vol"><span>언어</span><span class="langs">${langRow()}</span></div>
       <button class="close" data-o="close">닫기 · Esc</button></div>`;
   }
   function openSettings() {
