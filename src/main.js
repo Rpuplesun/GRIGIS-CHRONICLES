@@ -194,7 +194,7 @@
     const ac = DD.upCost(d, 'altar'), ap = DD.ALTAR[d.altarLv - 1].p;
     const ups = ['atk', 'hp', 'bld'].map((k) => { const u = DD.UPGRADES[k], c = DD.upCost(d, k); return slot('up:' + k, `<b class="glyph">${{ atk: '⚔', hp: '♥', bld: '▲' }[k]}<sub>${d.up[k]}</sub></b><em>${u.name.replace(' 강화', '')}</em>${c ? cost(c, d) : '<span class="cost">최대</span>'}`, `<b>${u.name} Lv.${d.up[k]}</b>${u.desc}`, { dim: !c || no(c) }); }).join('')
       + slot('up:altar', `<b class="glyph">★<sub>${d.altarLv}</sub></b><em>제단</em>${ac ? cost(ac, d) : '<span class="cost">최대</span>'}`, `<b>영웅 제단 Lv.${d.altarLv}</b>R ${pct(ap[0])}% · SR ${pct(ap[1])}% · SSR ${pct(ap[2])}%<small>강화하면 등급↑ 대기↓</small>`, { dim: !ac || no(ac) });
-    set('#bar', grp('유닛 소환', units) + grp('건물 · 바닥에', blds) + grp('길 · 방벽은 길 위에', maze) + grp('강화', ups));
+    set('#bar', grp('유닛 소환', units) + grp('건물 · 바닥에', blds) + grp('길 · 방벽은 길 위에', maze) + (ui.edit ? '' : grp('강화', ups))); // 편집 중에는 도구가 한 줄 더 생기므로 강화 묶음을 접는다
     const hl = spotOf(), gm = $('#game'); gm.classList.toggle('guide', !!hl); gm.classList.toggle('dimfield', !!hl && ui.build < 0 && !ui.edit); // 튜토리얼: 목표 칸만 밝게
     set('#tip', ui.tip || inspect() || '<small>칸이나 전장의 유닛·악마·건물에 마우스를 올리면 설명</small>');
     const vd = G.dungeons[ui.view], boss = !ui.world && vd.demons.find((e) => e.def.spr === 'd_boss' && e.hp > 0);

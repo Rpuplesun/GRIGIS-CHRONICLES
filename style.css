@@ -68,7 +68,7 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #info button{padding:2px 16px 6px;margin-left:14px;font-size:26px}
 #side{width:352px;height:1440px;background:var(--pn);box-shadow:inset 8px 0 0 var(--edge),inset 12px 0 0 var(--ln);padding:14px 10px 14px 22px;display:flex;flex-direction:column;gap:10px}
 #top .stage{color:var(--dim);font-size:22px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#top .wave{white-space:nowrap;overflow:hidden}
-#top .timer{font:77px/1 "Galmuri14";text-align:center;color:var(--tx);letter-spacing:4px}
+#top .timer{font:66px/1 "Galmuri14";text-align:center;color:var(--tx);letter-spacing:4px}
 #top .wave{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px}#top .wave b{font:44px/1 "Galmuri14";color:var(--acc)}#top .wave small{font-size:22px}
 .nextw{display:flex;gap:10px;align-items:flex-end;font-size:22px;color:var(--dim);height:40px;overflow:hidden}.nextw img{margin-right:2px;max-height:40px;width:auto!important}
 .prog{height:12px;background:var(--edge);margin:6px 0 10px}.prog i{display:block;height:100%;background:var(--acc)}
@@ -77,14 +77,16 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #bar{display:flex;flex-direction:column;gap:8px}
 .grp h3{margin:0 0 4px;font-size:22px;white-space:nowrap;font-weight:400;color:var(--dim);letter-spacing:4px;border-bottom:4px solid var(--pn3)}
 .grp .slots{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
-.slot{position:relative;height:104px;padding:2px 0 8px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden;font-size:22px;line-height:1}
-.slot:active:not(:disabled){padding:6px 0 4px}
-.slot img{margin-bottom:auto;margin-top:2px}.slot kbd{position:absolute;left:4px;top:4px;font:700 22px/1 "Galmuri11";color:var(--edge);background:var(--gold);padding:3px 6px 5px;z-index:1}.slot[data-dim] kbd{background:var(--dim)}
+/* 칸: 위는 그림(68px), 아래는 비용 띠(두 줄까지). 비용이 그림을 덮지 않는다 */
+.slot{position:relative;height:124px;padding:0 0 6px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden;font-size:22px;line-height:1}
+.slot:active:not(:disabled){padding:2px 0 4px}
+.slot>img:not(.tier){flex:none;margin-top:1px}.slot kbd{position:absolute;left:4px;top:4px;font:700 22px/1 "Galmuri11";color:var(--edge);background:var(--gold);padding:3px 6px 5px;z-index:1}.slot[data-dim] kbd{background:var(--dim)}
 .slot em{font-style:normal;white-space:nowrap;max-width:100%;overflow:hidden}
-.slot .glyph{font:44px/44px "Galmuri14";margin-bottom:auto;margin-top:4px;color:var(--acc)}.slot .glyph sub{font-size:22px;color:var(--tx)}
+.slot .glyph{font:44px/40px "Galmuri14";margin-top:4px;color:var(--acc)}.slot em{margin-top:2px}.slot .glyph sub{font-size:22px;color:var(--tx)}
 .slot[data-dim]{filter:brightness(.55)}.slot.lock img{filter:grayscale(1)}.slot.ready{background:#7a4a1c;box-shadow:inset 0 0 0 4px var(--gold),inset 0 -6px 0 #33250f}
-.cost{white-space:nowrap;display:flex;flex-direction:column;align-items:center}.cost i{font-style:normal;margin:0 1px}.cost .g{color:var(--gold)}.cost .m{color:var(--mat)}.cost .no{color:var(--bad)}
-#tip{flex:1;min-height:100px;background:var(--edge);padding:12px 16px;font-size:24px;line-height:1.35;overflow:hidden}#tip b{color:var(--gold);display:block;font-size:28px}#tip small{font-size:22px}
+.cost{white-space:nowrap;display:flex;flex-direction:column;align-items:center}
+.slot .cost{width:100%;height:48px;margin-top:auto;justify-content:center;gap:2px;background:#07050aa6;box-shadow:0 -4px 0 #07050a}.cost i{font-style:normal;margin:0 1px}.cost .g{color:var(--gold)}.cost .m{color:var(--mat)}.cost .no{color:var(--bad)}
+#tip{flex:1;min-height:70px;background:var(--edge);padding:12px 16px;font-size:24px;line-height:1.35;overflow:hidden}#tip b{color:var(--gold);display:block;font-size:28px}#tip small{font-size:22px}
 #sys{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}#sys button{padding:6px 0 10px;font-size:24px}#sys .wide{grid-column:span 2}
 /* ── 결과 ── */
 #result{position:absolute;inset:0;background:#07050ae6;display:flex;align-items:center;justify-content:center;text-align:center}
@@ -174,3 +176,4 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 .start:hover:not(:disabled),#result button.on:hover{background:none;filter:brightness(1.12)}
 .start:active:not(:disabled){padding:6px 60px 4px;box-shadow:none}
 #top .wave small{font-size:20px}
+#side{gap:6px}
