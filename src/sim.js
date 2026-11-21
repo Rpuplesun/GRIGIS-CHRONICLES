@@ -4,9 +4,13 @@
   const C = DD.C, T = C.TILE, GW = C.GW, GH = C.GH;
   const DT = 0.05;
   DD.DT = DT;
-  C.HEART = { x: C.OX + C.HEART_T[0] * T + 12, y: C.OY + C.HEART_T[1] * T + 12 };
-  C.SUMMON = { x: C.OX + C.SUMMON_T[0] * T + 12, y: C.OY + C.SUMMON_T[1] * T + 12 };
-  C.ALTAR = { x: C.OX + C.ALTAR_T[0] * T + 12, y: C.OY + C.ALTAR_T[1] * T + 12 };
+  // 배치(심장·소환소·제단 자리)는 판마다 정한다. 한 번에 한 판만 돌기 때문에 공용 상수를 바꿔 쓴다
+  DD.setLayout = function (name) {
+    const l = DD.LAYOUTS[name] || DD.LAYOUTS.top, px = (t) => ({ x: C.OX + t[0] * T + 12, y: C.OY + t[1] * T + 12 });
+    C.LAYOUT = DD.LAYOUTS[name] ? name : 'top'; C.HEART_T = l.heart; C.SUMMON_T = l.summon; C.ALTAR_T = l.altar;
+    C.HEART = px(l.heart); C.SUMMON = px(l.summon); C.ALTAR = px(l.altar);
+  };
+  DD.setLayout('top');
 
   function rng(seed) {
     let a = seed >>> 0;
@@ -27,6 +31,14 @@
   // ── 던전 격자: 0 바닥(건물 자리), 1 길(악마가 걷는 칸), 2 벽(통과·사격 불가) ──
   DD.defaultGrid = function (nEnt) {
     const gr = new Uint8Array(GW * GH);
+    if (C.LAYOUT === 'center') { // 심장이 가운데: 아래 입구는 오른쪽으로, 위 입구는 왼쪽으로 한 번 돌아 들어온다
+      const mx = C.ENT_T[0], hy = C.HEART_T[1], row = (y, a, b) => { for (let x = a; x <= b; x++) gr[key(x, y)] = 1; }, col = (x, a, b) => { for (let y = a; y <= b; y++) gr[key(x, y)] = 1; };
+      col(mx, GH - 2, GH - 1); row(GH - 2, mx, GW - 5); col(GW - 5, GH - 4, GH - 2); row(GH - 4, 8, GW - 5); col(8, hy + 3, GH - 4); row(hy + 3, 8, mx); col(mx, hy + 1, hy + 3);
+      if (nEnt >= 2) { col(mx, 0, 1); row(1, 4, mx); col(4, 1, 3); row(3, 4, GW - 9); col(GW - 9, 3, 5); row(5, mx, GW - 9); col(mx, 5, hy - 1); }
+      if (nEnt >= 3) { row(hy, 0, 4); col(4, 3, hy); }
+      if (nEnt >= 4) { row(hy, GW - 5, GW - 1); col(GW - 5, hy, GH - 4); }
+      return gr;
+    }
     // 기본 길은 ㄹ 모양: 입구(아래 가운데) → 왼쪽 → 위 → 오른쪽으로 가로질러 → 위 → 심장(위 가운데)
     const mx = C.ENT_T[0], L = 3, R = GW - 4, row = (y, a, b) => { for (let x = a; x <= b; x++) gr[key(x, y)] = 1; }, col = (x, a, b) => { for (let y = a; y <= b; y++) gr[key(x, y)] = 1; };
     col(mx, GH - 2, GH - 1); row(GH - 3, L, mx); col(L, GH >> 1, GH - 3); row(GH >> 1, L, R); col(R, 2, GH >> 1); row(2, mx, R); col(mx, 1, 2);
@@ -45,7 +57,7 @@
   }
   DD.gridCount = (gr) => { let r = 0, w = 0; for (const v of gr) { if (v === 1) r++; else if (v === 2) w++; } return { road: r, wall: w }; };
   // 입구 바깥 칸인가(아래 입구의 아래쪽, 좌우 입구의 바깥쪽). 악마가 들어오는 통로로 그리고 걷는다
-  DD.entOutside = (ents, cx, cy) => ents.some((e) => (e[1] === GH - 1 && e[0] !== 0 && e[0] !== GW - 1 ? cx === e[0] && cy >= GH : e[0] === 0 ? cx < 0 && cy === e[1] : cx >= GW && cy === e[1]));
+  DD.entOutside = (ents, cx, cy) => ents.some((e) => (e[0] === 0 ? cx < 0 && cy === e[1] : e[0] === GW - 1 ? cx >= GW && cy === e[1] : e[1] === 0 ? cx === e[0] && cy < 0 : cx === e[0] && cy >= GH));
   DD.gridCheck = function (gr, ents) { // 규칙 위반 사유 또는 null
     ents = ents || [C.ENT_T];
     if (gr.length !== GW * GH) return '격자 크기가 다릅니다';
@@ -85,6 +97,10 @@
     const sets = d.paths.slice(1).map((p) => new Set(p.map((c) => key(c[0], c[1])))), mi = path.findIndex((c) => sets.every((st) => st.has(key(c[0], c[1]))));
     const L = path.length, a = Math.max(0, Math.min(L - 2, Math.max(Math.floor(L * 0.45), mi)));
     d.sm = path.slice(a, a + 2); d.sr = path.slice(a + 2, a + 5).length ? path.slice(a + 2, a + 5) : d.sm;
+    if (mi < 0 && d.paths.length > 1) { // 길이 심장에서야 만난다(심장이 가운데): 길마다 심장 앞에 나눠 세운다
+      const at = (p, k) => p[Math.max(0, p.length - k)]; d.sm = d.paths.filter((p) => p.length).map((p) => at(p, 2)); d.sr = d.paths.filter((p) => p.length).map((p) => at(p, 1)); // 심장 바로 앞: 서로 가까워서 다른 길도 거든다
+      if (!d.sm.length) { d.sm = path.slice(a, a + 2); d.sr = d.sm; }
+    }
   }
   function los(d, a, b) { // 벽이 사격을 막는가
     if (!d.walls) return true;
@@ -109,7 +125,7 @@
       st: DD.stageOf(opt.players[Math.max(0, opt.players.findIndex((p) => !p.bot))].race, opt.stage || 0),
       rnd: rng(opt.seed || 1), nid: 1, dungeons: [], events: [], human: opt.players.findIndex((p) => !p.bot),
     };
-    G.D = DD.DIFFS[G.diff]; G.nEnt = DD.entCount(G.stage, G.diff, G.tutorial);
+    G.D = DD.DIFFS[G.diff]; G.nEnt = DD.entCount(G.stage, G.diff, G.tutorial); G.layout = DD.layoutOf(G.stage, G.tutorial); DD.setLayout(G.layout);
     if (!G.tutorial) { const ks = Object.keys(DD.MUTS); for (let w = 3; w < C.WAVES; w++) if (w % 5 && G.rnd() < 0.4) G.muts[w] = ks[Math.floor(G.rnd() * ks.length)]; }
     G.dungeons = opt.players.map((p, i) => mkDungeon(G, i, p));
     G.step = () => step(G);
@@ -124,7 +140,7 @@
     const d = {
       i, race: p.race, R, bot: !!p.bot, alive: true, gold: 150 + 30 * (m.sGold || 0) + (p.bonusGold || 0), mat: 0, kills: 0,
       units: [], blds: [], demons: [], shots: [], fx: [], snd: {}, queue: [], occ: {}, bc: {}, ver: 0, walls: 0,
-      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, nSum: 0, nBld: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0, lost: 0, mission: null, pop: C.POP, boons: [], boonPick: null,
+      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, nSum: 0, nBld: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0, lost: 0, skillT: 0, mission: null, pop: C.POP, boons: [], boonPick: null,
       mod: {
         atk: (sm.atk || 1) * (1 + 0.05 * (m.uAtk || 0)), hp: (sm.hp || 1) * (1 + 0.05 * (m.uHp || 0)), spd: sm.spd || 1,
         bhp: (1 + 0.08 * (m.bHp || 0)) * (p.race === 'human' ? 1.2 : 1), gold: 1 + 0.05 * (m.gold || 0), hcd: 1 - 0.04 * (m.hCd || 0),
@@ -134,7 +150,7 @@
     d.heroT = DD.HERO_CD.first * d.mod.hcd;
     const hh = Math.round(1000 * (1 + 0.08 * (m.bHp || 0)));
     d.heart = { k: 'h', x: C.HEART.x, y: C.HEART.y, hp: hh, mhp: hh, r: 12, hit: 0 };
-    d.ents = DD.entsFor(G.nEnt);
+    d.ents = DD.entsFor(G.nEnt, G.layout);
     let gr = DD.defaultGrid(G.nEnt);
     if (p.layout) { const u = Uint8Array.from(p.layout); if (!DD.gridCheck(u, d.ents)) gr = u; }
     applyGrid(d, gr); d.walls = DD.gridCount(gr).wall;
@@ -287,6 +303,18 @@
       const u = addUnit(G, d, to); u.x = f.x; u.y = f.y; u.hx = f.hx; u.hy = f.hy; u.kills = kills;
       fx(d, 'hero', u.x, u.y, 0.75, { c: to.legend ? 'g1' : d.R.color }); if (to.legend) snd(d, 'hero');
       G.events.push({ t: 'merge', d: d.i, name: to.name, legend: !!to.legend });
+    } else if (c.a === 'skill') { // 영웅 기술: 살아 있는 내 영웅이 모두 쓴다
+      const hs = d.units.filter((u) => u.hero && u.own === d.i && u.hp > 0);
+      if (!hs.length) return '영웅이 없습니다'; if (d.skillT > 0) return '기술을 아직 쓸 수 없습니다';
+      d.skillT = DD.SKILL_CD; snd(d, 'hero');
+      for (const u of hs) {
+        const r = u.hero.role, a = unitAtk(G, d, u);
+        if (r === 'war') { for (const e of d.demons) if (e.hp > 0 && !e.def.fly && d2(e, u) < 62 * 62) { if (!e.gim) e.stun = 2; hurt(G, d, u, e, a * 3); } fx(d, 'boom', u.x, u.y - 6, 0.45, { c: 'g1', r: 62 }); }
+        else if (r === 'arc') { const rr = (u.def.rng + 24) ** 2; for (const e of d.demons) if (e.hp > 0 && d2(e, u) < rr) { hurt(G, d, u, e, a * 2); fx(d, 'hit', e.x, e.y - 7, 0.2, { c: 'g1' }); } fx(d, 'hero', u.x, u.y, 0.5, { c: 'g1' }); }
+        else if (r === 'rid') { u.rush = 6; fx(d, 'hero', u.x, u.y, 0.5, { c: 'g1' }); }
+        else { for (const o of d.units) if (o.hp > 0 && d2(o, u) < 90 * 90) { o.hp = Math.min(o.mhp, o.hp + o.mhp * 0.35); fx(d, 'heal', o.x, o.y - 12, 0.4, { c: 'n1' }); } snd(d, 'heal'); }
+      }
+      G.events.push({ t: 'skill', d: d.i });
     } else if (c.a === 'boon') {
       if (!d.boonPick || d.boonPick[c.i] == null) return '지금은 안 된다';
       applyBoon(G, d, d.boonPick[c.i]); snd(d, 'up');
@@ -460,6 +488,7 @@
   }
   function demonStep(G, d, e) {
     if (e.gim) bossGim(G, d, e);
+    if (e.stun > 0) { e.stun -= DT; e.mv = false; return; } // 영웅의 대지 강타에 기절
     if (e.def.fly) { // 비행: 길도 벽도 유닛도 무시하고 심장으로
       const h = d.heart, reach = e.def.rng + h.r; e.face = h.x >= e.x ? 1 : -1;
       if (d2(e, h) <= reach * reach) { e.mv = false; if (e.cd <= 0) { e.cd = e.def.as; e.atkT = 0.3; strike(G, d, e, h, e.atk, 0, 'p2'); } }
@@ -520,10 +549,12 @@
       if (fail || clear) { d.mission = null; if (!fail) d.gold += ms.gold; G.events.push({ t: 'mission', d: d.i, ok: !fail, k: ms.k, gold: ms.gold }); }
     }
     if (d.heroT > 0) d.heroT -= DT;
+    if (d.skillT > 0) d.skillT -= DT;
     while (d.queue.length && d.queue[0].at <= G.t) {
       const q = d.queue.shift(), def = DD.DEMONS[q.t], mhp = def.hp * q.hp;
-      const en = d.ents[q.ent || 0] || d.ents[0], side = en[0] === 0 ? -1 : en[0] === GW - 1 ? 1 : 0; // 아래 입구는 아래 끝에서, 좌우 입구는 바깥 끝에서 나온다
-      d.demons.push({ id: G.nid++, k: 'd', def, ent: q.ent || 0, x: side ? (side < 0 ? C.OX + 6 + G.rnd() * 6 : C.OX + GW * T - 12 + G.rnd() * 6) : tcx(en[0]) + (G.rnd() - 0.5) * 12, y: side ? tcy(en[1]) + (G.rnd() - 0.5) * 12 : C.OY + GH * T - 12 + G.rnd() * 6, hp: mhp, mhp, atk: def.atk * q.atk, spd: q.spd || 1, gm: q.gm || 1, gim: q.gim || null, sc: [q.hp, q.atk], gt: 6, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: q.t === 'boss' ? 12 : 7 });
+      const en = d.ents[q.ent || 0] || d.ents[0], jx = (G.rnd() - 0.5) * 12, jo = G.rnd() * 6; // 입구가 난 벽 쪽 끝에서 나온다
+      const sp = en[0] === 0 ? [C.OX + 6 + jo, tcy(en[1]) + jx] : en[0] === GW - 1 ? [C.OX + GW * T - 12 + jo, tcy(en[1]) + jx] : en[1] === 0 ? [tcx(en[0]) + jx, C.OY + 6 + jo] : [tcx(en[0]) + jx, C.OY + GH * T - 12 + jo];
+      d.demons.push({ id: G.nid++, k: 'd', def, ent: q.ent || 0, x: sp[0], y: sp[1], hp: mhp, mhp, atk: def.atk * q.atk, spd: q.spd || 1, gm: q.gm || 1, gim: q.gim || null, sc: [q.hp, q.atk], gt: 6, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: q.t === 'boss' ? 12 : 7 });
     }
     const drums = d.blds.filter((b) => b.def.haste), pools = d.blds.filter((b) => b.def.regen);
     // 유닛
@@ -533,6 +564,7 @@
       let reg = u.mhp * ((o.race === 'merfolk' ? 0.01 : 0) + (o.mod.regen || 0));
       for (const p of pools) if (d2(u, p) < p.def.rad * p.def.rad) reg += p.def.regen;
       if (reg && u.hp < u.mhp) u.hp = Math.min(u.mhp, u.hp + reg * DT);
+      if (u.rush > 0) u.rush -= DT;
       if (u.stun > 0) { u.stun -= DT; u.mv = false; continue; } // 군주의 포효에 기절
       const home = { x: u.hx, y: u.hy }, heal = u.def.heal, ranged = u.def.rng > 30;
       if (u.rt <= 0) {
@@ -552,12 +584,12 @@
         if (d2(u, t) <= reach * reach) {
           u.mv = false; u.face = t.x >= u.x ? 1 : -1;
           if (u.cd <= 0) {
-            u.cd = u.def.as / (u.fast ? 1.25 : 1); u.atkT = 0.3;
+            u.cd = u.def.as / ((u.fast ? 1.25 : 1) * (u.rush > 0 ? 1.6 : 1)); u.atkT = 0.3;
             if (ally) { t.hp = Math.min(t.mhp, t.hp + heal * o.mod.atk * (1 + 0.1 * o.up.atk)); shoot(d, u, t, 'heal', 'n1'); fx(d, 'heal', t.x, t.y - 12, 0.4, { c: 'n1' }); snd(d, 'heal'); }
             else strike(G, d, u, t, unitAtk(G, d, u), u.def.splash, o.R.color);
           }
-        } else moveUnit(d, u, t.x, t.y, u.def.spd * o.mod.spd);
-      } else moveUnit(d, u, u.hx, u.hy, u.def.spd * o.mod.spd);
+        } else moveUnit(d, u, t.x, t.y, u.def.spd * o.mod.spd * (u.rush > 0 ? 1.6 : 1));
+      } else moveUnit(d, u, u.hx, u.hy, u.def.spd * o.mod.spd * (u.rush > 0 ? 1.6 : 1));
       if (u.atkT > 0) u.atkT -= DT;
     }
     // 탑
@@ -653,6 +685,7 @@
   DD.botThink = function (G, d) {
     const R = d.R, can = (c) => d.gold >= c.g && d.mat >= c.m;
     if (d.heroT <= 0) { G.cmd(d.i, { a: 'hero' }); return; }
+    if (d.skillT <= 0 && d.demons.length >= 8 && d.units.some((u) => u.hero && u.own === d.i)) G.cmd(d.i, { a: 'skill' });
     const own = d.units.filter((u) => u.own === d.i);
     const build = (bi, kind, max) => {
       const b = R.blds[bi], n = d.bc[b.id] || 0;

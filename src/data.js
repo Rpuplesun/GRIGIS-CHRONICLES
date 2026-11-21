@@ -5,7 +5,7 @@
   DD.C = {
     TILE: 24, GW: 27, GH: 18, OX: 24, OY: 24, W: 696, H: 480,
     WAVES: 20, WAVE_T: 60, FIRST_WAVE: 20, POP: 40, BLD_CAP: 40,
-    ROAD_MAX: 120, WALL_MAX: 50, PLOT_HP: 1.25,
+    ROAD_MAX: 140, WALL_MAX: 50, PLOT_HP: 1.25,
     HEART_T: [13, 0], SUMMON_T: [11, 0], ALTAR_T: [15, 0], ENT_T: [13, 17],
     PLOTS: [[5, 4], [21, 4], [5, 13], [21, 13]],
   };
@@ -231,8 +231,22 @@
     { id: 'regen', name: '야전 치유', desc: '유닛 초당 체력 0.5% 재생' },
   ];
   // 침공로: 스테이지와 난이도가 오르면 좌우 벽에도 입구가 열린다
-  DD.entCount = (stage, diff, tutorial) => { if (tutorial) return 1; const s = stage + (diff >= 2 ? 1 : 0) + (diff >= 3 ? 1 : 0); return s < 2 ? 1 : s < 4 ? 2 : 3; };
-  DD.entsFor = (n) => [DD.C.ENT_T, [0, DD.C.GH >> 1], [DD.C.GW - 1, DD.C.GH >> 1]].slice(0, n);
+  // 배치: 넷째 스테이지와 악마성은 심장이 한가운데 있고 위아래에서 쳐들어온다
+  DD.LAYOUTS = { top: { heart: [13, 0], summon: [11, 0], altar: [15, 0] }, center: { heart: [13, 9], summon: [11, 9], altar: [15, 9] } };
+  DD.layoutOf = (stage, tutorial) => (!tutorial && (stage === 3 || stage === 5) ? 'center' : 'top');
+  DD.entCount = (stage, diff, tutorial) => {
+    if (tutorial) return 1; const s = stage + (diff >= 2 ? 1 : 0) + (diff >= 3 ? 1 : 0);
+    return DD.layoutOf(stage) === 'center' ? (s < 4 ? 2 : s < 6 ? 3 : 4) : s < 2 ? 1 : s < 4 ? 2 : 3;
+  };
+  DD.entsFor = (n, lay) => { const C = DD.C, mx = C.ENT_T[0], L = [0, C.GH >> 1], R = [C.GW - 1, C.GH >> 1]; return ((lay || C.LAYOUT) === 'center' ? [C.ENT_T, [mx, 0], L, R] : [C.ENT_T, L, R]).slice(0, n); };
+  // 영웅 기술: 살아 있는 영웅이 한꺼번에 쓴다
+  DD.SKILL_CD = 40;
+  DD.HERO_SKILL = {
+    war: { name: '대지 강타', desc: '주변 악마에게 큰 피해를 주고 2초 기절' },
+    arc: { name: '화살비', desc: '사거리 안의 모든 악마에게 2배 피해' },
+    rid: { name: '질풍 돌격', desc: '6초 동안 이동·공격 속도 +60%' },
+    heal: { name: '치유의 빛', desc: '주변 아군의 체력을 35% 회복' },
+  };
   // 군주 기믹: 웨이브마다 다른 군주가 온다
   DD.BOSS = { 5: 'summon', 10: 'ram', 15: 'roar', 20: 'all' };
   DD.BOSS_GIM = {

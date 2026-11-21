@@ -43,7 +43,7 @@
       <section><h2>스테이지 <span class="row"><span class="lbl">난이도</span>${DD.DIFFS.map((x, i) => `<button class="${menu.diff === i ? 'on' : ''}" data-m="diff:${i}">${x.name}</button>`).join('')}</span></h2>
         <p class="diffnote">악마 체력 ${xm(DF.hp)} · 공격 ${xm(DF.atk)} · 골드 ${xm(DF.gold)} · <span class="gold">영혼석 ${xm(DF.shard)}</span></p><div class="cards c3">${DD.stageOrder(menu.race).map((id, i) => { const st = DD.stageOf(menu.race, i), lock = i > rs.stage, demo = DD.DEMO && i > 0; return `
         <button class="card ${menu.stage === i ? 'on' : ''}" ${lock || demo ? 'disabled' : ''} data-m="stage:${i}">
-          <b>${i + 1}. ${st.name}</b><small>${demo ? '정식 버전에서' : lock ? '잠김' : st.desc} · 악마 ×${st.mul}${DD.entCount(i, menu.diff) > 1 ? ` · 입구 ${DD.entCount(i, menu.diff)}` : ''}</small><small>${modText(st, menu.race)}</small>${rec[i] ? `<small class="rec"><span class="stars">${'★'.repeat(rec[i].s)}${'☆'.repeat(3 - rec[i].s)}</span> ${DD.DIFFS[rec[i].d].name}</small>` : best[i] ? `<small class="rec">${best[i] > C.WAVES ? '✔ 클리어' : `최고 웨이브 ${best[i]}/${C.WAVES}`}</small>` : ''}
+          <b>${i + 1}. ${st.name}</b><small>${demo ? '정식 버전에서' : lock ? '잠김' : st.desc} · 악마 ×${st.mul}</small><small>${[st.mods[menu.race] || !(DD.entCount(i, menu.diff) > 1) ? modText(st, menu.race) : '', DD.entCount(i, menu.diff) > 1 ? `입구 ${DD.entCount(i, menu.diff)}` : '', DD.layoutOf(i) === 'center' ? '심장 중앙' : ''].filter(Boolean).join(' · ')}</small>${rec[i] ? `<small class="rec"><span class="stars">${'★'.repeat(rec[i].s)}${'☆'.repeat(3 - rec[i].s)}</span> ${DD.DIFFS[rec[i].d].name}</small>` : best[i] ? `<small class="rec">${best[i] > C.WAVES ? '✔ 클리어' : `최고 웨이브 ${best[i]}/${C.WAVES}`}</small>` : ''}
         </button>`; }).join('')}</div></section>
       <section><h2>영구 강화 <span class="gold">${ic('ui_shard')} ${rs.shards}</span></h2><div class="cards c3">${DD.META.map((m) => { const fmt = fmtMeta(m), lv = rs.meta[m.k] || 0, cost = DD.metaCost(lv), max = lv >= DD.META_MAX; return `
         <button class="card" ${max || rs.shards < cost ? 'disabled' : ''} data-m="meta:${m.k}">
@@ -52,7 +52,7 @@
       <span></span><span></span>
       <footer><button class="start" data-m="start:1">출전</button><button data-m="story:1">이야기</button><button data-m="tutorial:1">튜토리얼</button><button data-m="settings:1">설정</button>
         <details class="help"><summary>조작법</summary><div class="helpbox">
-        <p><b>유닛</b> 클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R Y 소환 · T 영웅 · B V 조합 · 소환소나 제단을 누르면 집결지 지정</p>
+        <p><b>유닛</b> 클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R Y 소환 · T 영웅 · X 영웅 기술 · B V 조합 · 소환소나 제단을 누르면 집결지 지정</p>
         <p><b>건물</b> A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · H J 함정 · 거점 위는 체력 +25% · 고른 건물 Del 철거</p>
         <p><b>길 편집</b> E (Z 길, X 벽, C 지우기, 우클릭 지우기, Ctrl+Z 되돌리기) · 길 최대 ${C.ROAD_MAX}, 벽 최대 ${C.WALL_MAX} · 입구↔심장 연결 필수</p>
         <p><b>기타</b> 1 2 3 속도 · Space 일시정지 · N 다음 웨이브(보너스 골드) · Tab 지도 · Esc 취소 · 한글 입력 상태에서도 단축키가 듣는다</p></div></details></footer>`;
@@ -79,7 +79,7 @@
 
   function startGame(tutorial) {
     const race = tutorial ? 'human' : menu.race, others = DD.RACE_IDS.filter((r) => r !== race);
-    const players = [{ race, meta: save.races[race].meta, layout: tutorial ? null : (save.lay || {})[DD.entCount(menu.stage, menu.diff)], bonusGold: tutorial ? 0 : save.bonusGold || 0 }];
+    const players = [{ race, meta: save.races[race].meta, layout: tutorial ? null : (save.lay || {})[DD.layoutOf(menu.stage) + DD.entCount(menu.stage, menu.diff)], bonusGold: tutorial ? 0 : save.bonusGold || 0 }];
     if (!tutorial && menu.mode === 'multi') for (let i = 0; i < menu.allies - 1; i++) players.push({ race: others[i], bot: true });
     if (!tutorial && save.bonusGold) { save.bonusGold = 0; persist(); }
     G = DD.newGame({ players, stage: tutorial ? 0 : menu.stage, diff: menu.diff, tutorial: !!tutorial, seed: (Date.now() & 0xffff) + 1 });
@@ -90,7 +90,7 @@
     $('#game').hidden = false; $('#feed').innerHTML = ''; $('#herocard').innerHTML = ''; $('#banner').innerHTML = '';
     buildScript();
     resize(); last = performance.now(); requestAnimationFrame(loop);
-    if (!script.steps.length || script.steps[0].when) banner(G.st.name, `${C.FIRST_WAVE}초 뒤 첫 침공` + (G.nEnt > 1 ? ` · 입구 ${G.nEnt}곳` : ''));
+    if (!script.steps.length || script.steps[0].when) banner(G.st.name, `${C.FIRST_WAVE}초 뒤 첫 침공` + (G.nEnt > 1 ? ` · 입구 ${G.nEnt}곳` : '') + (G.layout === 'center' ? ' · 심장이 한가운데' : ''));
   }
 
   // ───────── 참모 대화·대본 ─────────
@@ -190,11 +190,13 @@
     if (ui.edit) maze += [[1, '길 깔기', '악마가 걷는 칸을 만든다', 'Z'], [2, '벽 쌓기', '통과와 사격을 막는 칸', 'X'], [0, '지우기', '바닥으로 되돌린다 · 우클릭으로도 지운다', 'C']].map(([t, n, tip, key]) => slot('tool:' + t, `<b class="glyph">${['✕', '▤', '▣'][t]}</b><em>${n}</em>`, `<b>${n}</b>${tip}`, { on: ui.tool === t, key })).join('')
       + slot('resetmaze:1', `<b class="glyph">↺</b><em>기본 길</em>`, '<b>기본 길</b>ㄹ 모양으로 되돌린다', {}) + slot('undo:1', `<b class="glyph">↶</b><em>되돌리기</em>`, '<b>되돌리기</b>마지막으로 칠한 것을 되돌린다 · Ctrl+Z', { key: '^Z', dim: !dr.hist.length }) + slot('editcancel:1', `<b class="glyph">✖</b><em>취소</em>`, '<b>취소</b>고친 것을 버리고 나간다', { key: 'Esc' });
     const units = R.units.map((u, i) => { const f = DD.reqFail(d, u); return slot('summon:' + i, `<img class="px tier" src="${DD.icon('ui_tier' + u.tier)}" alt="">${icon(u.spr, 2)}${f ? '<span class="cost bad">잠김</span>' : cost(u, d)}`, `<b>${u.name}</b>${ic('ui_coin')} ${u.g}${u.m ? ' ' + ic('ui_crate') + ' ' + u.m : ''} · 보유 ${d.units.filter((x) => x.def === u && x.own === d.i).length}기<br>체력 ${u.hp} · 공격 ${u.atk} · 사거리 ${u.rng}${u.heal ? ' · 치유 ' + u.heal : ''}${u.splash ? ' · 범위' : ''}${f ? `<small class="bad">${f}</small>` : ''}`, { dim: f || no(u), key: UKEY[i], cls: f ? 'lock' : '' }); }).join('')
-      + (ui.edit ? '' : slot('hero:1', `${icon('f_altar', 2)}<span class="cost">${d.heroT <= 0 ? '준비!' : mmss(d.heroT)}</span>`, `<b>영웅 소환</b>${d.heroT <= 0 ? '누가 올지는 모른다' : '대기 ' + mmss(d.heroT)}`, { dim: d.heroT > 0, key: 'T', cls: 'tall' + (d.heroT <= 0 ? ' ready' : '') })
-      + (() => { const mp = DD.mergePlan(d, [...ui.sel]), need = DD.mergeNeed(d.race), two = mp && !mp.to; // 1단계 조합은 두 2단계 유닛 중에서 고른다
+      + (ui.edit ? '' : slot('hero:1', `<em>영웅</em><span class="cost">${d.heroT <= 0 ? '준비!' : mmss(d.heroT)}</span>`, `<b>영웅 소환</b>${d.heroT <= 0 ? '누가 올지는 모른다' : '대기 ' + mmss(d.heroT)}`, { dim: d.heroT > 0, key: 'T', cls: 'mini' + (d.heroT <= 0 ? ' ready' : '') })
+      + (() => { if (ui.edit) return ''; const mp = DD.mergePlan(d, [...ui.sel]), need = DD.mergeNeed(d.race), two = mp && !mp.to; // 1단계 조합은 두 2단계 유닛 중에서 고른다
         const one = (pick, key) => { const to = mp ? mp.to || mp.opts[pick] : null, off = !mp || (pick && !two);
           return slot('merge:' + pick, `<em>조합</em><span class="cost">${off ? (pick ? '—' : need + '기 필요') : '→ ' + to.name}</span>`, `<b>조합${off ? '' : ' → ' + to.name}</b>같은 유닛 ${need}기를 한 단계 위 유닛 하나로 합친다<br>${off ? (mp ? '지금 합칠 유닛은 갈 길이 하나뿐이다' : '지금은 합칠 유닛이 없다') : `${mp.def.name} ${need}기 → <span class="gold">${to.name}</span>`}<small>유닛을 골라 두면 그 종류를 합친다 · 최상위 ${need}기는 전설 ${R.legend.name}</small>`, { key, cls: 'short' + (!off && to.legend ? ' ready' : ''), dim: off }); };
-        return one(0, 'B') + one(1, 'V'); })());
+        const hn = d.units.filter((u) => u.hero && u.own === d.i).length, sk = hn && d.skillT <= 0;
+        const skill = slot('skill:1', `<em>기술</em><span class="cost">${!hn ? '—' : sk ? '준비!' : mmss(d.skillT)}</span>`, `<b>영웅 기술</b>살아 있는 영웅이 모두 기술을 쓴다 · 대기 ${DD.SKILL_CD}초<small>${Object.keys(DD.HERO_SKILL).map((r) => `${DD.HERO_ROLES[r].label} · ${DD.HERO_SKILL[r].name} — ${DD.HERO_SKILL[r].desc}`).join('<br>')}</small>`, { key: 'X', cls: 'mini' + (sk ? ' ready' : ''), dim: !sk });
+        return one(0, 'B') + skill + one(1, 'V'); })());
     const bslots = R.blds.map((b, i) => { const c = DD.bldCost(d, b), have = d.bc[b.id] || 0, full = have >= DD.bldMax(b); return slot('build:' + i, `${b.kind === 'trap' ? `<b class="glyph">${b.slow ? '≋' : '▲'}</b>` : icon(b.spr + '@' + d.race, 2)}${full ? '<span class="cost">최대</span>' : cost(c, d)}`, `<b>${b.name}</b>${ic('ui_coin')} ${c.g}${c.m ? ' ' + ic('ui_crate') + ' ' + c.m : ''} · 보유 ${have}/${DD.bldMax(b)}<br>${b.desc}${b.atk ? `<br>공격 ${b.atk} · 사거리 ${b.rng} · 간격 ${b.as}초${b.splash ? ' · 범위' : ''}` : ''}<small>${b.kind === 'wall' ? '길 위에만 세운다 · 악마를 붙잡아 둔다' : b.kind === 'trap' ? '길 위에 깐다 · 악마는 부수지 못한다' : '바닥에 세운다'}</small>`, { dim: full || no(c), on: ui.build === i, key: BKEY[i] }); });
     const blds = bslots.filter((x, i) => i !== 3 && i < 5).join('');
     maze = bslots[3] + bslots[5] + bslots[6] + maze;
@@ -288,6 +290,7 @@
     else if (k === 'build') { if (applyEdit()) { ui.build = ui.build === +v ? -1 : +v; ui.ghost = null; ui.sel.clear(); } }
     else if (k === 'up') act({ a: 'up', k: v });
     else if (k === 'hero') act({ a: 'hero' });
+    else if (k === 'skill') act({ a: 'skill' });
     else if (k === 'sell') { act({ a: 'sell', id: +v }); ui.selB = null; }
     else if (k === 'dismiss') { if (act({ a: 'dismiss', ids: [...ui.sel] })) ui.sel.clear(); }
     else if (k === 'support') { if (act({ a: 'support', ids: [...ui.sel], to: +v })) ui.sel.clear(); }
@@ -398,6 +401,7 @@
     else if (ui.edit && k in TCODE) ui.tool = TCODE[k];
     else if (mine && UCODE.includes(k)) act({ a: 'summon', u: UCODE.indexOf(k) });
     else if (mine && k === 'KeyT') act({ a: 'hero' });
+    else if (mine && k === 'KeyX') { if (!rep) act({ a: 'skill' }); }
     else if (mine && (k === 'KeyB' || k === 'KeyV')) { if (!rep && act({ a: 'merge', ids: [...ui.sel], pick: k === 'KeyV' ? 1 : 0 })) ui.sel.clear(); }
     else if (mine && BCODE.includes(k)) { if (!rep && applyEdit()) { const i = BCODE.indexOf(k); ui.build = ui.build === i ? -1 : i; ui.ghost = null; ui.sel.clear(); ui.selB = null; } }
     else if (k === 'Space') { ev.preventDefault(); if (!rep) togglePause(); }
@@ -472,7 +476,7 @@
     if (!G.tutorial && !G.quit) { rs.best = rs.best || {}; rs.best[G.stage] = Math.max(rs.best[G.stage] || 0, G.win ? C.WAVES + 1 : d.wavesCleared); }
     if (tut) { save.tutorialDone = 1; save.bonusGold = DD.TUTORIAL_GOLD; unlocked = `<p class="gold">튜토리얼 완료 보상 · 전쟁 자금 ●${DD.TUTORIAL_GOLD}</p><p>이끌 종족을 고르십시오, 사령관.</p>`; }
     else if (!G.tutorial && G.win && rs.stage === G.stage && G.stage < 5) { rs.stage++; unlocked = DD.DEMO ? '<p>데모는 여기까지. 다른 종족도 기다립니다.</p>' : `<p class="good">해금 · ${DD.stageOf(d.race, rs.stage).name}</p>`; }
-    if (!G.tutorial) { (save.lay = save.lay || {})[d.ents.length] = Array.from(d.grid); delete save.layout; } // 다음 판에도 같은 길로 시작한다(입구 수별로 기억)
+    if (!G.tutorial) { (save.lay = save.lay || {})[G.layout + d.ents.length] = Array.from(d.grid); delete save.layout; } // 다음 판에도 같은 길로 시작한다(입구 수별로 기억)
     persist();
     DD.Audio.stopAmbience(); if (G.quit) DD.Music.stop(); else DD.Music.play(G.win ? 'victory' : 'defeat', { fade: 0.4 });
     dlg = null; drawDlg(); setGoal('');

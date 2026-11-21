@@ -120,7 +120,7 @@
     for (const [w, lv] of [[10, 6], [22, 3]]) { dither(x, lv, 'K', OX, OY, w, GH * T); dither(x, lv, 'K', OX + GW * T - w, OY, w, GH * T); dither(x, lv, 'K', OX, OY + GH * T - w, GW * T, w); }
     glow(x, C.HEART.x, C.HEART.y + 4, 58, 'o3'); glow(x, C.HEART.x, C.HEART.y, 30, 'r2');
     glow(x, C.SUMMON.x, C.SUMMON.y, 30, 'b3'); glow(x, C.ALTAR.x, C.ALTAR.y, 30, 'g3');
-    for (const e of d.ents) { if (e[0] === 0) glow(x, OX + 14, tcy(e[1]), 30, 'r3'); else if (e[0] === GW - 1) glow(x, OX + GW * T - 14, tcy(e[1]), 30, 'r3'); else glow(x, tcx(e[0]), OY + GH * T - 16, 34, 'r3'); }
+    for (const e of d.ents) { if (e[0] === 0) glow(x, OX + 14, tcy(e[1]), 30, 'r3'); else if (e[0] === GW - 1) glow(x, OX + GW * T - 14, tcy(e[1]), 30, 'r3'); else if (e[1] === 0) glow(x, tcx(e[0]), OY + 14, 30, 'r3'); else glow(x, tcx(e[0]), OY + GH * T - 16, 34, 'r3'); }
     for (const [cx, cy] of C.PLOTS) x.drawImage(DD.frame('t_platform', 0, 0), tcx(cx) - 14, tcy(cy) - 13);
     for (const sx of [0, GW - 1]) DD.blit(x, 't_standard', 0, tcx(sx), tcy(0) + 12);
     bgCache[d.i] = { k, c };
@@ -157,7 +157,7 @@
     for (const sx of [-1, 1]) { DD.blit(ctx, 't_brazier', 0, C.HEART.x + sx * 22, C.HEART.y + 10); const f = ((TT * 8 + sx) | 0) % 3; ctx.fillStyle = P.g1; ctx.fillRect(C.HEART.x + sx * 22 - (f === 2 ? 1 : 0), C.HEART.y - 9 - (f === 1 ? 1 : 0), 1, 2); }
     { const low = d.heart.hp / d.heart.mhp < 0.3; dotted(ctx, C.HEART.x, C.HEART.y - 2, 17 + (((TT * 2) | 0) % 2), low ? 'r1' : 'r3', 28);
       const c = DD.blit(ctx, 'f_heart', ((TT * 4) | 0) % 4, C.HEART.x, C.HEART.y + 12, false, flash && d.heart.hit > 0.06); bar(ctx, C.HEART.x - 14, C.HEART.y + 12 - c.height - 3, 28, d.heart.hp / d.heart.mhp, 'r2'); }
-    for (const e of d.ents) { const f = ((TT * 6) | 0) % 6; if (e[0] === 0) DD.blit(ctx, 'gate_s', f, OX - 8, tcy(e[1]) + 16); else if (e[0] === GW - 1) DD.blit(ctx, 'gate_s', f, OX + GW * T + 10, tcy(e[1]) + 16); else DD.blit(ctx, 'gate_s', f, tcx(e[0]) + 2, OY + GH * T + 4); } // 악마가 나오는 게이트
+    for (const e of d.ents) { const f = ((TT * 6) | 0) % 6; if (e[0] === 0) DD.blit(ctx, 'gate_s', f, OX - 8, tcy(e[1]) + 16); else if (e[0] === GW - 1) DD.blit(ctx, 'gate_s', f, OX + GW * T + 10, tcy(e[1]) + 16); else if (e[1] === 0) DD.blit(ctx, 'gate_s', f, tcx(e[0]) + 2, OY + 8); else DD.blit(ctx, 'gate_s', f, tcx(e[0]) + 2, OY + GH * T + 4); } // 악마가 나오는 게이트
     // 길 위의 진행 방향 화살표(악마가 걷는 쪽으로 흐른다)
     const seenA = new Set(); // 여러 입구의 길이 겹치는 칸은 한 번만
     (gd.paths || [gd.path]).forEach((pth) => pth.forEach(([cx, cy], i) => {

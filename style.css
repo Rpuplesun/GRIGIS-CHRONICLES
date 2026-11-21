@@ -202,3 +202,9 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 .slot.short kbd{top:50%;transform:translateY(-55%)}
 #mission{position:absolute;left:120px;top:110px;background:#1c1526e6;box-shadow:inset 0 0 0 4px var(--acc),inset 0 0 0 8px var(--edge);padding:10px 26px 14px;font-size:28px;white-space:nowrap}#mission[hidden]{display:none}
 #mission small{display:inline;margin-right:14px;color:var(--acc)}#mission .gold{margin-left:14px}#mission b{color:var(--gold)}
+/* 영웅 소환·영웅 기술: 한 칸 폭의 낮은 칸 */
+.slot.mini{height:59px;padding:2px 4px 4px 36px;justify-content:center}.slot.mini:active:not(:disabled){padding:4px 4px 2px 36px}
+.slot.mini em{margin:0;font-size:20px}.slot.mini .cost{width:auto;height:auto;margin:0;background:none;box-shadow:none;font-size:20px}
+.slot.mini kbd{top:50%;transform:translateY(-55%)}
+.slot.mini{gap:5px}
+:root:not([lang=ko]) #menu .c3 .card small{font-size:20px}

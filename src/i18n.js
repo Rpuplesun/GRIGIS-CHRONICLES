@@ -6,6 +6,13 @@
 
   // [한국어, 영어, 일본어]
   const D = [
+    ['영웅 기술', 'Hero Skills', '英雄スキル'], ['살아 있는 영웅이 모두 기술을 쓴다 · 대기', 'Every living hero uses their skill · cooldown', '生きている英雄が全員スキルを使う · 待機'],
+    ['대지 강타', 'Ground Slam', '大地強打'], ['주변 악마에게 큰 피해를 주고 2초 기절', 'Heavy damage to nearby demons and a 2s stun', '周囲の悪魔に大ダメージを与え2秒気絶'],
+    ['화살비', 'Arrow Rain', '矢の雨'], ['사거리 안의 모든 악마에게 2배 피해', 'Double damage to every demon in range', '射程内のすべての悪魔に2倍ダメージ'],
+    ['질풍 돌격', 'Gale Charge', '疾風突撃'], ['6초 동안 이동·공격 속도 +60%', '+60% move and attack speed for 6s', '6秒間、移動·攻撃速度 +60%'],
+    ['치유의 빛', 'Healing Light', '癒しの光'], ['주변 아군의 체력을 35% 회복', 'Restores 35% HP to nearby allies', '周囲の味方のHPを35%回復'],
+    ['영웅이 없습니다', 'You have no heroes', '英雄がいません'], ['기술을 아직 쓸 수 없습니다', 'Skills are not ready yet', 'スキルはまだ使えません'],
+    ['· 심장이 한가운데', '· the Heart is in the middle', '· 心臓は中央'], ['심장 중앙', 'center', '心臓中央'], ['기술', 'Skill', 'スキル'],
     ['가시 함정', 'Spike Trap', 'スパイク罠'], ['밟고 지나는 악마에게 0.5초마다 피해', 'Damages demons crossing it every 0.5s', '踏んだ悪魔に0.5秒ごとにダメージ'],
     ['끈끈이 늪', 'Tar Pit', '粘着沼'], ['밟고 지나는 악마의 이동 -45%', 'Demons crossing it move 45% slower', '踏んだ悪魔の移動 -45%'],
     ['길 위에 깐다 · 악마는 부수지 못한다', 'Laid on roads · demons cannot destroy it', '道の上に置く · 悪魔には壊せない'], ['고른 뒤 Del로 걷는다', 'Select it and press Del to remove', '選んでDelで撤去'],
@@ -203,7 +210,7 @@
     ['멀티 (AI 동맹)', 'Allied (AI)', 'マルチ (AI同盟)'], ['솔로', 'Solo', 'ソロ'], ['· 스테이지', '· Stage', '· ステージ'], ['스테이지', 'Stages', 'ステージ'],
     ['정식 버전에서', 'In the full game', '製品版で'], ['잠김', 'Locked', 'ロック'], ['· 악마 ×', '· Demons ×', '· 悪魔 ×'], ['✔ 클리어', '✔ Cleared', '✔ クリア'], ['최고 웨이브', 'Best wave', '最高ウェーブ'],
     ['영구 강화', 'Permanent Upgrades', '永久強化'], ['출전', 'To Battle', '出撃'], ['이야기', 'Story', '物語'], ['튜토리얼', 'Tutorial', 'チュートリアル'], ['⚙ 설정', '⚙ Settings', '⚙ 設定'], ['설정', 'Settings', '設定'], ['조작법', 'Controls', '操作方法'],
-    ['클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R Y 소환 · T 영웅 · B V 조합 · 소환소나 제단을 누르면 집결지 지정', 'Click or drag to select (double-click: same type, Ctrl+A: all) → click the ground to post them · Q W R summon · T hero · click the Summoning Circle or Altar to set a rally point', 'クリック·ドラッグで選択(ダブルクリックで同種、Ctrl+Aで全員) → 地面クリックで配置 · Q W R 召喚 · T 英雄 · 召喚陣か祭壇を押すと集合地点を指定'],
+    ['클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R Y 소환 · T 영웅 · X 영웅 기술 · B V 조합 · 소환소나 제단을 누르면 집결지 지정', 'Click or drag to select (double-click: same type, Ctrl+A: all) → click the ground to post them · Q W R Y summon · T hero · X hero skills · B V merge · click the Summoning Circle or Altar to set a rally point', 'クリック·ドラッグで選択(ダブルクリックで同種、Ctrl+Aで全員) → 地面クリックで配置 · Q W R Y 召喚 · T 英雄 · X 英雄スキル · B V 合成 · 召喚陣か祭壇を押すと集合地点を指定'],
     ['A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · H J 함정 · 거점 위는 체력 +25% · 고른 건물 Del 철거', 'A S D F G → click a tile (Shift: keep building) · buildings on floor, barricades on roads · H J traps · +25% HP on platforms · Del demolishes the selected building', 'A S D F G → マスをクリック(Shiftで連続) · 建物は床、防壁は道の上 · 拠点の上は耐久+25% · 選んだ建物はDelで撤去'],
     ['E (Z 길, X 벽, C 지우기, 우클릭 지우기, Ctrl+Z 되돌리기) · 길 최대', 'E (Z road, X wall, C erase, right-click erase, Ctrl+Z undo) · up to', 'E (Z 道, X 壁, C 消去, 右クリックで消去, Ctrl+Z 元に戻す) · 道は最大'],
     [', 벽 최대', ' road tiles,', '、壁は最大'], ['· 입구↔심장 연결 필수', 'wall tiles · the entrance must reach the Heart', '· 入口↔心臓の接続が必須'],
@@ -230,7 +237,7 @@
     ['취소', 'Cancel', 'キャンセル'], ['고친 것을 버리고 나간다', 'Discards your changes and exits', '変更を捨てて戻る'], ['✔ E로 적용', '✔ Press E to apply', '✔ Eで適用'],
     // ── 패널·정보 줄 ──
     ['· 보유', '· Owned', '· 所持'], ['· 사거리', '· Range', '· 射程'], ['· 치유', '· Heal', '· 回復'], ['· 범위', '· Area', '· 範囲'], ['· 간격', '· Interval', '· 間隔'], ['· 원거리', '· Ranged', '· 遠距離'], ['· 처치', '· Kills', '· 撃破'],
-    ['준비!', 'Ready!', '準備完了!'], ['영웅 소환 준비 · T', 'Hero ready · T', '英雄召喚の準備完了 · T'], ['영웅 소환', 'Summon Hero', '英雄召喚'], ['누가 올지는 모른다', 'No telling who will come', '誰が来るかはわからない'],
+    ['준비!', 'Ready!', '準備OK'], ['영웅 소환 준비 · T', 'Hero ready · T', '英雄召喚の準備完了 · T'], ['영웅 소환', 'Summon Hero', '英雄召喚'], ['누가 올지는 모른다', 'No telling who will come', '誰が来るかはわからない'],
     ['길 위에만 세운다 · 악마를 붙잡아 둔다', 'Built on roads only · holds demons in place', '道の上にのみ建てる · 悪魔を足止めする'], ['바닥에 세운다', 'Built on floor tiles', '床に建てる'],
     ['강화하면 등급↑ 대기↓', 'Upgrading raises hero grades and shortens the wait', '強化で等級↑ 待機↓'], ['영웅 제단', 'Hero Altar', '英雄の祭壇'], ['소환소', 'Summoning Circle', '召喚陣'],
     ['유닛 소환', 'Summon', 'ユニット召喚'], ['건물 · 바닥에', 'Buildings · on floor', '建物 · 床に'], ['길 · 방벽과 함정은 길 위에', 'Paths · Barricades · Traps', '道 · 防壁と罠は道の上'], ['강화', 'Upgrades', '強化'],
@@ -258,7 +265,7 @@
 
   // 숫자·이름이 끼는 문장. 사전보다 먼저 적용한다. [정규식, 영어, 일본어]
   const R = [
-    [/ · 입구 (\d+)곳/, ' · $1 gates', ' · 入口$1か所'], [/ · 입구 (\d+)/, ' · $1 gates', ' · 入口$1'],
+    [/ · 입구 (\d+)곳/, ' · $1 gates', ' · 入口$1か所'], [/입구 (\d+)/, '$1 gates', '入口$1'],
     [/(\d+)초 안에 격퇴/, 'Repel the wave within $1s', '$1秒以内に撃退'],
     [/같은 유닛 (\d+)기를 한 단계 위 유닛 하나로 합친다/, 'Merges $1 identical units into one of the next tier', '同じユニット$1体を一段上のユニット一体に合成する'],
     [/같은 유닛 (\d+)기가 필요합니다/, 'You need $1 identical units', '同じユニットが$1体必要です'],
