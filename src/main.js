@@ -169,7 +169,7 @@
   const spotOf = () => (script.goal && script.steps[script.i] ? script.steps[script.i].hl : null);
   const slot = (act, body, tip, o) => `<button class="slot ${o.on ? 'on' : ''} ${o.cls || ''} ${spotOf() === act ? 'spot' : ''}" data-a="${act}" data-tip="${tip.replace(/"/g, '&quot;')}" ${o.dim ? 'data-dim="1"' : ''}>${o.key ? `<kbd>${o.key}</kbd>` : ''}${body}</button>`;
   const grp = (name, slots, cls) => `<div class="grp ${cls || ''}"><h3>${name}</h3><div class="slots">${slots}</div></div>`;
-  const nextWave = () => { if (G.wave >= C.WAVES) return '마지막 웨이브'; const c = {}, mu = DD.MUTS[G.muts[G.wave + 1]]; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => { const m = DD.DEMONS[t]; return `<span class="${m.fly ? 'fly' : ''}" data-tip="<b>${m.name} ×${c[t]}</b>${m.desc}">${icon(m.spr, 2)}${c[t]}</span>`; }).join(' ') + (mu ? ` <span class="mut" data-tip="<b>변이 · ${mu.name}</b>${mu.desc}">${mu.name}</span>` : ''); };
+  const nextWave = () => { if (G.wave >= C.WAVES) return '마지막 웨이브'; const c = {}, mu = DD.MUTS[G.muts[G.wave + 1]]; const bg = DD.BOSS_GIM[DD.BOSS[G.wave + 1]]; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => { const m = t === 'boss' && bg && !G.tutorial ? Object.assign({}, DD.DEMONS[t], bg) : DD.DEMONS[t]; return `<span class="${m.fly ? 'fly' : ''}" data-tip="<b>${m.name} ×${c[t]}</b>${m.desc}">${icon(m.spr, 2)}${c[t]}</span>`; }).join(' ') + (mu ? ` <span class="mut" data-tip="<b>변이 · ${mu.name}</b>${mu.desc}">${mu.name}</span>` : ''); };
   const UKEY = ['Q', 'W', 'R', 'Y'], BKEY = ['A', 'S', 'D', 'F', 'G'];
   function drawHud() {
     const d = me(), R = d.R, own = d.units.filter((u) => u.own === d.i).length, hp = d.heart.hp / d.heart.mhp;
@@ -203,10 +203,12 @@
     set('#bar', grp('유닛 소환', units) + grp('건물 · 바닥에', blds) + grp('길 · 방벽은 길 위에', maze, ui.edit ? 'c3' : '') + (ui.edit ? '' : grp('강화', ups))); // 편집 중에는 도구가 한 줄 더 생기므로 강화 묶음을 접는다
     const hl = spotOf(), gm = $('#game'); gm.classList.toggle('guide', !!hl); gm.classList.toggle('dimfield', !!hl && ui.build < 0 && !ui.edit); // 튜토리얼: 목표 칸만 밝게
     set('#tip', ui.tip || inspect() || ''); placeTip();
+    const ms = d.mission; // 진행 중인 미션
+    set('#mission', ms ? `<small>미션</small>${DD.MISSION[ms.k].name}${ms.k === 'fast' ? ` · <b>${Math.max(0, Math.ceil(DD.MISSION.fast.t - (G.t - ms.t0)))}초</b>` : ''} <span class="gold">${ic('ui_coin')}${ms.gold}</span>` : ''); $('#mission').hidden = !ms || ui.world;
     const bp = d.boonPick; // 전리품 고르기: 고를 때까지 게임이 멈춘다
     set('#boon', bp ? `<div class="box"><h2>전리품</h2><p>악마 군주를 쓰러뜨렸다. 하나를 고른다.</p><div class="cards c3">${bp.map((bi, i) => `<button class="card" data-a="boon:${i}"><kbd>${i + 1}</kbd><b>${DD.BOONS[bi].name}</b><small>${DD.BOONS[bi].desc}</small></button>`).join('')}</div></div>` : ''); $('#boon').hidden = !bp;
     const vd = G.dungeons[ui.view], boss = !ui.world && vd.demons.find((e) => e.def.spr === 'd_boss' && e.hp > 0);
-    set('#bossbar', boss ? `<b>${boss.def.name}</b><i><i style="width:${Math.max(0, Math.round((boss.hp / boss.mhp) * 100))}%"></i></i><span>${Math.ceil(boss.hp)}</span>` : '');
+    set('#bossbar', boss ? `<b>${boss.gim && DD.BOSS_GIM[boss.gim] ? DD.BOSS_GIM[boss.gim].name : boss.def.name}</b><i><i style="width:${Math.max(0, Math.round((boss.hp / boss.mhp) * 100))}%"></i></i><span>${Math.ceil(boss.hp)}</span>` : '');
     $('#paused').hidden = !(paused && !ui.edit && !dlg && !G.over);
     // 아래 정보 줄: 편집 안내 > 선택 > 기본 안내
     let info = '유닛 선택 → 바닥 클릭으로 배치 · 더블클릭으로 같은 유닛 모두 선택 · 소환소를 누르면 집결지';
@@ -243,7 +245,7 @@
     const q = pickAt(ui.mouse); if (!q) return '';
     const d = G.dungeons[ui.view], e = (q.k === 'd' ? d.demons : q.k === 'u' ? d.units : d.blds).find((x) => x.id === q.id && x.hp > 0); if (!e) return '';
     const hp = `♥ ${Math.ceil(e.hp)}/${Math.ceil(e.mhp)}`;
-    if (q.k === 'd') return `<b>${e.def.name}</b>${hp} · 공격 ${Math.round(e.atk)}${e.def.rng > 30 ? ' · 원거리' : ''}<small>${e.def.desc}</small>`;
+    if (q.k === 'd') { const bg = e.gim && DD.BOSS_GIM[e.gim]; return `<b>${bg ? bg.name : e.def.name}</b>${hp} · 공격 ${Math.round(e.atk)}${e.def.rng > 30 ? ' · 원거리' : ''}<small>${bg ? bg.desc + ' · 중장갑' : e.def.desc}</small>`; }
     if (q.k === 'u') { const o = G.dungeons[e.own]; return `<b>${e.hero ? `[${DD.GRADES[e.hero.grade].id}] ` : ''}${e.def.name}</b>${hp} · 처치 ${e.kills}${e.own !== d.i ? `<small>${o.R.name} 지원군</small>` : e.hero ? `<small>${DD.HERO_ROLES[e.hero.role].label}</small>` : ''}`; }
     return `<b>${e.def.name}</b>${hp}<br>${e.def.desc}${e.def.atk ? `<small>공격 ${e.def.atk} · 사거리 ${e.def.rng}</small>` : ''}`;
   }
@@ -419,9 +421,12 @@
     for (const e of G.events.splice(0)) {
       const who = (i) => (i === G.human ? '내 요새' : G.dungeons[i].R.name);
       if (e.t === 'wave') DD.Audio.play(e.w % 5 === 0 ? 'boss' : 'wave'); else if (e.t === 'fall') DD.Audio.play('fall');
-      if (e.t === 'wave') banner('WAVE ' + e.w, e.w % 5 === 0 ? '악마 군주가 온다' : e.mut ? `변이 · ${DD.MUTS[e.mut].name} — ${DD.MUTS[e.mut].desc}` : '악마 침공', e.w % 5 === 0);
+      if (e.t === 'wave') banner('WAVE ' + e.w, e.w % 5 === 0 ? (DD.BOSS[e.w] && !G.tutorial ? `${DD.BOSS_GIM[DD.BOSS[e.w]].name} — ${DD.BOSS_GIM[DD.BOSS[e.w]].desc}` : '악마 군주가 온다') : e.mut ? `변이 · ${DD.MUTS[e.mut].name} — ${DD.MUTS[e.mut].desc}` : '악마 침공', e.w % 5 === 0);
       else if (e.t === 'gamble' && e.d === G.human) toast(`랜덤 소환 · ${e.name}`, e.tier > 1 ? 'good' : '');
       else if (e.t === 'merge' && e.d === G.human) { if (e.legend) banner(e.name, '전설 유닛 탄생'); else toast(`조합 · ${e.name}`, 'good'); }
+      else if (e.t === 'missionNew' && e.d === G.human) { toast(`미션 · ${DD.MISSION[e.k].name}`, 'info'); DD.Audio.play('alert'); }
+      else if (e.t === 'mission' && e.d === G.human) { toast(e.ok ? `미션 성공 · ${DD.MISSION[e.k].name} (+●${e.gold})` : `미션 실패 · ${DD.MISSION[e.k].name}`, e.ok ? 'good' : 'bad'); if (e.ok) DD.Audio.play('coin'); }
+      else if (e.t === 'bossRage' && e.d === ui.view) toast('군주가 돌진한다!', 'bad');
       else if (e.t === 'boon' && e.d === G.human) { DD.Audio.play('ready'); lastHtml = {}; hudT = 0; }
       else if (e.t === 'boonGot' && e.d === G.human) toast(`전리품 · ${DD.BOONS[e.b].name} — ${DD.BOONS[e.b].desc}`, 'good');
       else if (e.t === 'hero' && e.d === G.human) heroCard(e);

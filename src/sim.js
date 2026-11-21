@@ -117,7 +117,7 @@
     const d = {
       i, race: p.race, R, bot: !!p.bot, alive: true, gold: 150 + 30 * (m.sGold || 0) + (p.bonusGold || 0), mat: 0, kills: 0,
       units: [], blds: [], demons: [], shots: [], fx: [], snd: {}, queue: [], occ: {}, bc: {}, ver: 0, walls: 0,
-      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, nSum: 0, nBld: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0, pop: C.POP, boons: [], boonPick: null,
+      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, nSum: 0, nBld: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0, lost: 0, mission: null, pop: C.POP, boons: [], boonPick: null,
       mod: {
         atk: (sm.atk || 1) * (1 + 0.05 * (m.uAtk || 0)), hp: (sm.hp || 1) * (1 + 0.05 * (m.uHp || 0)), spd: sm.spd || 1,
         bhp: (1 + 0.08 * (m.bHp || 0)) * (p.race === 'human' ? 1.2 : 1), gold: 1 + 0.05 * (m.gold || 0), hcd: 1 - 0.04 * (m.hCd || 0),
@@ -434,11 +434,28 @@
     const n = Math.round(base.length * d.share * (mu.n || 1));
     for (let i = 0; i < n; i++) list.push(base[i % base.length]);
     const easy = G.tutorial ? (w <= 5 ? 0.6 : 0.85) : 1; // 튜토리얼의 첫 다섯 웨이브는 약하다
-    list.forEach((t, i) => d.queue.push({ at: G.t + (i / list.length) * 25, t, hp: sc.hp * G.st.mul * easy * D.hp * (mu.hp || 1), atk: sc.atk * Math.sqrt(G.st.mul) * D.atk * (mu.atk || 1), spd: mu.spd || 1, gm: mu.gold || 1 }));
+    list.forEach((t, i) => d.queue.push({ at: G.t + (i / list.length) * 25, t, hp: sc.hp * G.st.mul * easy * D.hp * (mu.hp || 1), atk: sc.atk * Math.sqrt(G.st.mul) * D.atk * (mu.atk || 1), spd: mu.spd || 1, gm: mu.gold || 1, gim: t === 'boss' ? DD.BOSS[w] || null : null }));
     d.queue.sort((a, b) => a.at - b.at);
   }
 
+  // 군주 기믹: 임프 소환, 포효(기절), 절반 아래에서 돌진
+  function bossGim(G, d, e) {
+    const g = e.gim, all = g === 'all';
+    if ((g === 'ram' || all) && !e.rage && e.hp < e.mhp * 0.5) { e.rage = true; e.spd = (e.spd || 1) * 1.6; fx(d, 'boom', e.x, e.y - 8, 0.4, { c: 'r1', r: 26 }); snd(d, 'alarm'); G.events.push({ t: 'bossRage', d: d.i }); }
+    e.gt -= DT; if (e.gt > 0 || g === 'ram') return;
+    e.gn = (e.gn || 0) + 1;
+    if (g === 'summon' || (all && e.gn % 2)) {
+      e.gt = all ? 7 : 8; const imp = DD.DEMONS.imp;
+      for (let i = 0; i < 3; i++) { const mhp = imp.hp * e.sc[0]; d.demons.push({ id: G.nid++, k: 'd', def: imp, x: e.x + (G.rnd() - 0.5) * 14, y: e.y + (G.rnd() - 0.5) * 8, hp: mhp, mhp, atk: imp.atk * e.sc[1], spd: 1, gm: 0.5, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: 7 }); }
+      fx(d, 'smoke', e.x, e.y, 0.5); snd(d, 'summon');
+    } else {
+      e.gt = all ? 7 : 10;
+      for (const u of d.units) if (u.hp > 0 && d2(u, e) < 70 * 70) u.stun = 2;
+      fx(d, 'boom', e.x, e.y - 8, 0.45, { c: 'p2', r: 70 }); snd(d, 'alarm');
+    }
+  }
   function demonStep(G, d, e) {
+    if (e.gim) bossGim(G, d, e);
     if (e.def.fly) { // 비행: 길도 벽도 유닛도 무시하고 심장으로
       const h = d.heart, reach = e.def.rng + h.r; e.face = h.x >= e.x ? 1 : -1;
       if (d2(e, h) <= reach * reach) { e.mv = false; if (e.cd <= 0) { e.cd = e.def.as; e.atkT = 0.3; strike(G, d, e, h, e.atk, 0, 'p2'); } }
@@ -476,7 +493,7 @@
     const reach = e.def.rng + t.r;
     if (d2(e, t) <= reach * reach) {
       e.mv = false; e.face = t.x >= e.x ? 1 : -1;
-      if (e.cd <= 0) { e.cd = e.def.as; e.atkT = 0.3; strike(G, d, e, t, e.atk, e.def.splash, 'p2'); }
+      if (e.cd <= 0) { e.cd = e.def.as; e.atkT = 0.3; strike(G, d, e, t, e.atk * (t.k === 'b' && (e.gim === 'ram' || e.gim === 'all') ? 4 : 1), e.def.splash, 'p2'); }
     } else {
       const p = step2(e, t.x, t.y, e.def.spd * (e.spd || 1));
       if (p && (t.k !== 'u' || roadAt(d, p[0], p[1]))) { e.x = p[0]; e.y = p[1]; e.mv = true; } else { e.tg = null; e.rt = 0.2; }
@@ -485,10 +502,16 @@
 
   function stepDungeon(G, d) {
     const inc = DD.income(d); d.gold += inc.g * DT; d.mat += inc.m * DT;
+    const ms = d.mission;
+    if (ms) { // 미션 판정: 웨이브를 다 잡으면 성공, 조건을 어기거나 다음 웨이브가 오면 실패
+      const el = G.t - ms.t0, clear = el > 1 && !d.demons.length && !d.queue.length;
+      const fail = G.wave !== ms.w || (ms.k === 'fast' && el > DD.MISSION.fast.t) || (ms.k === 'nodmg' && d.heart.hp < ms.hp0 - 0.5) || (ms.k === 'noloss' && d.lost > ms.lost0);
+      if (fail || clear) { d.mission = null; if (!fail) d.gold += ms.gold; G.events.push({ t: 'mission', d: d.i, ok: !fail, k: ms.k, gold: ms.gold }); }
+    }
     if (d.heroT > 0) d.heroT -= DT;
     while (d.queue.length && d.queue[0].at <= G.t) {
       const q = d.queue.shift(), def = DD.DEMONS[q.t], mhp = def.hp * q.hp;
-      d.demons.push({ id: G.nid++, k: 'd', def, x: tcx(C.ENT_T[0]) + (G.rnd() - 0.5) * 12, y: C.OY + GH * T - 12 + G.rnd() * 6, hp: mhp, mhp, atk: def.atk * q.atk, spd: q.spd || 1, gm: q.gm || 1, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: q.t === 'boss' ? 12 : 7 });
+      d.demons.push({ id: G.nid++, k: 'd', def, x: tcx(C.ENT_T[0]) + (G.rnd() - 0.5) * 12, y: C.OY + GH * T - 12 + G.rnd() * 6, hp: mhp, mhp, atk: def.atk * q.atk, spd: q.spd || 1, gm: q.gm || 1, gim: q.gim || null, sc: [q.hp, q.atk], gt: 6, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: q.t === 'boss' ? 12 : 7 });
     }
     const drums = d.blds.filter((b) => b.def.haste), pools = d.blds.filter((b) => b.def.regen);
     // 유닛
@@ -498,6 +521,7 @@
       let reg = u.mhp * ((o.race === 'merfolk' ? 0.01 : 0) + (o.mod.regen || 0));
       for (const p of pools) if (d2(u, p) < p.def.rad * p.def.rad) reg += p.def.regen;
       if (reg && u.hp < u.mhp) u.hp = Math.min(u.mhp, u.hp + reg * DT);
+      if (u.stun > 0) { u.stun -= DT; u.mv = false; continue; } // 군주의 포효에 기절
       const home = { x: u.hx, y: u.hy }, heal = u.def.heal, ranged = u.def.rng > 30;
       if (u.rt <= 0) {
         u.rt = 0.3; u.tg = null; u.fast = drums.some((b) => d2(u, b) < b.def.rad * b.def.rad);
@@ -550,7 +574,7 @@
     // 정리
     if (d.demons.some((e) => e.hp <= 0)) d.demons = d.demons.filter((e) => e.hp > 0);
     if (d.units.some((u) => u.hp <= 0)) {
-      d.units.forEach((u) => { if (u.hp <= 0) { fx(d, 'dust', u.x, u.y, 0.42, { c: 's' }); snd(d, 'udie'); if (u.hero) G.events.push({ t: 'herodead', d: d.i, name: u.hero.name }); } });
+      d.units.forEach((u) => { if (u.hp <= 0) { if (u.own === d.i) d.lost++; fx(d, 'dust', u.x, u.y, 0.42, { c: 's' }); snd(d, 'udie'); if (u.hero) G.events.push({ t: 'herodead', d: d.i, name: u.hero.name }); } });
       d.units = d.units.filter((u) => u.hp > 0);
     }
     if (d.blds.some((b) => b.hp <= 0)) {
@@ -589,6 +613,10 @@
     if (G.wave < C.WAVES && G.t >= C.FIRST_WAVE + G.wave * C.WAVE_T) {
       G.wave++;
       G.dungeons.forEach((d) => { if (d.alive) { d.wavesCleared = G.wave - 1; spawnWave(G, d, G.wave); } });
+      for (const d of G.dungeons) if (d.alive && !d.bot && !G.tutorial && G.wave >= 2 && G.wave % 5 && G.rnd() < 0.5) {
+        const ks = Object.keys(DD.MISSION), k = ks[Math.floor(G.rnd() * ks.length)];
+        d.mission = { k, w: G.wave, t0: G.t, hp0: d.heart.hp, lost0: d.lost, gold: DD.missionGold(G.wave) }; G.events.push({ t: 'missionNew', d: d.i, k });
+      }
       G.events.push({ t: 'wave', w: G.wave, mut: G.muts[G.wave] || null });
     }
     for (const d of G.dungeons) if (d.alive) stepDungeon(G, d);

@@ -180,6 +180,7 @@
           else if (e.own !== d.i) ring(ctx, x0, y0, 7, 's2', false);
         }
         spr(ctx, e, e.def.spr, TT, flash);
+        if (e.stun > 0) { ctx.fillStyle = P.g1; const o = ((TT * 8) | 0) % 3; ctx.fillRect(x0 - 5 + o * 4, y0 - 20, 2, 2); ctx.fillRect(x0 + 3 - o * 4, y0 - 22, 2, 2); }
         if (e.fast) { ctx.fillStyle = P.g1; ctx.fillRect(x0 - 7, y0 - 16 - (((TT * 6) | 0) % 2), 1, 2); }
       }
     }

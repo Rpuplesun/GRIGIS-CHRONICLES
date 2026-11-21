@@ -228,6 +228,21 @@
     { id: 'bld', name: '견고한 축성', desc: '건물 체력 +30%' },
     { id: 'regen', name: '야전 치유', desc: '유닛 초당 체력 0.5% 재생' },
   ];
+  // 군주 기믹: 웨이브마다 다른 군주가 온다
+  DD.BOSS = { 5: 'summon', 10: 'ram', 15: 'roar', 20: 'all' };
+  DD.BOSS_GIM = {
+    summon: { name: '소환의 군주', desc: '8초마다 임프 셋을 부른다 · 빨리 쓰러뜨려야 한다' },
+    ram: { name: '파성의 군주', desc: '건물에 4배 피해 · 체력이 절반 아래로 떨어지면 돌진한다' },
+    roar: { name: '포효의 군주', desc: '10초마다 포효해 주변 유닛을 2초 동안 기절시킨다' },
+    all: { name: '악마 대군주', desc: '임프 소환 · 건물 4배 피해 · 포효 · 절반 아래에서 돌진' },
+  };
+  // 판 안의 미션: 군주가 없는 웨이브에 가끔 걸린다. 이루면 골드
+  DD.MISSION = {
+    fast: { name: '45초 안에 격퇴', t: 45 },
+    nodmg: { name: '심장이 맞기 전에 격퇴' },
+    noloss: { name: '유닛을 잃지 않고 격퇴' },
+  };
+  DD.missionGold = (w) => 40 + 10 * w;
   // 기록: 깬 난이도와 남은 심장으로 별 1~3개
   DD.starsFor = (heartRatio) => (heartRatio >= 0.9 ? 3 : heartRatio >= 0.5 ? 2 : 1);
 })(typeof window !== 'undefined' ? window : globalThis);

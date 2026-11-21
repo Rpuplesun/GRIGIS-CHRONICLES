@@ -6,6 +6,13 @@
 
   // [한국어, 영어, 일본어]
   const D = [
+    ['소환의 군주', 'Lord of Summons', '召喚の君主'], ['8초마다 임프 셋을 부른다 · 빨리 쓰러뜨려야 한다', 'Calls three imps every 8s · bring it down fast', '8秒ごとにインプを三体呼ぶ · 早く倒せ'],
+    ['파성의 군주', 'Siegebreaker Lord', '破城の君主'], ['건물에 4배 피해 · 체력이 절반 아래로 떨어지면 돌진한다', 'Deals 4× damage to buildings · charges below half HP', '建物に4倍ダメージ · HPが半分を切ると突進する'],
+    ['포효의 군주', 'Roaring Lord', '咆哮の君主'], ['10초마다 포효해 주변 유닛을 2초 동안 기절시킨다', 'Roars every 10s, stunning nearby units for 2s', '10秒ごとに咆哮し、周囲のユニットを2秒間気絶させる'],
+    ['악마 대군주', 'Demon Overlord', '悪魔大君主'], ['임프 소환 · 건물 4배 피해 · 포효 · 절반 아래에서 돌진', 'Summons imps · 4× damage to buildings · roars · charges below half HP', 'インプ召喚 · 建物に4倍ダメージ · 咆哮 · 半分以下で突進'],
+    ['· 중장갑', '· Heavy armor', '· 重装甲'], ['군주가 돌진한다!', 'The Lord is charging!', '君主が突進してくる!'],
+    ['미션 성공 ·', 'Mission complete ·', 'ミッション成功 ·'], ['미션 실패 ·', 'Mission failed ·', 'ミッション失敗 ·'], ['미션 ·', 'Mission ·', 'ミッション ·'], ['미션', 'Mission', 'ミッション'],
+    ['심장이 맞기 전에 격퇴', 'Repel the wave before the Heart is hit', '心臓が攻撃される前に撃退'], ['유닛을 잃지 않고 격퇴', 'Repel the wave without losing a unit', 'ユニットを失わずに撃退'],
     ['마법사', 'Mage', '魔法使い'], ['용아병', 'Dragontooth Guard', '竜牙兵'], ['투창꾼', 'Javelineer', '投槍兵'], ['바위 정령', 'Rock Spirit', '岩の精霊'], ['작살수', 'Harpooner', '銛撃ち'],
     ['2단계 무작위', 'random tier 2', '2段階ランダム'], ['2단계', 'Tier 2', '2段階'],
     ['성기사', 'Paladin', '聖騎士'], ['고룡', 'Elder Dragon', '古龍'], ['베헤모스', 'Behemoth', 'ベヒーモス'], ['정령왕', 'Spirit King', '精霊王'], ['크라켄', 'Kraken', 'クラーケン'],
@@ -247,6 +254,7 @@
 
   // 숫자·이름이 끼는 문장. 사전보다 먼저 적용한다. [정규식, 영어, 일본어]
   const R = [
+    [/(\d+)초 안에 격퇴/, 'Repel the wave within $1s', '$1秒以内に撃退'],
     [/같은 유닛 (\d+)기를 한 단계 위 유닛 하나로 합친다/, 'Merges $1 identical units into one of the next tier', '同じユニット$1体を一段上のユニット一体に合成する'],
     [/같은 유닛 (\d+)기가 필요합니다/, 'You need $1 identical units', '同じユニットが$1体必要です'],
     [/유닛을 골라 두면 그 종류를 합친다 · 최상위 (\d+)기는 전설 /, 'Select units to merge that type · $1 top-tier units make the legendary ', 'ユニットを選ぶとその種類を合成 · 最上位$1体で伝説の'],
