@@ -48,11 +48,11 @@
         </button>`; }).join('')}</div></section>
       <span></span><span></span>
       <footer><button class="start" data-m="start:1">출전</button><button data-m="story:1">이야기</button><button data-m="tutorial:1">튜토리얼</button><button data-m="settings:1">설정</button>
-        <details class="help"><summary>조작법</summary>
+        <details class="help"><summary>조작법</summary><div class="helpbox">
         <p><b>유닛</b> 클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R 소환 · T 영웅 · 소환소나 제단을 누르면 집결지 지정</p>
         <p><b>건물</b> A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · 거점 위는 체력 +25% · 고른 건물 Del 철거</p>
         <p><b>길 편집</b> E (Z 길, X 벽, C 지우기, 우클릭 지우기, Ctrl+Z 되돌리기) · 길 최대 ${C.ROAD_MAX}, 벽 최대 ${C.WALL_MAX} · 입구↔심장 연결 필수</p>
-        <p><b>기타</b> 1 2 3 속도 · Space 일시정지 · N 다음 웨이브(보너스 골드) · Tab 지도 · Esc 취소 · 한글 입력 상태에서도 단축키가 듣는다</p></details></footer>`;
+        <p><b>기타</b> 1 2 3 속도 · Space 일시정지 · N 다음 웨이브(보너스 골드) · Tab 지도 · Esc 취소 · 한글 입력 상태에서도 단축키가 듣는다</p></div></details></footer>`;
   }
   $('#menu').addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-m]'); if (!b || b.disabled) return;
@@ -165,7 +165,7 @@
   // 핫바 칸 하나. tip은 마우스를 올리면 오른쪽 설명 상자에 뜬다.
   const spotOf = () => (script.goal && script.steps[script.i] ? script.steps[script.i].hl : null);
   const slot = (act, body, tip, o) => `<button class="slot ${o.on ? 'on' : ''} ${o.cls || ''} ${spotOf() === act ? 'spot' : ''}" data-a="${act}" data-tip="${tip.replace(/"/g, '&quot;')}" ${o.dim ? 'data-dim="1"' : ''}>${o.key ? `<kbd>${o.key}</kbd>` : ''}${body}</button>`;
-  const grp = (name, slots) => `<div class="grp"><h3>${name}</h3><div class="slots">${slots}</div></div>`;
+  const grp = (name, slots, cls) => `<div class="grp ${cls || ''}"><h3>${name}</h3><div class="slots">${slots}</div></div>`;
   const nextWave = () => { if (G.wave >= C.WAVES) return '마지막 웨이브'; const c = {}; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => { const m = DD.DEMONS[t]; return `<span data-tip="<b>${m.name} ×${c[t]}</b>${m.desc}">${icon(m.spr, 2)}${c[t]}</span>`; }).join(' '); };
   const UKEY = ['Q', 'W', 'R'], BKEY = ['A', 'S', 'D', 'F', 'G'];
   function drawHud() {
@@ -183,7 +183,7 @@
     else set('#allies', '');
     const gc = DD.gridCount(ui.draft ? ui.draft.grid : d.grid), no = (c) => d.gold < c.g || d.mat < c.m;
     const dr = ui.draft;
-    let maze = slot('edit:1', `<b class="glyph">${ui.edit ? '✔' : '▦'}</b><em>${ui.edit ? '적용' : '길 편집'}</em>`, ui.edit ? `<b>적용하고 계속</b>${dr.err ? `<small class="bad">${dr.err}</small>` : '조건이 맞습니다'}` : `<b>길 편집</b>게임을 멈추고 길과 벽을 고친다<small>악마 경로 ${d.path.length}칸 · 길 ${gc.road}/${C.ROAD_MAX} · 벽 ${gc.wall}/${C.WALL_MAX}</small>`, { on: ui.edit, key: 'E', dim: ui.edit && !!dr.err });
+    let maze = slot('edit:1', `<b class="glyph">${ui.edit ? '✔' : '▦'}</b><em>${ui.edit ? '적용' : '길 편집'}</em>`, ui.edit ? `<b>적용하고 계속</b>${dr.err ? `<small class="bad">${dr.err}</small>` : '조건이 맞습니다'}` : `<b>길 편집</b>게임을 멈추고 길과 벽을 고친다<small>악마 경로 ${d.path.length}칸 · 길 ${gc.road}/${C.ROAD_MAX} · 벽 ${gc.wall}/${C.WALL_MAX}</small>`, { on: ui.edit, key: 'E', dim: ui.edit && !!dr.err, cls: ui.edit ? '' : 'span2' });
     if (ui.edit) maze += [[1, '길 깔기', '악마가 걷는 칸을 만든다', 'Z'], [2, '벽 쌓기', '통과와 사격을 막는 칸', 'X'], [0, '지우기', '바닥으로 되돌린다 · 우클릭으로도 지운다', 'C']].map(([t, n, tip, key]) => slot('tool:' + t, `<b class="glyph">${['✕', '▤', '▣'][t]}</b><em>${n}</em>`, `<b>${n}</b>${tip}`, { on: ui.tool === t, key })).join('')
       + slot('resetmaze:1', `<b class="glyph">↺</b><em>기본 길</em>`, '<b>기본 길</b>ㄹ 모양으로 되돌린다', {}) + slot('undo:1', `<b class="glyph">↶</b><em>되돌리기</em>`, '<b>되돌리기</b>마지막으로 칠한 것을 되돌린다 · Ctrl+Z', { key: '^Z', dim: !dr.hist.length }) + slot('editcancel:1', `<b class="glyph">✖</b><em>취소</em>`, '<b>취소</b>고친 것을 버리고 나간다', { key: 'Esc' });
     const units = R.units.map((u, i) => { const f = DD.reqFail(d, u); return slot('summon:' + i, `<img class="px tier" src="${DD.icon('ui_tier' + u.tier)}" alt="">${icon(u.spr, 2)}${f ? '<span class="cost bad">잠김</span>' : cost(u, d)}`, `<b>${u.name}</b>${ic('ui_coin')} ${u.g}${u.m ? ' ' + ic('ui_crate') + ' ' + u.m : ''} · 보유 ${d.units.filter((x) => x.def === u && x.own === d.i).length}기<br>체력 ${u.hp} · 공격 ${u.atk} · 사거리 ${u.rng}${u.heal ? ' · 치유 ' + u.heal : ''}${u.splash ? ' · 범위' : ''}${f ? `<small class="bad">${f}</small>` : ''}`, { dim: f || no(u), key: UKEY[i], cls: f ? 'lock' : '' }); }).join('')
@@ -194,9 +194,9 @@
     const ac = DD.upCost(d, 'altar'), ap = DD.ALTAR[d.altarLv - 1].p;
     const ups = ['atk', 'hp', 'bld'].map((k) => { const u = DD.UPGRADES[k], c = DD.upCost(d, k); return slot('up:' + k, `<b class="glyph">${{ atk: '⚔', hp: '♥', bld: '▲' }[k]}<sub>${d.up[k]}</sub></b><em>${u.name.replace(' 강화', '')}</em>${c ? cost(c, d) : '<span class="cost">최대</span>'}`, `<b>${u.name} Lv.${d.up[k]}</b>${u.desc}`, { dim: !c || no(c) }); }).join('')
       + slot('up:altar', `<b class="glyph">★<sub>${d.altarLv}</sub></b><em>제단</em>${ac ? cost(ac, d) : '<span class="cost">최대</span>'}`, `<b>영웅 제단 Lv.${d.altarLv}</b>R ${pct(ap[0])}% · SR ${pct(ap[1])}% · SSR ${pct(ap[2])}%<small>강화하면 등급↑ 대기↓</small>`, { dim: !ac || no(ac) });
-    set('#bar', grp('유닛 소환', units) + grp('건물 · 바닥에', blds) + grp('길 · 방벽은 길 위에', maze) + (ui.edit ? '' : grp('강화', ups))); // 편집 중에는 도구가 한 줄 더 생기므로 강화 묶음을 접는다
+    set('#bar', grp('유닛 소환', units) + grp('건물 · 바닥에', blds) + grp('길 · 방벽은 길 위에', maze, ui.edit ? 'c3' : '') + (ui.edit ? '' : grp('강화', ups))); // 편집 중에는 도구가 한 줄 더 생기므로 강화 묶음을 접는다
     const hl = spotOf(), gm = $('#game'); gm.classList.toggle('guide', !!hl); gm.classList.toggle('dimfield', !!hl && ui.build < 0 && !ui.edit); // 튜토리얼: 목표 칸만 밝게
-    set('#tip', ui.tip || inspect() || '<small>칸이나 전장의 유닛·악마·건물에 마우스를 올리면 설명</small>');
+    set('#tip', ui.tip || inspect() || ''); placeTip();
     const vd = G.dungeons[ui.view], boss = !ui.world && vd.demons.find((e) => e.def.spr === 'd_boss' && e.hp > 0);
     set('#bossbar', boss ? `<b>${boss.def.name}</b><i><i style="width:${Math.max(0, Math.round((boss.hp / boss.mhp) * 100))}%"></i></i><span>${Math.ceil(boss.hp)}</span>` : '');
     $('#paused').hidden = !(paused && !ui.edit && !dlg && !G.over);
@@ -220,8 +220,15 @@
     }
     set('#info', (paused && !ui.edit ? '<b class="gold">Ⅱ 일시정지</b> · ' : '') + info); $('#info').hidden = !!ui.world;
   }
-  $('#side').addEventListener('mouseover', (ev) => { const b = ev.target.closest('[data-tip]'); const t = b ? b.dataset.tip : null; if (ui && ui.tip !== t) { ui.tip = t; if (G) drawHud(); } });
+  $('#side').addEventListener('mouseover', (ev) => { const b = ev.target.closest('[data-tip]'); const t = b ? b.dataset.tip : null; if (ui && ui.tip !== t) { ui.tip = t; if (b) tipAt(b); if (G) drawHud(); } });
   $('#side').addEventListener('mouseleave', () => { if (ui) { ui.tip = null; if (G) drawHud(); } });
+  // 설명 상자는 패널 왼쪽으로 펼쳐진다. 내용 길이에 맞춰 커지므로 글자가 잘리지 않는다
+  function tipAt(b) { const r = b.getBoundingClientRect(), s = $('#side').getBoundingClientRect(); ui.tipY = (r.top - s.top) / (s.height / 1440); }
+  function placeTip() {
+    const t = $('#tip'), on = !!lastHtml['#tip']; t.hidden = !on; if (!on) return;
+    const h = t.offsetHeight, y = ui.tip ? ui.tipY : ui.mouse && ui.mouse.y > 180 ? 96 : 1440 - h - 110; // 전장 설명은 마우스 반대쪽에
+    t.style.top = Math.max(8, Math.min(y, 1440 - h - 8)) + 'px';
+  }
   // 전장 위 마우스: 악마·유닛·건물 정보를 설명 상자에
   function inspect() {
     if (!ui.mouse || ui.world || ui.edit) return '';
@@ -244,7 +251,7 @@
   $('#game').addEventListener('pointerdown', (ev) => { // click은 패널이 다시 그려지면 사라진다(누른 버튼이 교체됨) → 누르는 순간 처리
     if (ev.button !== 0) return;
     const b = ev.target.closest('[data-a]'); if (!b || !G || b.disabled) return;
-    if (b.dataset.tip) ui.tip = b.dataset.tip; // 터치 화면에서는 누르면 설명이 뜬다
+    if (b.dataset.tip) { ui.tip = b.dataset.tip; tipAt(b); } // 터치 화면에서는 누르면 설명이 뜬다
     b.blur(); // 눌린 버튼에 초점이 남으면 Space·Enter가 그 버튼을 다시 누른다
     const [k, v] = b.dataset.a.split(':');
     DD.Audio.play('click');

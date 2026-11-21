@@ -24,7 +24,7 @@ small{display:block;color:var(--dim);font-size:22px}
 b{font-weight:700}
 kbd{font:inherit;font-size:22px;color:var(--dim)}
 /* ── 메뉴 ── */
-#menu{position:absolute;inset:0;padding:70px 110px;background:linear-gradient(#0d0912cc,#0d0912 62%),url(art/capsule.webp) right top/1500px auto no-repeat;image-rendering:pixelated;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto 1fr auto;gap:26px 60px}
+#menu{position:absolute;inset:0;padding:46px 110px;background:linear-gradient(#0d0912cc,#0d0912 62%),url(art/capsule.webp) right top/1500px auto no-repeat;image-rendering:pixelated;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto 1fr auto;gap:18px 60px}
 #menu header{grid-column:1/3}
 #menu h1{font:700 88px/1 "Galmuri11";letter-spacing:6px;margin:0;color:var(--gold);text-shadow:0 -4px 0 var(--edge),4px 0 0 var(--edge),-4px 0 0 var(--edge),0 4px 0 var(--edge),4px 8px 0 var(--blood),4px 12px 0 var(--edge)}
 #menu .sub{color:var(--dim);margin:18px 0 0}
@@ -40,7 +40,7 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #menu footer{grid-column:1/3;display:flex;gap:20px;align-items:center}
 .start{font:55px/1 "Galmuri14";padding:26px 80px 32px;background:var(--blood);box-shadow:inset 0 0 0 4px var(--gold),inset 0 -8px 0 #5c1220;color:#fff}
 .start:hover:not(:disabled){background:#c42f49}
-.help{color:var(--dim);font-size:22px;margin-left:auto;max-width:1100px}.help p{margin:4px 0}.help summary{cursor:pointer;color:var(--tx);font-size:33px}
+.help{position:relative;color:var(--dim);font-size:24px;margin-left:auto}.help p{margin:8px 0}.help b{color:var(--gold);margin-right:10px}.helpbox{position:absolute;right:0;bottom:100%;margin-bottom:16px;width:1240px;padding:18px 26px;background:var(--pn);box-shadow:var(--frame);line-height:1.4;z-index:5}.help summary{cursor:pointer;color:var(--tx);font-size:33px}
 /* ── 게임 ── */
 #game{position:absolute;inset:0;display:flex}
 #field{position:relative;width:2208px;height:1440px;line-height:0}
@@ -64,11 +64,11 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #feed div{background:#07050acc;border-left:6px solid var(--acc);padding:4px 16px 6px;animation:feed 4s steps(16) forwards;width:max-content}
 #feed .bad{border-color:var(--bad);color:var(--bad)}#feed .good{border-color:var(--good);color:var(--good)}#feed .info{border-color:#7cc4ff}
 @keyframes feed{0%,80%{opacity:1}100%{opacity:0}}
-#info{position:absolute;left:112px;right:112px;bottom:10px;height:76px;padding:14px 24px;background:#1c1526e6;box-shadow:var(--frame);font-size:28px;white-space:nowrap;overflow:hidden}
+#info{position:absolute;left:112px;right:112px;bottom:10px;min-height:76px;padding:14px 24px;background:#1c1526e6;box-shadow:var(--frame);font-size:28px;line-height:1.45}
 #info button{padding:2px 16px 6px;margin-left:14px;font-size:26px}
-#side{width:352px;height:1440px;background:var(--pn);box-shadow:inset 8px 0 0 var(--edge),inset 12px 0 0 var(--ln);padding:14px 10px 14px 22px;display:flex;flex-direction:column;gap:10px}
-#top .stage{color:var(--dim);font-size:22px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#top .wave{white-space:nowrap;overflow:hidden}
-#top .timer{font:66px/1 "Galmuri14";text-align:center;color:var(--tx);letter-spacing:4px}
+#side{position:relative;width:352px;height:1440px;background:var(--pn);box-shadow:inset 8px 0 0 var(--edge),inset 12px 0 0 var(--ln);padding:14px 10px 14px 22px;display:flex;flex-direction:column;gap:10px}
+#top .stage{color:var(--dim);font-size:22px;line-height:1.15;text-align:center}#top .wave{white-space:nowrap;overflow:hidden}
+#top .timer{font:77px/1 "Galmuri14";text-align:center;color:var(--tx);letter-spacing:4px}
 #top .wave{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px}#top .wave b{font:44px/1 "Galmuri14";color:var(--acc)}#top .wave small{font-size:22px}
 .nextw{display:flex;gap:10px;align-items:flex-end;font-size:22px;color:var(--dim);height:40px;overflow:hidden}.nextw img{margin-right:2px;max-height:40px;width:auto!important}
 .prog{height:12px;background:var(--edge);margin:6px 0 10px}.prog i{display:block;height:100%;background:var(--acc)}
@@ -78,16 +78,16 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 .grp h3{margin:0 0 4px;font-size:22px;white-space:nowrap;font-weight:400;color:var(--dim);letter-spacing:4px;border-bottom:4px solid var(--pn3)}
 .grp .slots{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
 /* 칸: 위는 그림(68px), 아래는 비용 띠(두 줄까지). 비용이 그림을 덮지 않는다 */
-.slot{position:relative;height:124px;padding:0 0 6px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden;font-size:22px;line-height:1}
+.slot{position:relative;height:130px;padding:0 0 6px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden;font-size:22px;line-height:1}
 .slot:active:not(:disabled){padding:2px 0 4px}
 .slot>img:not(.tier){flex:none;margin-top:1px}.slot kbd{position:absolute;left:4px;top:4px;font:700 22px/1 "Galmuri11";color:var(--edge);background:var(--gold);padding:3px 6px 5px;z-index:1}.slot[data-dim] kbd{background:var(--dim)}
 .slot em{font-style:normal;white-space:nowrap;max-width:100%;overflow:hidden}
-.slot .glyph{font:44px/40px "Galmuri14";margin-top:4px;color:var(--acc)}.slot em{margin-top:2px}.slot .glyph sub{font-size:22px;color:var(--tx)}
+.slot .glyph{font:44px/40px "Galmuri14";height:40px;flex:none;margin-top:4px;color:var(--acc)}.slot em{flex:none;margin-top:2px}.slot .glyph sub{font-size:22px;line-height:0;vertical-align:baseline;color:var(--tx)}
 .slot[data-dim]{filter:brightness(.55)}.slot.lock img{filter:grayscale(1)}.slot.ready{background:#7a4a1c;box-shadow:inset 0 0 0 4px var(--gold),inset 0 -6px 0 #33250f}
 .cost{white-space:nowrap;display:flex;flex-direction:column;align-items:center}
 .slot .cost{width:100%;height:48px;margin-top:auto;justify-content:center;gap:2px;background:#07050aa6;box-shadow:0 -4px 0 #07050a}.cost i{font-style:normal;margin:0 1px}.cost .g{color:var(--gold)}.cost .m{color:var(--mat)}.cost .no{color:var(--bad)}
-#tip{flex:1;min-height:70px;background:var(--edge);padding:12px 16px;font-size:24px;line-height:1.35;overflow:hidden}#tip b{color:var(--gold);display:block;font-size:28px}#tip small{font-size:22px}
-#sys{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}#sys button{padding:6px 0 10px;font-size:24px}#sys .wide{grid-column:span 2}
+#tip{position:absolute;right:100%;margin-right:12px;width:640px;z-index:30;pointer-events:none;background:var(--edge);font-size:26px;line-height:1.4}#tip[hidden]{display:none}#tip b{color:var(--gold);display:block;font-size:28px}#tip small{font-size:22px}
+#sys{margin-top:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}#sys button{padding:6px 0 10px;font-size:24px}#sys .wide{grid-column:span 2}
 /* ── 결과 ── */
 #result{position:absolute;inset:0;background:#07050ae6;display:flex;align-items:center;justify-content:center;text-align:center}
 #result>div{background:var(--pn);box-shadow:var(--frame);padding:60px 140px 70px;min-width:1000px}
@@ -177,3 +177,6 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 .start:active:not(:disabled){padding:6px 60px 4px;box-shadow:none}
 #top .wave small{font-size:20px}
 #side{gap:6px}
+.grp.c3 .slots{grid-template-columns:repeat(3,1fr)}.slot.span2{grid-column:span 2}
+:root[lang=ja] .slot em{font-size:20px;letter-spacing:-2px}:root:not([lang=ko]) #top .wave b{font-size:40px}
+#tip{padding:10px 14px 18px}#tip small{display:block}
