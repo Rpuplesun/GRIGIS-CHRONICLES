@@ -25,11 +25,13 @@
   const NB = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
   // ── 던전 격자: 0 바닥(건물 자리), 1 길(악마가 걷는 칸), 2 벽(통과·사격 불가) ──
-  DD.defaultGrid = function () {
+  DD.defaultGrid = function (nEnt) {
     const gr = new Uint8Array(GW * GH);
     // 기본 길은 ㄹ 모양: 입구(아래 가운데) → 왼쪽 → 위 → 오른쪽으로 가로질러 → 위 → 심장(위 가운데)
     const mx = C.ENT_T[0], L = 3, R = GW - 4, row = (y, a, b) => { for (let x = a; x <= b; x++) gr[key(x, y)] = 1; }, col = (x, a, b) => { for (let y = a; y <= b; y++) gr[key(x, y)] = 1; };
     col(mx, GH - 2, GH - 1); row(GH - 3, L, mx); col(L, GH >> 1, GH - 3); row(GH >> 1, L, R); col(R, 2, GH >> 1); row(2, mx, R); col(mx, 1, 2);
+    if (nEnt >= 2) row(GH >> 1, 0, L); // 왼쪽 입구는 가운데 가로길에 붙는다
+    if (nEnt >= 3) { row(GH >> 1, GW - 2, GW - 1); col(GW - 2, GH >> 1, GH - 3); row(GH - 3, mx, GW - 2); } // 오른쪽 입구는 아래로 돌아 아래 입구 길에 합류한다
     return gr;
   };
   function flow(gr) { // 심장에서 길을 따라 퍼지는 거리. -1은 심장에 닿지 않는 칸
@@ -42,18 +44,21 @@
     return dist;
   }
   DD.gridCount = (gr) => { let r = 0, w = 0; for (const v of gr) { if (v === 1) r++; else if (v === 2) w++; } return { road: r, wall: w }; };
-  DD.gridCheck = function (gr) { // 규칙 위반 사유 또는 null
+  // 입구 바깥 칸인가(아래 입구의 아래쪽, 좌우 입구의 바깥쪽). 악마가 들어오는 통로로 그리고 걷는다
+  DD.entOutside = (ents, cx, cy) => ents.some((e) => (e[1] === GH - 1 && e[0] !== 0 && e[0] !== GW - 1 ? cx === e[0] && cy >= GH : e[0] === 0 ? cx < 0 && cy === e[1] : cx >= GW && cy === e[1]));
+  DD.gridCheck = function (gr, ents) { // 규칙 위반 사유 또는 null
+    ents = ents || [C.ENT_T];
     if (gr.length !== GW * GH) return '격자 크기가 다릅니다';
     for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) if (DD.isFixed(cx, cy) && gr[key(cx, cy)]) return '바꿀 수 없는 칸';
-    if (gr[key(C.ENT_T[0], C.ENT_T[1])] !== 1) return '입구는 길이어야 한다';
+    for (const e of ents) if (gr[key(e[0], e[1])] !== 1) return '입구는 길이어야 한다';
     const n = DD.gridCount(gr);
     if (n.road > C.ROAD_MAX) return `길 타일 한도 초과 (${C.ROAD_MAX})`;
     if (n.wall > C.WALL_MAX) return `벽 타일 한도 초과 (${C.WALL_MAX})`;
-    if (flow(gr)[key(C.ENT_T[0], C.ENT_T[1])] < 0) return '입구와 심장은 이어져 있어야 합니다.';
+    const fl = flow(gr); for (const e of ents) if (fl[key(e[0], e[1])] < 0) return '입구와 심장은 이어져 있어야 합니다.';
     return null;
   };
-  function pathOf(dist) { // 입구에서 심장까지의 최단 경로(끊겨 있으면 빈 배열)
-    const path = []; let [cx, cy] = C.ENT_T;
+  function pathOf(dist, ent) { // 입구에서 심장까지의 최단 경로(끊겨 있으면 빈 배열)
+    const path = []; let [cx, cy] = ent || C.ENT_T;
     while (dist[key(cx, cy)] > 0) {
       path.push([cx, cy]);
       const dv = dist[key(cx, cy)]; let nx = -1, ny = -1;
@@ -62,21 +67,23 @@
     }
     return path;
   }
-  DD.gridPath = (gr) => { const dist = flow(gr); return { dist, path: pathOf(dist) }; }; // 편집 초안 미리보기용
+  DD.gridPath = (gr, ents) => { const dist = flow(gr), paths = (ents || [C.ENT_T]).map((e) => pathOf(dist, e)); return { dist, path: paths[0], paths }; }; // 편집 초안 미리보기용
   // 진행 중인 요새에 격자 전체를 적용할 수 있는가. 사유 또는 null
   DD.gridErr = function (d, gr) {
-    const e0 = DD.gridCheck(gr); if (e0) return e0;
-    for (const b of d.blds) if (gr[key(b.cx, b.cy)] !== (b.def.kind === 'wall' ? 1 : 0)) return '건물 아래 칸은 바꿀 수 없습니다';
+    const e0 = DD.gridCheck(gr, d.ents); if (e0) return e0;
+    for (const b of d.blds) if (gr[key(b.cx, b.cy)] !== (b.def.kind === 'wall' || b.def.kind === 'trap' ? 1 : 0)) return '건물 아래 칸은 바꿀 수 없습니다';
     const nd = flow(gr);
     for (const e of d.demons) { const ex = tx(e.x), ey = ty(e.y); if (inG(ex, ey) && nd[key(ex, ey)] < 0) return '악마가 서 있는 길도 심장과 이어져 있어야 합니다'; }
     return null;
   };
   function applyGrid(d, gr) {
     d.grid = gr; d.dist = flow(gr); d.ver++;
-    const path = pathOf(d.dist);
+    d.paths = d.ents.map((e) => pathOf(d.dist, e)); const path = d.paths[0];
     d.path = path;
     // 기본 배치: 근접은 길 중간 두 칸, 원거리는 바로 뒤(심장 쪽) 세 칸(칸마다 여섯 자리)
-    const L = path.length, a = Math.max(0, Math.min(L - 2, Math.floor(L * 0.45)));
+    // 입구가 여럿이면 모든 길이 합쳐진 뒤의 칸에 세운다(어느 입구로 와도 지나가게)
+    const sets = d.paths.slice(1).map((p) => new Set(p.map((c) => key(c[0], c[1])))), mi = path.findIndex((c) => sets.every((st) => st.has(key(c[0], c[1]))));
+    const L = path.length, a = Math.max(0, Math.min(L - 2, Math.max(Math.floor(L * 0.45), mi)));
     d.sm = path.slice(a, a + 2); d.sr = path.slice(a + 2, a + 5).length ? path.slice(a + 2, a + 5) : d.sm;
   }
   function los(d, a, b) { // 벽이 사격을 막는가
@@ -86,11 +93,11 @@
     return true;
   }
 
-  // 전체 지도(6px 칸, 92×60칸)에서 던전의 자리. k: 방 회전(0 입구가 아래, 1 오른쪽, 2 위, 3 왼쪽), cor: 게이트→입구 회랑
+  // 전체 지도(6px 칸, 116×80칸)에서 던전의 자리. k: 방 회전(0 입구가 아래, 1 오른쪽, 2 위, 3 왼쪽), cor: 게이트→입구 회랑
   const SLOT = {
-    N: { x0: 34, y0: 0, k: 0, cor: [[45, 24], [45, 15]] }, E: { x0: 73, y0: 19, k: 3, cor: [[51, 30], [72, 30]] },
-    S: { x0: 34, y0: 45, k: 2, cor: [[45, 36], [45, 44]] }, W: { x0: 4, y0: 19, k: 1, cor: [[39, 30], [19, 30]] },
-    SE: { x0: 60, y0: 45, k: 2, cor: [[45, 36], [45, 43], [71, 43], [71, 44]] }, SW: { x0: 9, y0: 45, k: 2, cor: [[45, 36], [45, 43], [20, 43], [20, 44]] },
+    N: { x0: 44, y0: 0, k: 0, cor: [[58, 34], [58, 20]] }, E: { x0: 92, y0: 25, k: 3, cor: [[64, 40], [91, 40]] },
+    S: { x0: 44, y0: 60, k: 2, cor: [[58, 46], [58, 59]] }, W: { x0: 4, y0: 25, k: 1, cor: [[52, 40], [24, 40]] },
+    SE: { x0: 75, y0: 60, k: 2, cor: [[58, 46], [58, 57], [89, 57], [89, 59]] }, SW: { x0: 12, y0: 60, k: 2, cor: [[58, 46], [58, 57], [26, 57], [26, 59]] },
   };
   DD.worldSlots = (n) => ({ 1: ['N'], 2: ['N', 'S'], 3: ['N', 'E', 'W'], 4: ['N', 'E', 'S', 'W'], 5: ['N', 'E', 'SE', 'SW', 'W'] }[n].map((s) => SLOT[s]));
   // 방 안 칸 좌표(벽 포함, 실수 가능) → 전체 지도 칸 좌표
@@ -102,7 +109,7 @@
       st: DD.stageOf(opt.players[Math.max(0, opt.players.findIndex((p) => !p.bot))].race, opt.stage || 0),
       rnd: rng(opt.seed || 1), nid: 1, dungeons: [], events: [], human: opt.players.findIndex((p) => !p.bot),
     };
-    G.D = DD.DIFFS[G.diff];
+    G.D = DD.DIFFS[G.diff]; G.nEnt = DD.entCount(G.stage, G.diff, G.tutorial);
     if (!G.tutorial) { const ks = Object.keys(DD.MUTS); for (let w = 3; w < C.WAVES; w++) if (w % 5 && G.rnd() < 0.4) G.muts[w] = ks[Math.floor(G.rnd() * ks.length)]; }
     G.dungeons = opt.players.map((p, i) => mkDungeon(G, i, p));
     G.step = () => step(G);
@@ -127,8 +134,9 @@
     d.heroT = DD.HERO_CD.first * d.mod.hcd;
     const hh = Math.round(1000 * (1 + 0.08 * (m.bHp || 0)));
     d.heart = { k: 'h', x: C.HEART.x, y: C.HEART.y, hp: hh, mhp: hh, r: 12, hit: 0 };
-    let gr = DD.defaultGrid();
-    if (p.layout) { const u = Uint8Array.from(p.layout); if (!DD.gridCheck(u)) gr = u; }
+    d.ents = DD.entsFor(G.nEnt);
+    let gr = DD.defaultGrid(G.nEnt);
+    if (p.layout) { const u = Uint8Array.from(p.layout); if (!DD.gridCheck(u, d.ents)) gr = u; }
     applyGrid(d, gr); d.walls = DD.gridCount(gr).wall;
     return d;
   }
@@ -156,7 +164,8 @@
     if (!inG(cx, cy) || is(C.HEART_T, cx, cy) || is(C.SUMMON_T, cx, cy) || is(C.ALTAR_T, cx, cy)) return '지을 수 없는 위치';
     if (d.occ[key(cx, cy)]) return '건물이 있는 칸';
     const gv = d.grid[key(cx, cy)];
-    if (b.kind === 'wall') return gv !== 1 ? '방벽은 길 위에만 세울 수 있습니다' : is(C.ENT_T, cx, cy) ? '입구는 못 막는다' : null;
+    if (b.kind === 'trap') return gv !== 1 ? '함정은 길 위에만 놓을 수 있습니다' : null;
+    if (b.kind === 'wall') return gv !== 1 ? '방벽은 길 위에만 세울 수 있습니다' : d.ents.some((e) => is(e, cx, cy)) ? '입구는 못 막는다' : null;
     return gv === 1 ? '길 위에는 방벽만' : gv === 2 ? '벽 위에는 못 짓는다' : null;
   };
   // 조합 계획: 고른 유닛이 있으면 그 종류에서, 없으면 가장 낮은 등급부터 찾는다. {def, us, to} 또는 null
@@ -229,11 +238,11 @@
       fx(d, 'dust', e.x, e.y + 8, 0.42, { c: 'e' }); snd(d, 'build'); d.nBld++;
     } else if (c.a === 'tile') { // 길·벽 편집. t: 0 바닥, 1 길, 2 벽
       const { cx, cy, t } = c;
-      if (!inG(cx, cy) || DD.isFixed(cx, cy) || is(C.ENT_T, cx, cy)) return '바꿀 수 없는 칸';
+      if (!inG(cx, cy) || DD.isFixed(cx, cy) || d.ents.some((e) => is(e, cx, cy))) return '바꿀 수 없는 칸';
       if (d.grid[key(cx, cy)] === t) return null;
       if (d.occ[key(cx, cy)]) return '건물이 있는 칸';
       const ng = Uint8Array.from(d.grid); ng[key(cx, cy)] = t;
-      const e0 = DD.gridCheck(ng); if (e0) return e0;
+      const e0 = DD.gridCheck(ng, d.ents); if (e0) return e0;
       const nd = flow(ng);
       for (const e of d.demons) { const ex = tx(e.x), ey = ty(e.y); if (inG(ex, ey) && nd[key(ex, ey)] < 0) return '악마가 서 있는 길'; }
       if (t === 2 && d.units.some((u) => tx(u.x) === cx && ty(u.y) === cy)) return '유닛이 서 있는 칸';
@@ -409,7 +418,7 @@
     else if (!wallAt(d, p[0], u.y)) { u.x = p[0]; u.mv = true; } else if (!wallAt(d, u.x, p[1])) { u.y = p[1]; u.mv = true; }
   }
   const prog = (d, e) => { const cx = tx(e.x), cy = ty(e.y), v = inG(cx, cy) ? d.dist[key(cx, cy)] : -1; return v < 0 ? 999 : v; }; // 심장까지 남은 칸
-  const roadAt = (d, x, y) => { const cx = tx(x), cy = ty(y); return inG(cx, cy) ? d.grid[key(cx, cy)] === 1 : cy >= GH && cx === C.ENT_T[0]; };
+  const roadAt = (d, x, y) => { const cx = tx(x), cy = ty(y); return inG(cx, cy) ? d.grid[key(cx, cy)] === 1 : DD.entOutside(d.ents, cx, cy); };
   function nearest(e, list, maxD) {
     let best = null, bd = maxD * maxD;
     for (const o of list) { if (o.hp <= 0) continue; const q = d2(e, o); if (q < bd) { bd = q; best = o; } }
@@ -428,7 +437,8 @@
     const n = Math.round(base.length * d.share * (mu.n || 1));
     for (let i = 0; i < n; i++) list.push(base[i % base.length]);
     const easy = G.tutorial ? (w <= 5 ? 0.6 : 0.85) : 1; // 튜토리얼의 첫 다섯 웨이브는 약하다
-    list.forEach((t, i) => d.queue.push({ at: G.t + (i / list.length) * 25, t, hp: sc.hp * G.st.mul * easy * D.hp * (mu.hp || 1), atk: sc.atk * Math.sqrt(G.st.mul) * D.atk * (mu.atk || 1), spd: mu.spd || 1, gm: mu.gold || 1, gim: t === 'boss' ? DD.BOSS[w] || null : null }));
+    const ne = d.ents.length;
+    list.forEach((t, i) => d.queue.push({ ent: t === 'boss' ? 0 : i % ne, at: G.t + (i / list.length) * 25, t, hp: sc.hp * G.st.mul * easy * D.hp * (mu.hp || 1), atk: sc.atk * Math.sqrt(G.st.mul) * D.atk * (mu.atk || 1), spd: mu.spd || 1, gm: mu.gold || 1, gim: t === 'boss' ? DD.BOSS[w] || null : null }));
     d.queue.sort((a, b) => a.at - b.at);
   }
 
@@ -456,6 +466,13 @@
       else { const p = step2(e, h.x, h.y, e.def.spd * (e.spd || 1)); e.mv = !!p; if (p) { e.x = p[0]; e.y = p[1]; } }
       return;
     }
+    { // 함정: 서 있는 칸의 함정이 듣는다(군주는 늪에 반만 걸린다)
+      const tcx0 = tx(e.x), tcy0 = ty(e.y), tr = inG(tcx0, tcy0) ? d.occ[key(tcx0, tcy0)] : null; e.slow = 1;
+      if (tr && tr.def.kind === 'trap') {
+        if (tr.def.slow) e.slow = e.def.spr === 'd_boss' ? (1 + tr.def.slow) / 2 : tr.def.slow;
+        if (tr.def.dmg) { e.tt = (e.tt || 0) - DT; if (e.tt <= 0) { e.tt = tr.def.every; tr.hit = 0.12; hurt(G, d, tr, e, tr.def.dmg * (1 + 0.15 * d.up.bld) * d.mod.atk); fx(d, 'hit', e.x, e.y - 3, 0.17, { c: 'W' }); if (e.hp <= 0) return; } }
+      }
+    }
     const ranged = e.def.rng > 30, boss = e.def.spr === 'd_boss';
     if (e.rt <= 0 || (e.tg && e.tg.hp <= 0)) {
       e.rt = 0.35; e.tg = null;
@@ -466,22 +483,22 @@
         if (q <= reach * reach ? !ranged || los(d, e, u) : !ranged && roadAt(d, u.x, u.y)) { bd = q; e.tg = u; }
       }
       if (!e.tg && (ranged || boss)) { // 흑마술사와 군주는 길가의 건물도 부순다
-        const b = nearest(e, d.blds, e.def.rng + 12 + (boss ? 6 : 0));
+        const b = nearest(e, d.blds.filter((x) => x.def.kind !== 'trap'), e.def.rng + 12 + (boss ? 6 : 0));
         if (b && los(d, e, b)) e.tg = b;
       }
     }
     let t = e.tg;
     if (!t) { // 길을 따라 심장으로
-      const cx = tx(e.x), cy = ty(e.y); let nx = C.ENT_T[0], ny = C.ENT_T[1];
+      const cx = tx(e.x), cy = ty(e.y), en = d.ents[e.ent || 0] || d.ents[0]; let nx = en[0], ny = en[1];
       if (inG(cx, cy)) {
         const dv = d.dist[key(cx, cy)];
         for (const [dx, dy] of NB) { const ax = cx + dx, ay = cy + dy; if (inG(ax, ay) && d.dist[key(ax, ay)] === dv - 1 && dv > 0) { nx = ax; ny = ay; break; } }
       }
       if (is(C.HEART_T, nx, ny)) t = d.heart;
       else {
-        const blk = d.occ[key(nx, ny)] || (inG(cx, cy) && d.occ[key(cx, cy)]);
+        const blk = [d.occ[key(nx, ny)], inG(cx, cy) && d.occ[key(cx, cy)]].find((b) => b && b.def.kind !== 'trap'); // 함정은 막지 않는다
         if (blk && blk.hp > 0) t = blk; // 바리케이드
-        else { const p = step2(e, tcx(nx), tcy(ny), e.def.spd * (e.spd || 1)); e.mv = !!p; if (p) { e.x = p[0]; e.y = p[1]; } return; }
+        else { const p = step2(e, tcx(nx), tcy(ny), e.def.spd * (e.spd || 1) * (e.slow || 1)); e.mv = !!p; if (p) { e.x = p[0]; e.y = p[1]; } return; }
       }
     }
     const reach = e.def.rng + t.r;
@@ -489,7 +506,7 @@
       e.mv = false; e.face = t.x >= e.x ? 1 : -1;
       if (e.cd <= 0) { e.cd = e.def.as; e.atkT = 0.3; strike(G, d, e, t, e.atk * (t.k === 'b' && (e.gim === 'ram' || e.gim === 'all') ? 4 : 1), e.def.splash, 'p2'); }
     } else {
-      const p = step2(e, t.x, t.y, e.def.spd * (e.spd || 1));
+      const p = step2(e, t.x, t.y, e.def.spd * (e.spd || 1) * (e.slow || 1));
       if (p && (t.k !== 'u' || roadAt(d, p[0], p[1]))) { e.x = p[0]; e.y = p[1]; e.mv = true; } else { e.tg = null; e.rt = 0.2; }
     }
   }
@@ -505,7 +522,8 @@
     if (d.heroT > 0) d.heroT -= DT;
     while (d.queue.length && d.queue[0].at <= G.t) {
       const q = d.queue.shift(), def = DD.DEMONS[q.t], mhp = def.hp * q.hp;
-      d.demons.push({ id: G.nid++, k: 'd', def, x: tcx(C.ENT_T[0]) + (G.rnd() - 0.5) * 12, y: C.OY + GH * T - 12 + G.rnd() * 6, hp: mhp, mhp, atk: def.atk * q.atk, spd: q.spd || 1, gm: q.gm || 1, gim: q.gim || null, sc: [q.hp, q.atk], gt: 6, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: q.t === 'boss' ? 12 : 7 });
+      const en = d.ents[q.ent || 0] || d.ents[0], side = en[0] === 0 ? -1 : en[0] === GW - 1 ? 1 : 0; // 아래 입구는 아래 끝에서, 좌우 입구는 바깥 끝에서 나온다
+      d.demons.push({ id: G.nid++, k: 'd', def, ent: q.ent || 0, x: side ? (side < 0 ? C.OX + 6 + G.rnd() * 6 : C.OX + GW * T - 12 + G.rnd() * 6) : tcx(en[0]) + (G.rnd() - 0.5) * 12, y: side ? tcy(en[1]) + (G.rnd() - 0.5) * 12 : C.OY + GH * T - 12 + G.rnd() * 6, hp: mhp, mhp, atk: def.atk * q.atk, spd: q.spd || 1, gm: q.gm || 1, gim: q.gim || null, sc: [q.hp, q.atk], gt: 6, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: q.t === 'boss' ? 12 : 7 });
     }
     const drums = d.blds.filter((b) => b.def.haste), pools = d.blds.filter((b) => b.def.regen);
     // 유닛

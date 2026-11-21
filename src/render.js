@@ -1,4 +1,4 @@
-// 캔버스 렌더러. 논리 해상도 552×360, 정수 좌표만 사용(반투명·보간 없음).
+// 캔버스 렌더러. 논리 해상도 696×480, 정수 좌표만 사용(반투명·보간 없음).
 // 효과 규칙(VFX 키트): 프레임 교체만, 알파·크기·회전 애니메이션 없음, 덮기는 순서 디더.
 (function () {
   const DD = window.DD, C = DD.C, P = DD.PAL;
@@ -28,8 +28,8 @@
   function motes(x, T, st) {
     const [col, vx, vy] = MOTE[st.id];
     for (let i = 0; i < 16; i++) {
-      const sx = (i * 97) % C.W, sy = (i * 53) % 330, ph = i * 1.7;
-      const py = 26 + ((((sy + T * vy * (0.6 + (i % 3) * 0.3)) % 330) + 330) % 330), px = (((sx + T * vx + Math.sin(T * 0.7 + ph) * 5) % C.W) + C.W) % C.W;
+      const sx = (i * 97) % C.W, sy = (i * 53) % (C.H - 30), ph = i * 1.7;
+      const py = 26 + ((((sy + T * vy * (0.6 + (i % 3) * 0.3)) % (C.H - 30)) + (C.H - 30)) % (C.H - 30)), px = (((sx + T * vx + Math.sin(T * 0.7 + ph) * 5) % C.W) + C.W) % C.W;
       x.fillStyle = P[i % 5 === 0 && st.id === 'fire' ? 'g1' : col]; x.fillRect(px | 0, py | 0, 1, 1);
     }
   }
@@ -94,7 +94,7 @@
     const x = c.getContext('2d'), st = G.st.id, tl = (n) => DD.tile(n, st);
     for (let y = 0; y < C.H; y += T) for (let px = 0; px < C.W; px += T) x.drawImage(DD.tile('void', 'cave'), px, y);
     for (let cy = -1; cy <= GH + 1; cy++) for (let cx = -1; cx <= GW; cx++) {
-      const inside = cx >= 0 && cy >= 0 && cx < GW && cy < GH, ent = cx === C.ENT_T[0] && cy >= GH;
+      const inside = cx >= 0 && cy >= 0 && cx < GW && cy < GH, ent = !inside && DD.entOutside(d.ents, cx, cy);
       if (cy > GH && !ent) continue;
       const v = inside ? d.grid[cx + cy * GW] : ent ? 1 : 2;
       const h = ((cx * 73856093) ^ (cy * 19349663) ^ (st.length * 83492791)) >>> 0; // 칸마다 고정된 무작위 값
@@ -107,7 +107,7 @@
       if (inside && v === 2) { x.fillStyle = P.K; x.fillRect(OX + cx * T, OY + cy * T + T - 1, T, 1); }
     }
     // 길 가장자리: 어두운 턱과 밝은 테두리를 둘러 악마가 걷는 길을 또렷하게 한다
-    const isRoad = (cx, cy) => (cx >= 0 && cy >= 0 && cx < GW && cy < GH ? d.grid[cx + cy * GW] === 1 : cx === C.ENT_T[0] && cy >= GH);
+    const isRoad = (cx, cy) => (cx >= 0 && cy >= 0 && cx < GW && cy < GH ? d.grid[cx + cy * GW] === 1 : DD.entOutside(d.ents, cx, cy));
     for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) {
       if (!isRoad(cx, cy)) continue; const X = OX + cx * T, Y = OY + cy * T;
       [[0, -1, X, Y, T, 1, X, Y - 2, T, 2], [0, 1, X, Y + T - 1, T, 1, X, Y + T, T, 2], [-1, 0, X, Y, 1, T, X - 2, Y, 2, T], [1, 0, X + T - 1, Y, 1, T, X + T, Y, 2, T]].forEach(([dx, dy, lx, ly, lw, lh, kx, ky, kw, kh]) => {
@@ -120,7 +120,7 @@
     for (const [w, lv] of [[10, 6], [22, 3]]) { dither(x, lv, 'K', OX, OY, w, GH * T); dither(x, lv, 'K', OX + GW * T - w, OY, w, GH * T); dither(x, lv, 'K', OX, OY + GH * T - w, GW * T, w); }
     glow(x, C.HEART.x, C.HEART.y + 4, 58, 'o3'); glow(x, C.HEART.x, C.HEART.y, 30, 'r2');
     glow(x, C.SUMMON.x, C.SUMMON.y, 30, 'b3'); glow(x, C.ALTAR.x, C.ALTAR.y, 30, 'g3');
-    glow(x, tcx(C.ENT_T[0]), OY + GH * T - 16, 34, 'r3');
+    for (const e of d.ents) { if (e[0] === 0) glow(x, OX + 14, tcy(e[1]), 30, 'r3'); else if (e[0] === GW - 1) glow(x, OX + GW * T - 14, tcy(e[1]), 30, 'r3'); else glow(x, tcx(e[0]), OY + GH * T - 16, 34, 'r3'); }
     for (const [cx, cy] of C.PLOTS) x.drawImage(DD.frame('t_platform', 0, 0), tcx(cx) - 14, tcy(cy) - 13);
     for (const sx of [0, GW - 1]) DD.blit(x, 't_standard', 0, tcx(sx), tcy(0) + 12);
     bgCache[d.i] = { k, c };
@@ -149,7 +149,7 @@
     const TT = G.t + (ui.clock || 0), flash = ui.flash !== false;
     ctx.imageSmoothingEnabled = false;
     // 길 편집 중에는 초안 격자를 보여 준다
-    const gd = ui.draft ? Object.assign(Object.create(d), { grid: ui.draft.grid, ver: 'draft' + ui.draft.ver, path: ui.draft.path }) : d;
+    const gd = ui.draft ? Object.assign(Object.create(d), { grid: ui.draft.grid, ver: 'draft' + ui.draft.ver, path: ui.draft.path, paths: ui.draft.paths }) : d;
     ctx.drawImage(bg(G, gd), 0, 0);
     DD.blit(ctx, 'f_summon', ((TT * 5) | 0) % 4, C.SUMMON.x, C.SUMMON.y + 12);
     DD.blit(ctx, 'f_altar', ((TT * 6) | 0) % 4, C.ALTAR.x, C.ALTAR.y + 12);
@@ -157,15 +157,22 @@
     for (const sx of [-1, 1]) { DD.blit(ctx, 't_brazier', 0, C.HEART.x + sx * 22, C.HEART.y + 10); const f = ((TT * 8 + sx) | 0) % 3; ctx.fillStyle = P.g1; ctx.fillRect(C.HEART.x + sx * 22 - (f === 2 ? 1 : 0), C.HEART.y - 9 - (f === 1 ? 1 : 0), 1, 2); }
     { const low = d.heart.hp / d.heart.mhp < 0.3; dotted(ctx, C.HEART.x, C.HEART.y - 2, 17 + (((TT * 2) | 0) % 2), low ? 'r1' : 'r3', 28);
       const c = DD.blit(ctx, 'f_heart', ((TT * 4) | 0) % 4, C.HEART.x, C.HEART.y + 12, false, flash && d.heart.hit > 0.06); bar(ctx, C.HEART.x - 14, C.HEART.y + 12 - c.height - 3, 28, d.heart.hp / d.heart.mhp, 'r2'); }
-    DD.blit(ctx, 'gate_s', ((TT * 6) | 0) % 6, tcx(C.ENT_T[0]) + 2, OY + GH * T + 4); // 악마가 나오는 게이트
+    for (const e of d.ents) { const f = ((TT * 6) | 0) % 6; if (e[0] === 0) DD.blit(ctx, 'gate_s', f, OX - 8, tcy(e[1]) + 16); else if (e[0] === GW - 1) DD.blit(ctx, 'gate_s', f, OX + GW * T + 10, tcy(e[1]) + 16); else DD.blit(ctx, 'gate_s', f, tcx(e[0]) + 2, OY + GH * T + 4); } // 악마가 나오는 게이트
     // 길 위의 진행 방향 화살표(악마가 걷는 쪽으로 흐른다)
-    gd.path.forEach(([cx, cy], i) => {
-      if ((i + 300 - ((TT * 3) | 0) % 3) % 3) return;
-      const nx = i + 1 < gd.path.length ? gd.path[i + 1] : C.HEART_T, dx = nx[0] - cx, dy = nx[1] - cy, X = tcx(cx), Y = tcy(cy);
+    const seenA = new Set(); // 여러 입구의 길이 겹치는 칸은 한 번만
+    (gd.paths || [gd.path]).forEach((pth) => pth.forEach(([cx, cy], i) => {
+      if ((i + 300 - ((TT * 3) | 0) % 3) % 3 || seenA.has(cx + cy * GW)) return; seenA.add(cx + cy * GW);
+      const nx = i + 1 < pth.length ? pth[i + 1] : C.HEART_T, dx = nx[0] - cx, dy = nx[1] - cy, X = tcx(cx), Y = tcy(cy);
       ctx.fillStyle = P.w4;
       for (let k = -3; k <= 3; k++) { const a = 3 - Math.abs(k); if (dx) { ctx.fillRect(X + dx * a - 1, Y + k, 2, 1); } else { ctx.fillRect(X + k, Y + dy * a - 1, 1, 2); } }
-    });
-    const all = d.blds.concat(d.units, d.demons).sort((a, b) => (a.k === 'b' ? a.y + 8 : a.y) - (b.k === 'b' ? b.y + 8 : b.y));
+    }));
+    for (const b of d.blds) if (b.def.kind === 'trap') { // 함정은 바닥에 깔린다
+      const X = b.x - 12, Y = b.y - 12;
+      if (b.def.slow) { ctx.fillStyle = P.K; ctx.fillRect(X + 3, Y + 5, 18, 15); ctx.fillRect(X + 5, Y + 3, 14, 19); ctx.fillStyle = P.p3; ctx.fillRect(X + 5, Y + 6, 14, 12); ctx.fillStyle = P.p2; const o = ((TT * 2 + b.id) | 0) % 2; ctx.fillRect(X + 7 + o, Y + 8, 3, 2); ctx.fillRect(X + 14 - o, Y + 13, 3, 2); ctx.fillRect(X + 9, Y + 15, 2, 1); }
+      else { const up = b.hit > 0 ? 2 : 0; for (const [sx, sy] of [[5, 8], [12, 8], [19, 8], [8, 16], [15, 16]]) { ctx.fillStyle = P.K; ctx.fillRect(X + sx - 3, Y + sy, 6, 2); ctx.fillRect(X + sx - 2, Y + sy - 3 - up, 4, 3 + up); ctx.fillStyle = P.s1; ctx.fillRect(X + sx - 1, Y + sy - 2 - up, 2, 3 + up); ctx.fillStyle = P.W; ctx.fillRect(X + sx - 1, Y + sy - 3 - up, 1, 1); } }
+      if (ui.selB === b.id) ring(ctx, Math.round(b.x), Math.round(b.y), 11, 'n1', true);
+    }
+    const all = d.blds.filter((b) => b.def.kind !== 'trap').concat(d.units, d.demons).sort((a, b) => (a.k === 'b' ? a.y + 8 : a.y) - (b.k === 'b' ? b.y + 8 : b.y));
     for (const e of all) {
       if (e.k === 'b') {
         const id = e.def.spr + '@' + d.race;
@@ -240,7 +247,7 @@
       for (const [cx, cy] of cor) { cell(cx, cy, 'e3'); ctx.fillStyle = P.e4; ctx.fillRect(cx * S6, cy * S6, 1, 1); }
       for (let ly = 0; ly < GH + 2; ly++) for (let lx = 0; lx < GW + 2; lx++) { // 벽 포함
         const gx = lx - 1, gy = ly - 1, inside = gx >= 0 && gy >= 0 && gx < GW && gy < GH;
-        const v = inside ? d.grid[gx + gy * GW] : gx === C.ENT_T[0] && gy === GH ? 1 : 2;
+        const v = inside ? d.grid[gx + gy * GW] : DD.entOutside(d.ents, gx, gy) ? 1 : 2;
         const [wx, wy] = DD.worldCell(s, lx + 0.5, ly + 0.5).map((q) => Math.floor(q));
         cell(wx, wy, v === 1 ? 'e3' : v === 2 ? 'e2' : 'e4');
         if (v === 2) { ctx.fillStyle = P.e1; ctx.fillRect(wx * S6, wy * S6, S6, 1); ctx.fillStyle = P.e3; ctx.fillRect(wx * S6, wy * S6 + S6 - 1, S6, 1); }
@@ -261,8 +268,8 @@
       num(ctx, String(i + 1), X0 + 5, Y0 + 2, i === G.human ? 'n1' : 'W');
       if (i === ui.view) { ctx.fillStyle = P[i === G.human ? 'n1' : 'W']; for (let a = 0; a < w * S6; a += 3) { ctx.fillRect(X0 + a, Y0 - 2, 1, 1); ctx.fillRect(X0 + a, Y0 + h * S6 + 1, 1, 1); } for (let a = 0; a < h * S6; a += 3) { ctx.fillRect(X0 - 2, Y0 + a, 1, 1); ctx.fillRect(X0 + w * S6 + 1, Y0 + a, 1, 1); } }
     });
-    glow(ctx, 273, 183, 46, 'r3');
-    DD.blit(ctx, 'gate', ((TT * 6) | 0) % 6, 273, 183 + 31);
+    glow(ctx, (C.W >> 1) - 3, (C.H >> 1) + 3, 46, 'r3');
+    DD.blit(ctx, 'gate', ((TT * 6) | 0) % 6, (C.W >> 1) - 3, (C.H >> 1) + 34);
     if (ui.veil > 0) DD.veil(ctx, ui.veil);
   };
 })();

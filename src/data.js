@@ -3,11 +3,11 @@
   const DD = (g.DD = g.DD || {});
   // 던전은 24px 타일 격자. 안쪽 21×13칸, 입구는 아래 가운데, 심장은 위 가운데.
   DD.C = {
-    TILE: 24, GW: 21, GH: 13, OX: 24, OY: 24, W: 552, H: 360,
-    WAVES: 20, WAVE_T: 60, FIRST_WAVE: 20, POP: 40, BLD_CAP: 24,
-    ROAD_MAX: 70, WALL_MAX: 30, PLOT_HP: 1.25,
-    HEART_T: [10, 0], SUMMON_T: [8, 0], ALTAR_T: [12, 0], ENT_T: [10, 12],
-    PLOTS: [[4, 3], [16, 3], [4, 9], [16, 9]],
+    TILE: 24, GW: 27, GH: 18, OX: 24, OY: 24, W: 696, H: 480,
+    WAVES: 20, WAVE_T: 60, FIRST_WAVE: 20, POP: 40, BLD_CAP: 40,
+    ROAD_MAX: 120, WALL_MAX: 50, PLOT_HP: 1.25,
+    HEART_T: [13, 0], SUMMON_T: [11, 0], ALTAR_T: [15, 0], ENT_T: [13, 17],
+    PLOTS: [[5, 4], [21, 4], [5, 13], [21, 13]],
   };
 
   // 유닛: hp, atk, rng(사거리 px), as(공격 간격 초), spd(px/초)
@@ -116,6 +116,12 @@
     merfolk: ['크라켄', 2000, 85, 20, 1.2, 26, { splash: 16 }],
   };
   for (const k in LG) { const l = LG[k]; DD.RACES[k].legend = U(l[0], 4, 0, 0, l[1], l[2], l[3], l[4], l[5], 'u_' + k + '_5', Object.assign({ legend: true }, l[6])); }
+  // 함정: 모든 종족 공통. 길 위에 깔고, 악마는 부수지 못한다
+  const TRAPS = [
+    B('spike', '가시 함정', 'trap', 40, 0, 1, 'trap_spike', '밟고 지나는 악마에게 0.5초마다 피해', { dmg: 9, every: 0.5 }),
+    B('tar', '끈끈이 늪', 'trap', 35, 0, 1, 'trap_tar', '밟고 지나는 악마의 이동 -45%', { slow: 0.55 }),
+  ];
+  for (const k in DD.RACES) DD.RACES[k].blds.push(...TRAPS);
   DD.RACE_IDS = Object.keys(DD.RACES);
   DD.mergeNeed = (race) => (race === 'spirit' ? 2 : 3); // 정령은 둘만 있어도 융합한다
 
@@ -194,7 +200,7 @@
   DD.shardsFor = (stage, wavesCleared, win, diff) => Math.round((wavesCleared * 2 + (win ? 30 : 0)) * (1 + stage * 0.5) * DD.DIFFS[diff == null ? 1 : diff].shard);
 
   // 건물 종류별 최대 수. 같은 건물을 끝없이 늘릴 수 없다
-  DD.BLD_MAX = { unlock: 1, tower: 6, wall: 10, eco: 3, aura: 3 };
+  DD.BLD_MAX = { unlock: 1, tower: 6, wall: 10, eco: 3, aura: 3, trap: 6 };
   DD.bldMax = (b) => DD.BLD_MAX[b.kind];
   // 난이도: 악마 체력·공격, 골드, 영혼석 배율
   DD.DIFFS = [
@@ -224,6 +230,9 @@
     { id: 'bld', name: '견고한 축성', desc: '건물 체력 +30%' },
     { id: 'regen', name: '야전 치유', desc: '유닛 초당 체력 0.5% 재생' },
   ];
+  // 침공로: 스테이지와 난이도가 오르면 좌우 벽에도 입구가 열린다
+  DD.entCount = (stage, diff, tutorial) => { if (tutorial) return 1; const s = stage + (diff >= 2 ? 1 : 0) + (diff >= 3 ? 1 : 0); return s < 2 ? 1 : s < 4 ? 2 : 3; };
+  DD.entsFor = (n) => [DD.C.ENT_T, [0, DD.C.GH >> 1], [DD.C.GW - 1, DD.C.GH >> 1]].slice(0, n);
   // 군주 기믹: 웨이브마다 다른 군주가 온다
   DD.BOSS = { 5: 'summon', 10: 'ram', 15: 'roar', 20: 'all' };
   DD.BOSS_GIM = {
@@ -234,7 +243,7 @@
   };
   // 판 안의 미션: 군주가 없는 웨이브에 가끔 걸린다. 이루면 골드
   DD.MISSION = {
-    fast: { name: '45초 안에 격퇴', t: 45 },
+    fast: { name: '50초 안에 격퇴', t: 50 },
     nodmg: { name: '심장이 맞기 전에 격퇴' },
     noloss: { name: '유닛을 잃지 않고 격퇴' },
   };

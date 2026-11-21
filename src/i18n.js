@@ -6,6 +6,10 @@
 
   // [한국어, 영어, 일본어]
   const D = [
+    ['가시 함정', 'Spike Trap', 'スパイク罠'], ['밟고 지나는 악마에게 0.5초마다 피해', 'Damages demons crossing it every 0.5s', '踏んだ悪魔に0.5秒ごとにダメージ'],
+    ['끈끈이 늪', 'Tar Pit', '粘着沼'], ['밟고 지나는 악마의 이동 -45%', 'Demons crossing it move 45% slower', '踏んだ悪魔の移動 -45%'],
+    ['길 위에 깐다 · 악마는 부수지 못한다', 'Laid on roads · demons cannot destroy it', '道の上に置く · 悪魔には壊せない'], ['고른 뒤 Del로 걷는다', 'Select it and press Del to remove', '選んでDelで撤去'],
+    ['함정은 길 위에만 놓을 수 있습니다', 'Traps can only be laid on roads', '罠は道の上にしか置けません'], ['H J 함정', 'H J traps', 'H J 罠'],
     ['소환의 군주', 'Lord of Summons', '召喚の君主'], ['8초마다 임프 셋을 부른다 · 빨리 쓰러뜨려야 한다', 'Calls three imps every 8s · bring it down fast', '8秒ごとにインプを三体呼ぶ · 早く倒せ'],
     ['파성의 군주', 'Siegebreaker Lord', '破城の君主'], ['건물에 4배 피해 · 체력이 절반 아래로 떨어지면 돌진한다', 'Deals 4× damage to buildings · charges below half HP', '建物に4倍ダメージ · HPが半分を切ると突進する'],
     ['포효의 군주', 'Roaring Lord', '咆哮の君主'], ['10초마다 포효해 주변 유닛을 2초 동안 기절시킨다', 'Roars every 10s, stunning nearby units for 2s', '10秒ごとに咆哮し、周囲のユニットを2秒間気絶させる'],
@@ -200,7 +204,7 @@
     ['정식 버전에서', 'In the full game', '製品版で'], ['잠김', 'Locked', 'ロック'], ['· 악마 ×', '· Demons ×', '· 悪魔 ×'], ['✔ 클리어', '✔ Cleared', '✔ クリア'], ['최고 웨이브', 'Best wave', '最高ウェーブ'],
     ['영구 강화', 'Permanent Upgrades', '永久強化'], ['출전', 'To Battle', '出撃'], ['이야기', 'Story', '物語'], ['튜토리얼', 'Tutorial', 'チュートリアル'], ['⚙ 설정', '⚙ Settings', '⚙ 設定'], ['설정', 'Settings', '設定'], ['조작법', 'Controls', '操作方法'],
     ['클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R Y 소환 · T 영웅 · B V 조합 · 소환소나 제단을 누르면 집결지 지정', 'Click or drag to select (double-click: same type, Ctrl+A: all) → click the ground to post them · Q W R summon · T hero · click the Summoning Circle or Altar to set a rally point', 'クリック·ドラッグで選択(ダブルクリックで同種、Ctrl+Aで全員) → 地面クリックで配置 · Q W R 召喚 · T 英雄 · 召喚陣か祭壇を押すと集合地点を指定'],
-    ['A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · 거점 위는 체력 +25% · 고른 건물 Del 철거', 'A S D F G → click a tile (Shift: keep building) · buildings on floor, barricades on roads · +25% HP on platforms · Del demolishes the selected building', 'A S D F G → マスをクリック(Shiftで連続) · 建物は床、防壁は道の上 · 拠点の上は耐久+25% · 選んだ建物はDelで撤去'],
+    ['A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · H J 함정 · 거점 위는 체력 +25% · 고른 건물 Del 철거', 'A S D F G → click a tile (Shift: keep building) · buildings on floor, barricades on roads · H J traps · +25% HP on platforms · Del demolishes the selected building', 'A S D F G → マスをクリック(Shiftで連続) · 建物は床、防壁は道の上 · 拠点の上は耐久+25% · 選んだ建物はDelで撤去'],
     ['E (Z 길, X 벽, C 지우기, 우클릭 지우기, Ctrl+Z 되돌리기) · 길 최대', 'E (Z road, X wall, C erase, right-click erase, Ctrl+Z undo) · up to', 'E (Z 道, X 壁, C 消去, 右クリックで消去, Ctrl+Z 元に戻す) · 道は最大'],
     [', 벽 최대', ' road tiles,', '、壁は最大'], ['· 입구↔심장 연결 필수', 'wall tiles · the entrance must reach the Heart', '· 入口↔心臓の接続が必須'],
     ['1 2 3 속도 · Space 일시정지 · N 다음 웨이브(보너스 골드) · Tab 지도 · Esc 취소 · 한글 입력 상태에서도 단축키가 듣는다', '1 2 3 speed · Space pause · N next wave (bonus gold) · Tab map · Esc cancel', '1 2 3 速度 · Space 一時停止 · N 次のウェーブ(ボーナスゴールド) · Tab 地図 · Esc キャンセル · 日本語入力中でもショートカットが効く'],
@@ -229,7 +233,7 @@
     ['준비!', 'Ready!', '準備完了!'], ['영웅 소환 준비 · T', 'Hero ready · T', '英雄召喚の準備完了 · T'], ['영웅 소환', 'Summon Hero', '英雄召喚'], ['누가 올지는 모른다', 'No telling who will come', '誰が来るかはわからない'],
     ['길 위에만 세운다 · 악마를 붙잡아 둔다', 'Built on roads only · holds demons in place', '道の上にのみ建てる · 悪魔を足止めする'], ['바닥에 세운다', 'Built on floor tiles', '床に建てる'],
     ['강화하면 등급↑ 대기↓', 'Upgrading raises hero grades and shortens the wait', '強化で等級↑ 待機↓'], ['영웅 제단', 'Hero Altar', '英雄の祭壇'], ['소환소', 'Summoning Circle', '召喚陣'],
-    ['유닛 소환', 'Summon', 'ユニット召喚'], ['건물 · 바닥에', 'Buildings · on floor', '建物 · 床に'], ['길 · 방벽은 길 위에', 'Paths · Barricades', '道 · 防壁は道の上'], ['강화', 'Upgrades', '強化'],
+    ['유닛 소환', 'Summon', 'ユニット召喚'], ['건물 · 바닥에', 'Buildings · on floor', '建物 · 床に'], ['길 · 방벽과 함정은 길 위에', 'Paths · Barricades · Traps', '道 · 防壁と罠は道の上'], ['강화', 'Upgrades', '強化'],
     ['칸이나 전장의 유닛·악마·건물에 마우스를 올리면 설명', 'Hover a slot, or a unit, demon or building on the field, for details', 'スロットや戦場のユニット·悪魔·建物にカーソルを置くと説明'],
     ['유닛 선택 → 바닥 클릭으로 배치 · 더블클릭으로 같은 유닛 모두 선택 · 소환소를 누르면 집결지', 'Select units → click the ground to post them · double-click selects all of a type · click the Summoning Circle to set a rally point', 'ユニット選択 → 地面クリックで配置 · ダブルクリックで同種を全選択 · 召喚陣を押すと集合地点'],
     ['· 요새를 누르면 들어간다', '· click a fortress to enter', '· 要塞を押すと入る'], ['관전 중', '— spectating', 'を観戦中'], ['기본 배치로', 'Default formation', '基本配置に戻す'],
@@ -254,6 +258,7 @@
 
   // 숫자·이름이 끼는 문장. 사전보다 먼저 적용한다. [정규식, 영어, 일본어]
   const R = [
+    [/ · 입구 (\d+)곳/, ' · $1 gates', ' · 入口$1か所'], [/ · 입구 (\d+)/, ' · $1 gates', ' · 入口$1'],
     [/(\d+)초 안에 격퇴/, 'Repel the wave within $1s', '$1秒以内に撃退'],
     [/같은 유닛 (\d+)기를 한 단계 위 유닛 하나로 합친다/, 'Merges $1 identical units into one of the next tier', '同じユニット$1体を一段上のユニット一体に合成する'],
     [/같은 유닛 (\d+)기가 필요합니다/, 'You need $1 identical units', '同じユニットが$1体必要です'],

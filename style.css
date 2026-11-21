@@ -43,8 +43,8 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 .help{position:relative;color:var(--dim);font-size:24px;margin-left:auto}.help p{margin:8px 0}.help b{color:var(--gold);margin-right:10px}.helpbox{position:absolute;right:0;bottom:100%;margin-bottom:16px;width:1240px;padding:18px 26px;background:var(--pn);box-shadow:var(--frame);line-height:1.4;z-index:5}.help summary{cursor:pointer;color:var(--tx);font-size:33px}
 /* ── 게임 ── */
 #game{position:absolute;inset:0;display:flex}
-#field{position:relative;width:2208px;height:1440px;line-height:0}
-#cv{width:2208px;height:1440px;background:#000;touch-action:none;display:block}
+#field{position:relative;width:2088px;height:1440px;line-height:0}
+#cv{width:2088px;height:1440px;background:#000;touch-action:none;display:block}
 #field>div{line-height:1.35}
 #allies{position:absolute;left:112px;right:112px;top:12px;display:flex;gap:8px}#allies:empty{display:none}
 #allies button{flex:1;padding:6px 14px 10px;text-align:left;font-size:26px;white-space:nowrap;background:#1c1526e6}
@@ -66,7 +66,7 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 @keyframes feed{0%,80%{opacity:1}100%{opacity:0}}
 #info{position:absolute;left:112px;right:112px;bottom:10px;min-height:76px;padding:14px 24px;background:#1c1526e6;box-shadow:var(--frame);font-size:28px;line-height:1.45}
 #info button{padding:2px 16px 6px;margin-left:14px;font-size:26px}
-#side{position:relative;width:352px;height:1440px;background:var(--pn);box-shadow:inset 8px 0 0 var(--edge),inset 12px 0 0 var(--ln);padding:14px 10px 14px 22px;display:flex;flex-direction:column;gap:10px}
+#side{position:relative;width:472px;height:1440px;background:var(--pn);box-shadow:inset 8px 0 0 var(--edge),inset 12px 0 0 var(--ln);padding:14px 10px 14px 22px;display:flex;flex-direction:column;gap:10px}
 #top .stage{color:var(--dim);font-size:22px;line-height:1.15;text-align:center}#top .wave{white-space:nowrap;overflow:hidden}
 #top .timer{font:77px/1 "Galmuri14";text-align:center;color:var(--tx);letter-spacing:4px}
 #top .wave{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px}#top .wave b{font:44px/1 "Galmuri14";color:var(--acc)}#top .wave small{font-size:22px}
