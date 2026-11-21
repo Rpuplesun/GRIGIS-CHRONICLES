@@ -98,10 +98,12 @@
 
   DD.newGame = function (opt) {
     const G = {
-      t: 0, wave: 0, over: false, win: false, stage: opt.stage || 0, tutorial: !!opt.tutorial,
+      t: 0, wave: 0, over: false, win: false, stage: opt.stage || 0, tutorial: !!opt.tutorial, diff: opt.tutorial || opt.diff == null ? 1 : opt.diff, muts: {},
       st: DD.stageOf(opt.players[Math.max(0, opt.players.findIndex((p) => !p.bot))].race, opt.stage || 0),
       rnd: rng(opt.seed || 1), nid: 1, dungeons: [], events: [], human: opt.players.findIndex((p) => !p.bot),
     };
+    G.D = DD.DIFFS[G.diff];
+    if (!G.tutorial) { const ks = Object.keys(DD.MUTS); for (let w = 3; w < C.WAVES; w++) if (w % 5 && G.rnd() < 0.4) G.muts[w] = ks[Math.floor(G.rnd() * ks.length)]; }
     G.dungeons = opt.players.map((p, i) => mkDungeon(G, i, p));
     G.step = () => step(G);
     G.cmd = (di, c) => cmd(G, G.dungeons[di], c);
@@ -115,7 +117,7 @@
     const d = {
       i, race: p.race, R, bot: !!p.bot, alive: true, gold: 150 + 30 * (m.sGold || 0) + (p.bonusGold || 0), mat: 0, kills: 0,
       units: [], blds: [], demons: [], shots: [], fx: [], snd: {}, queue: [], occ: {}, bc: {}, ver: 0, walls: 0,
-      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, nSum: 0, nBld: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0,
+      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, nSum: 0, nBld: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0, pop: C.POP, boons: [], boonPick: null,
       mod: {
         atk: (sm.atk || 1) * (1 + 0.05 * (m.uAtk || 0)), hp: (sm.hp || 1) * (1 + 0.05 * (m.uHp || 0)), spd: sm.spd || 1,
         bhp: (1 + 0.08 * (m.bHp || 0)) * (p.race === 'human' ? 1.2 : 1), gold: 1 + 0.05 * (m.gold || 0), hcd: 1 - 0.04 * (m.hCd || 0),
@@ -158,7 +160,7 @@
     return gv === 1 ? '길 위에는 방벽만' : gv === 2 ? '벽 위에는 못 짓는다' : null;
   };
   // 기본 수입(초당). 골드 수급 강화는 처치 골드와 기본 수입 모두에 붙는다
-  DD.income = (d) => ({ g: (2 + 1.5 * (d.bc.market || 0)) * d.mod.gold, m: (d.race === 'spirit' ? 0.15 : 0) + 0.3 * (d.bc.crystal || 0) });
+  DD.income = (d) => ({ g: (1.6 + 1.2 * (d.bc.market || 0)) * d.mod.gold, m: (d.race === 'spirit' ? 0.15 : 0) + 0.3 * (d.bc.crystal || 0) });
   DD.callBonus = (G) => Math.floor(DD.canCall(G) * DD.CALL_BONUS);
   const pay = (d, c) => { if (d.gold < c.g || d.mat < c.m) return false; d.gold -= c.g; d.mat -= c.m; return true; };
 
@@ -195,7 +197,7 @@
       const u = d.R.units[c.u], f = DD.reqFail(d, u);
       if (f) return f;
       const own = d.units.filter((x) => x.own === d.i).length - (u.req && u.req.eat ? u.req.eat[1] : 0);
-      if (own >= C.POP) return '인구 한도';
+      if (own >= d.pop) return '인구 한도';
       if (!pay(d, u)) return '자원 부족';
       if (u.req && u.req.eat) {
         let n = u.req.eat[1]; const src = d.R.units[u.req.eat[0]];
@@ -205,6 +207,7 @@
     } else if (c.a === 'build') {
       const b = d.R.blds[c.b], cost = DD.bldCost(d, b), e0 = DD.buildErr(d, b, c.cx, c.cy);
       if (e0) return e0;
+      if ((d.bc[b.id] || 0) >= DD.bldMax(b)) return '이 건물은 더 지을 수 없다';
       if (d.blds.length >= C.BLD_CAP) return '건물 한도';
       if (!pay(d, cost)) return '자원 부족';
       const mhp = b.hp * d.mod.bhp * (1 + 0.15 * d.up.bld) * (DD.isPlot(c.cx, c.cy) ? C.PLOT_HP : 1);
@@ -254,6 +257,9 @@
         u.hx = Math.max(C.OX + 5, Math.min(C.OX + GW * T - 5, c.x + ((i % n) - (n - 1) / 2) * 12));
         u.hy = Math.max(C.OY + 8, Math.min(C.OY + GH * T - 3, c.y + (Math.floor(i / n) - (n - 1) / 2) * 12));
       });
+    } else if (c.a === 'boon') {
+      if (!d.boonPick || d.boonPick[c.i] == null) return '지금은 안 된다';
+      applyBoon(G, d, d.boonPick[c.i]); snd(d, 'up');
     } else if (c.a === 'up') {
       const cost = DD.upCost(d, c.k); if (!cost) return '최대 레벨';
       if (!pay(d, cost)) return '자원 부족';
@@ -295,11 +301,32 @@
     if (o.race === 'beast') a *= 1 + Math.min(0.4, 0.015 * d.units.length);
     return a;
   }
+  // 전리품: 셋을 뽑아 고르게 한다. 봇은 바로 하나를 집는다
+  function offerBoon(G, d) {
+    const ids = DD.BOONS.map((b, i) => i), pick = [];
+    while (pick.length < 3) pick.push(ids.splice(Math.floor(G.rnd() * ids.length), 1)[0]);
+    if (d.bot) applyBoon(G, d, pick[Math.floor(G.rnd() * 3)]); else { d.boonPick = pick; G.events.push({ t: 'boon', d: d.i }); }
+  }
+  function applyBoon(G, d, bi) {
+    const k = DD.BOONS[bi].id, own = d.units.filter((u) => u.own === d.i); d.boons.push(k); d.boonPick = null;
+    if (k === 'atk') d.mod.atk *= 1.12;
+    else if (k === 'hp') { d.mod.hp *= 1.15; own.forEach((u) => { u.mhp *= 1.15; u.hp *= 1.15; }); }
+    else if (k === 'loot') d.mod.kg = (d.mod.kg || 1) + 0.2;
+    else if (k === 'pop') d.pop += 6;
+    else if (k === 'heart') { d.heart.mhp += 250; d.heart.hp += 250; }
+    else if (k === 'hero') { d.heroT = 0; d.mod.hcd *= 0.85; }
+    else if (k === 'bank') d.gold += 300;
+    else if (k === 'mat') d.mat += 60;
+    else if (k === 'bld') { d.mod.bhp *= 1.3; d.blds.forEach((b) => { b.mhp *= 1.3; b.hp *= 1.3; }); }
+    else if (k === 'regen') d.mod.regen = (d.mod.regen || 0) + 0.005;
+    G.events.push({ t: 'boonGot', d: d.i, b: bi });
+  }
   function hurt(G, d, src, t, amt) {
     t.hp -= amt; t.hit = 0.12;
     if (t.k === 'd' && t.hp <= 0 && !t.dead) {
       t.dead = true; d.kills++; if (src && src.k === 'u') src.kills++;
-      const kg = t.def.gold * d.mod.gold * (1 + 0.2 * Math.min(3, d.bc.hoard || 0)); d.gold += kg;
+      const kg = t.def.gold * (t.gm || 1) * G.D.gold * d.mod.gold * (d.mod.kg || 1) * (1 + 0.2 * Math.min(3, d.bc.hoard || 0)); d.gold += kg;
+      if (t.def.spr === 'd_boss' && G.wave < C.WAVES && !G.tutorial) offerBoon(G, d);
       d.mat += (t.def.mat || 0) + (G.rnd() < 0.1 ? 1 : 0);
       fx(d, 'corpse', t.x, t.y, 0.5, { s: t.def.spr, face: t.face }); fx(d, 'smoke', t.x, t.y, 0.5); fx(d, 'gold', t.x, t.y - 14, 0.7, { n: Math.round(kg) });
       snd(d, t.def.spr === 'd_boss' ? 'bossdie' : 'die');
@@ -374,10 +401,11 @@
 
   function spawnWave(G, d, w) {
     const base = DD.waveList(w), sc = DD.waveScale(w), list = [];
-    const n = Math.round(base.length * d.share);
+    const mu = DD.MUTS[G.muts[w]] || {}, D = G.D;
+    const n = Math.round(base.length * d.share * (mu.n || 1));
     for (let i = 0; i < n; i++) list.push(base[i % base.length]);
     const easy = G.tutorial ? (w <= 5 ? 0.6 : 0.85) : 1; // 튜토리얼의 첫 다섯 웨이브는 약하다
-    list.forEach((t, i) => d.queue.push({ at: G.t + (i / list.length) * 25, t, hp: sc.hp * G.st.mul * easy, atk: sc.atk * Math.sqrt(G.st.mul) }));
+    list.forEach((t, i) => d.queue.push({ at: G.t + (i / list.length) * 25, t, hp: sc.hp * G.st.mul * easy * D.hp * (mu.hp || 1), atk: sc.atk * Math.sqrt(G.st.mul) * D.atk * (mu.atk || 1), spd: mu.spd || 1, gm: mu.gold || 1 }));
     d.queue.sort((a, b) => a.at - b.at);
   }
 
@@ -407,7 +435,7 @@
       else {
         const blk = d.occ[key(nx, ny)] || (inG(cx, cy) && d.occ[key(cx, cy)]);
         if (blk && blk.hp > 0) t = blk; // 바리케이드
-        else { const p = step2(e, tcx(nx), tcy(ny), e.def.spd); e.mv = !!p; if (p) { e.x = p[0]; e.y = p[1]; } return; }
+        else { const p = step2(e, tcx(nx), tcy(ny), e.def.spd * (e.spd || 1)); e.mv = !!p; if (p) { e.x = p[0]; e.y = p[1]; } return; }
       }
     }
     const reach = e.def.rng + t.r;
@@ -415,7 +443,7 @@
       e.mv = false; e.face = t.x >= e.x ? 1 : -1;
       if (e.cd <= 0) { e.cd = e.def.as; e.atkT = 0.3; strike(G, d, e, t, e.atk, e.def.splash, 'p2'); }
     } else {
-      const p = step2(e, t.x, t.y, e.def.spd);
+      const p = step2(e, t.x, t.y, e.def.spd * (e.spd || 1));
       if (p && (t.k !== 'u' || roadAt(d, p[0], p[1]))) { e.x = p[0]; e.y = p[1]; e.mv = true; } else { e.tg = null; e.rt = 0.2; }
     }
   }
@@ -425,14 +453,14 @@
     if (d.heroT > 0) d.heroT -= DT;
     while (d.queue.length && d.queue[0].at <= G.t) {
       const q = d.queue.shift(), def = DD.DEMONS[q.t], mhp = def.hp * q.hp;
-      d.demons.push({ id: G.nid++, k: 'd', def, x: tcx(C.ENT_T[0]) + (G.rnd() - 0.5) * 12, y: C.OY + GH * T - 12 + G.rnd() * 6, hp: mhp, mhp, atk: def.atk * q.atk, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: q.t === 'boss' ? 12 : 7 });
+      d.demons.push({ id: G.nid++, k: 'd', def, x: tcx(C.ENT_T[0]) + (G.rnd() - 0.5) * 12, y: C.OY + GH * T - 12 + G.rnd() * 6, hp: mhp, mhp, atk: def.atk * q.atk, spd: q.spd || 1, gm: q.gm || 1, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: q.t === 'boss' ? 12 : 7 });
     }
     const drums = d.blds.filter((b) => b.def.haste), pools = d.blds.filter((b) => b.def.regen);
     // 유닛
     for (const u of d.units) {
       if (u.hit > 0) u.hit -= DT; u.cd -= DT; u.rt -= DT;
       const o = G.dungeons[u.own];
-      let reg = o.race === 'merfolk' ? u.mhp * 0.01 : 0;
+      let reg = u.mhp * ((o.race === 'merfolk' ? 0.01 : 0) + (o.mod.regen || 0));
       for (const p of pools) if (d2(u, p) < p.def.rad * p.def.rad) reg += p.def.regen;
       if (reg && u.hp < u.mhp) u.hp = Math.min(u.mhp, u.hp + reg * DT);
       const home = { x: u.hx, y: u.hy }, heal = u.def.heal, ranged = u.def.rng > 30;
@@ -526,7 +554,7 @@
     if (G.wave < C.WAVES && G.t >= C.FIRST_WAVE + G.wave * C.WAVE_T) {
       G.wave++;
       G.dungeons.forEach((d) => { if (d.alive) { d.wavesCleared = G.wave - 1; spawnWave(G, d, G.wave); } });
-      G.events.push({ t: 'wave', w: G.wave });
+      G.events.push({ t: 'wave', w: G.wave, mut: G.muts[G.wave] || null });
     }
     for (const d of G.dungeons) if (d.alive) stepDungeon(G, d);
     if (!G.over && G.t >= G.endT) { G.over = true; G.win = true; G.dungeons.forEach((d) => d.alive && (d.wavesCleared = C.WAVES)); }
@@ -574,10 +602,10 @@
       const u = R.units[ui];
       if (DD.reqFail(d, u)) continue;
       if (ui === 0 && own.length >= 16 && !DD.reqFail(d, R.units[1])) continue;
-      if (ui < 2 && own.length >= C.POP - 4 && !DD.reqFail(d, R.units[2])) continue;
+      if (ui < 2 && own.length >= d.pop - 4 && !DD.reqFail(d, R.units[2])) continue;
       if (can(u)) { if (!G.cmd(d.i, { a: 'summon', u: ui })) return; }
       else if (ui === 2 && own.length >= 12) return; // 상위 유닛 저축
     }
-    if (own.length >= C.POP && d.gold > 400) { const weak = own.find((u) => u.def.tier === 1); if (weak) weak.hp = 0; }
+    if (own.length >= d.pop && d.gold > 400) { const weak = own.find((u) => u.def.tier === 1); if (weak) weak.hp = 0; }
   };
 })(typeof window !== 'undefined' ? window : globalThis);

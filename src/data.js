@@ -31,7 +31,7 @@
         B('forge', '대장간', 'unlock', 160, 30, 600, 'b_unlock2', '기사 해금 · 공격 +15%', { buffAtk: 0.15 }),
         B('tower', '화살탑', 'tower', 90, 10, 350, 'b_tower', '원거리 공격', { atk: 16, rng: 95, as: 0.9 }),
         B('wall', '방벽', 'wall', 30, 0, 700, 'b_wall', '길 차단'),
-        B('market', '시장', 'eco', 120, 0, 300, 'b_special', '골드 +1.5/초', { gps: 1.5 }),
+        B('market', '시장', 'eco', 120, 0, 300, 'b_special', '골드 +1.2/초', { gps: 1.2 }),
       ],
       heroes: [['검성 레온하르트', 'war'], ['명궁 실비아', 'arc'], ['창기사 발트', 'rid'], ['성녀 에일라', 'heal']],
     },
@@ -130,10 +130,10 @@
   };
 
   DD.DEMONS = {
-    imp: { name: '임프', hp: 42, atk: 6, rng: 12, as: 0.9, spd: 34, gold: 8, spr: 'd_imp', desc: '약하지만 떼로 몰려온다' },
-    brute: { name: '악귀', hp: 170, atk: 16, rng: 15, as: 1.2, spd: 20, gold: 18, mat: 3, spr: 'd_brute', desc: '단단하다 · 자재(◆)를 흘린다' },
-    hound: { name: '지옥견', hp: 62, atk: 9, rng: 13, as: 0.7, spd: 54, gold: 10, spr: 'd_hound', desc: '매우 빠르다 · 길을 길게 늘여 붙잡자' },
-    warlock: { name: '흑마술사', hp: 72, atk: 14, rng: 72, as: 1.4, spd: 22, gold: 16, mat: 3, spr: 'd_warlock', desc: '원거리 · 길가 건물을 부순다 · 벽으로 시야를 막자' },
+    imp: { name: '임프', hp: 42, atk: 6, rng: 12, as: 0.9, spd: 34, gold: 7, spr: 'd_imp', desc: '약하지만 떼로 몰려온다' },
+    brute: { name: '악귀', hp: 170, atk: 16, rng: 15, as: 1.2, spd: 20, gold: 15, mat: 3, spr: 'd_brute', desc: '단단하다 · 자재(◆)를 흘린다' },
+    hound: { name: '지옥견', hp: 62, atk: 9, rng: 13, as: 0.7, spd: 54, gold: 8, spr: 'd_hound', desc: '매우 빠르다 · 길을 길게 늘여 붙잡자' },
+    warlock: { name: '흑마술사', hp: 72, atk: 14, rng: 72, as: 1.4, spd: 22, gold: 13, mat: 3, spr: 'd_warlock', desc: '원거리 · 길가 건물을 부순다 · 벽으로 시야를 막자' },
     boss: { name: '악마 군주', hp: 1500, atk: 40, rng: 20, as: 1.4, spd: 15, gold: 200, mat: 30, splash: 16, spr: 'd_boss', desc: '광역 공격 · 건물도 부순다 · 다섯 웨이브마다' },
   };
   // 웨이브 w(1~20)의 구성
@@ -176,5 +176,39 @@
   DD.META_MAX = 10;
   DD.metaCost = (lv) => 10 + lv * 10;
   DD.CALL_BONUS = 1; // 웨이브를 일찍 부르면 건너뛴 1초마다 주는 추가 골드
-  DD.shardsFor = (stage, wavesCleared, win) => Math.round((wavesCleared * 2 + (win ? 30 : 0)) * (1 + stage * 0.5));
+  DD.shardsFor = (stage, wavesCleared, win, diff) => Math.round((wavesCleared * 2 + (win ? 30 : 0)) * (1 + stage * 0.5) * DD.DIFFS[diff == null ? 1 : diff].shard);
+
+  // 건물 종류별 최대 수. 같은 건물을 끝없이 늘릴 수 없다
+  DD.BLD_MAX = { unlock: 1, tower: 6, wall: 10, eco: 3, aura: 3 };
+  DD.bldMax = (b) => DD.BLD_MAX[b.kind];
+  // 난이도: 악마 체력·공격, 골드, 영혼석 배율
+  DD.DIFFS = [
+    { name: '쉬움', hp: 0.8, atk: 0.85, gold: 1.1, shard: 0.7 },
+    { name: '보통', hp: 1, atk: 1, gold: 1, shard: 1 },
+    { name: '어려움', hp: 1.3, atk: 1.15, gold: 0.85, shard: 1.6 },
+    { name: '악몽', hp: 1.7, atk: 1.3, gold: 0.7, shard: 2.4 },
+  ];
+  // 변이 웨이브: 군주가 없는 웨이브 가운데 몇 개는 성질이 바뀌어 온다
+  DD.MUTS = {
+    swift: { name: '질주', desc: '악마 이동 +35%', spd: 1.35 },
+    armor: { name: '철갑', desc: '악마 체력 +40%', hp: 1.4 },
+    horde: { name: '대군', desc: '악마 수 +50%', n: 1.5, hp: 0.85 },
+    rage: { name: '격노', desc: '악마 공격 +40%', atk: 1.4 },
+    rich: { name: '약탈단', desc: '처치 골드 2배 · 악마 체력 +20%', gold: 2, hp: 1.2 },
+  };
+  // 전리품: 악마 군주를 쓰러뜨리면 셋 중 하나를 고른다
+  DD.BOONS = [
+    { id: 'atk', name: '날 선 무기', desc: '유닛·탑 공격 +12%' },
+    { id: 'hp', name: '두꺼운 갑옷', desc: '유닛 체력 +15%' },
+    { id: 'loot', name: '약탈 허가', desc: '처치 골드 +20%' },
+    { id: 'pop', name: '징집령', desc: '인구 한도 +6' },
+    { id: 'heart', name: '심장 강화', desc: '심장 최대 체력 +250 · 250 회복' },
+    { id: 'hero', name: '영웅의 부름', desc: '영웅을 바로 소환 · 대기 -15%' },
+    { id: 'bank', name: '군자금', desc: '골드 +300' },
+    { id: 'mat', name: '보급 마차', desc: '자재 +60' },
+    { id: 'bld', name: '견고한 축성', desc: '건물 체력 +30%' },
+    { id: 'regen', name: '야전 치유', desc: '유닛 초당 체력 0.5% 재생' },
+  ];
+  // 기록: 깬 난이도와 남은 심장으로 별 1~3개
+  DD.starsFor = (heartRatio) => (heartRatio >= 0.9 ? 3 : heartRatio >= 0.5 ? 2 : 1);
 })(typeof window !== 'undefined' ? window : globalThis);

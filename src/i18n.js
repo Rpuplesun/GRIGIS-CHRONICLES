@@ -6,6 +6,20 @@
 
   // [한국어, 영어, 일본어]
   const D = [
+    ['쉬움', 'Easy', 'やさしい'], ['보통', 'Normal', 'ふつう'], ['어려움', 'Hard', 'むずかしい'], ['악몽', 'Nightmare', '悪夢'], ['난이도', 'Difficulty', '難易度'],
+    ['악마 체력', 'Demon HP', '悪魔のHP'], ['· 공격 ×', '· ATK ×', '· 攻撃 ×'], ['· 골드 ×', '· Gold ×', '· ゴールド ×'], ['영혼석 ×', 'Soul Shards ×', '魂石 ×'],
+    ['이 건물은 더 지을 수 없다', 'You cannot build more of these', 'この建物はこれ以上建てられません'], ['골드 +1.2/초', '+1.2 gold/s', 'ゴールド +1.2/秒'],
+    ['질주', 'Swift', '疾走'], ['악마 이동 +35%', 'Demons move 35% faster', '悪魔の移動 +35%'], ['철갑', 'Armored', '鉄甲'], ['악마 체력 +40%', 'Demons have 40% more HP', '悪魔のHP +40%'],
+    ['대군', 'Horde', '大軍'], ['악마 수 +50%', '50% more demons', '悪魔の数 +50%'], ['격노', 'Enraged', '激怒'], ['악마 공격 +40%', 'Demons hit 40% harder', '悪魔の攻撃 +40%'],
+    ['약탈단', 'Raiders', '略奪団'], ['처치 골드 2배 · 악마 체력 +20%', 'Double kill gold · demons have 20% more HP', '撃破ゴールド2倍 · 悪魔のHP +20%'], ['변이 ·', 'Mutation ·', '変異 ·'],
+    ['전리품 ·', 'Spoils ·', '戦利品 ·'], ['전리품', 'Spoils of War', '戦利品'], ['악마 군주를 쓰러뜨렸다. 하나를 고른다.', 'The Demon Lord has fallen. Choose one.', '悪魔君主を倒した。一つ選べ。'],
+    ['날 선 무기', 'Honed Blades', '研がれた刃'], ['유닛·탑 공격 +12%', 'Units and towers deal 12% more damage', 'ユニット·塔の攻撃 +12%'], ['두꺼운 갑옷', 'Thick Armor', '厚い鎧'], ['유닛 체력 +15%', 'Units have 15% more HP', 'ユニットのHP +15%'],
+    ['약탈 허가', 'Licence to Loot', '略奪許可'], ['처치 골드 +20%', '+20% kill gold', '撃破ゴールド +20%'], ['징집령', 'Conscription', '徴兵令'], ['인구 한도 +6', 'Population cap +6', '人口上限 +6'],
+    ['심장 강화', 'Fortified Heart', '心臓強化'], ['심장 최대 체력 +250 · 250 회복', 'Heart max HP +250 · heals 250', '心臓の最大HP +250 · 250回復'],
+    ['영웅의 부름', "Hero's Call", '英雄の呼び声'], ['영웅을 바로 소환 · 대기 -15%', 'A hero is ready now · 15% shorter wait', '英雄をすぐ召喚 · 待機 -15%'],
+    ['군자금', 'War Chest', '軍資金'], ['골드 +300', '+300 gold', 'ゴールド +300'], ['보급 마차', 'Supply Wagon', '補給馬車'], ['자재 +60', '+60 materials', '資材 +60'],
+    ['견고한 축성', 'Sturdy Works', '堅固な築城'], ['건물 체력 +30%', 'Buildings have 30% more HP', '建物のHP +30%'], ['야전 치유', 'Field Medicine', '野戦治療'], ['유닛 초당 체력 0.5% 재생', 'Units regenerate 0.5% HP per second', 'ユニットが毎秒HP 0.5%再生'],
+    ['· 새 기록 +', '· New record +', '· 新記録 +'],
     // ── 종족·유닛·건물·영웅 ──
     ['인간족', 'Humans', '人間族'], ['용족', 'Dragonkin', '竜族'], ['수인족', 'Beastfolk', '獣人族'], ['정령족', 'Spirits', '精霊族'], ['어인족', 'Merfolk', '魚人族'],
     ['건물 비용 -20% · 체력 +20%', 'Buildings cost 20% less, +20% HP', '建物コスト-20% · 耐久+20%'],

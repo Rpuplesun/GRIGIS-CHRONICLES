@@ -15,7 +15,8 @@
   const pct = (v) => Math.round(v * 100);
 
   // ───────── 메뉴 ─────────
-  const menu = Object.assign({ race: 'human', mode: 'solo', allies: 3 }, save.menu); // 마지막으로 고른 종족·방식을 기억한다
+  const menu = Object.assign({ race: 'human', mode: 'solo', allies: 3, diff: 1 }, save.menu);
+  if (!DD.DIFFS[menu.diff]) menu.diff = 1; // 마지막으로 고른 종족·방식을 기억한다
   if (!DD.RACES[menu.race]) menu.race = 'human';
   const topStage = (race) => (DD.DEMO ? 0 : Math.min(5, save.races[race].stage)); // 열린 스테이지 중 가장 뒤
   menu.stage = topStage(menu.race);
@@ -26,7 +27,8 @@
   }
   const fmtMeta = (m) => (lv) => '+' + (m.unit === '%' ? pct(m.per * lv) + '%' : m.per * lv);
   function drawMenu() {
-    const rs = save.races[menu.race], R = DD.RACES[menu.race], best = rs.best || {};
+    const rs = save.races[menu.race], R = DD.RACES[menu.race], best = rs.best || {}, rec = rs.rec || {}, DF = DD.DIFFS[menu.diff];
+    const xm = (v) => '×' + v;
     if (menu.stage > rs.stage) menu.stage = rs.stage;
     $('#menu').innerHTML = `
       <header><h1>${DD.TITLE.name}</h1><p class="sub">${DD.TITLE.sub}${DD.DEMO ? ' · 데모' : ''}${save.bonusGold ? ` · <span class="gold">전쟁 자금 ●${save.bonusGold} (다음 출전에 지급)</span>` : ''}</p></header>
@@ -38,9 +40,10 @@
           <div class="icons">${r.units.map((u) => icon(u.spr, 3)).join('')}</div>
           <b>${r.name}</b><small>${r.trait}</small><small class="gold">${ic('ui_shard')} ${save.races[id].shards} · 스테이지 ${save.races[id].stage + 1}</small>
         </button>`; }).join('')}</div></section>
-      <section><h2>스테이지</h2><div class="cards c3">${DD.stageOrder(menu.race).map((id, i) => { const st = DD.stageOf(menu.race, i), lock = i > rs.stage, demo = DD.DEMO && i > 0; return `
+      <section><h2>스테이지 <span class="row"><span class="lbl">난이도</span>${DD.DIFFS.map((x, i) => `<button class="${menu.diff === i ? 'on' : ''}" data-m="diff:${i}">${x.name}</button>`).join('')}</span></h2>
+        <p class="diffnote">악마 체력 ${xm(DF.hp)} · 공격 ${xm(DF.atk)} · 골드 ${xm(DF.gold)} · <span class="gold">영혼석 ${xm(DF.shard)}</span></p><div class="cards c3">${DD.stageOrder(menu.race).map((id, i) => { const st = DD.stageOf(menu.race, i), lock = i > rs.stage, demo = DD.DEMO && i > 0; return `
         <button class="card ${menu.stage === i ? 'on' : ''}" ${lock || demo ? 'disabled' : ''} data-m="stage:${i}">
-          <b>${i + 1}. ${st.name}</b><small>${demo ? '정식 버전에서' : lock ? '잠김' : st.desc} · 악마 ×${st.mul}</small><small>${modText(st, menu.race)}</small>${best[i] ? `<small class="rec">${best[i] > C.WAVES ? '✔ 클리어' : `최고 웨이브 ${best[i]}/${C.WAVES}`}</small>` : ''}
+          <b>${i + 1}. ${st.name}</b><small>${demo ? '정식 버전에서' : lock ? '잠김' : st.desc} · 악마 ×${st.mul}</small><small>${modText(st, menu.race)}</small>${rec[i] ? `<small class="rec"><span class="stars">${'★'.repeat(rec[i].s)}${'☆'.repeat(3 - rec[i].s)}</span> ${DD.DIFFS[rec[i].d].name}</small>` : best[i] ? `<small class="rec">${best[i] > C.WAVES ? '✔ 클리어' : `최고 웨이브 ${best[i]}/${C.WAVES}`}</small>` : ''}
         </button>`; }).join('')}</div></section>
       <section><h2>영구 강화 <span class="gold">${ic('ui_shard')} ${rs.shards}</span></h2><div class="cards c3">${DD.META.map((m) => { const fmt = fmtMeta(m), lv = rs.meta[m.k] || 0, cost = DD.metaCost(lv), max = lv >= DD.META_MAX; return `
         <button class="card" ${max || rs.shards < cost ? 'disabled' : ''} data-m="meta:${m.k}">
@@ -60,9 +63,9 @@
     const [k, v] = b.dataset.m.split(':');
     if (k === 'mode') menu.mode = v;
     else if (k === 'race') { menu.race = v; menu.stage = topStage(v); }
-    else if (k === 'allies' || k === 'stage') menu[k] = +v;
+    else if (k === 'allies' || k === 'stage' || k === 'diff') menu[k] = +v;
     else if (k === 'meta') { const rs = save.races[menu.race], lv = rs.meta[v] || 0, c = DD.metaCost(lv); if (rs.shards >= c) { rs.shards -= c; rs.meta[v] = lv + 1; persist(); } }
-    else if (k === 'start') { save.menu = { race: menu.race, mode: menu.mode, allies: menu.allies }; persist(); return startGame(); }
+    else if (k === 'start') { save.menu = { race: menu.race, mode: menu.mode, allies: menu.allies, diff: menu.diff }; persist(); return startGame(); }
     else if (k === 'story') return showStory(showMenu);
     else if (k === 'settings') return openSettings();
     else if (k === 'tutorial') return startGame(true);
@@ -79,7 +82,7 @@
     const players = [{ race, meta: save.races[race].meta, layout: tutorial ? null : save.layout, bonusGold: tutorial ? 0 : save.bonusGold || 0 }];
     if (!tutorial && menu.mode === 'multi') for (let i = 0; i < menu.allies - 1; i++) players.push({ race: others[i], bot: true });
     if (!tutorial && save.bonusGold) { save.bonusGold = 0; persist(); }
-    G = DD.newGame({ players, stage: tutorial ? 0 : menu.stage, tutorial: !!tutorial, seed: (Date.now() & 0xffff) + 1 });
+    G = DD.newGame({ players, stage: tutorial ? 0 : menu.stage, diff: menu.diff, tutorial: !!tutorial, seed: (Date.now() & 0xffff) + 1 });
     ui = { sel: new Set(), selB: null, ghost: null, box: null, view: 0, build: -1, veil: 16, flash: save.opt.flash, edit: false, tool: 1, hover: null, rally: null, insp: null, seenD: new Set(), heroReady: false, busy: false };
     DD.Audio.ambience(G.st.id); DD.Audio.preload(); DD.Music.play(G.st.id); DD.Music.preload(['boss', 'victory', 'defeat']); ui.music = G.st.id;
     speed = 1; paused = false; acc = 0; lastHtml = {}; dlg = null; drawDlg(); setGoal('');
@@ -166,16 +169,16 @@
   const spotOf = () => (script.goal && script.steps[script.i] ? script.steps[script.i].hl : null);
   const slot = (act, body, tip, o) => `<button class="slot ${o.on ? 'on' : ''} ${o.cls || ''} ${spotOf() === act ? 'spot' : ''}" data-a="${act}" data-tip="${tip.replace(/"/g, '&quot;')}" ${o.dim ? 'data-dim="1"' : ''}>${o.key ? `<kbd>${o.key}</kbd>` : ''}${body}</button>`;
   const grp = (name, slots, cls) => `<div class="grp ${cls || ''}"><h3>${name}</h3><div class="slots">${slots}</div></div>`;
-  const nextWave = () => { if (G.wave >= C.WAVES) return '마지막 웨이브'; const c = {}; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => { const m = DD.DEMONS[t]; return `<span data-tip="<b>${m.name} ×${c[t]}</b>${m.desc}">${icon(m.spr, 2)}${c[t]}</span>`; }).join(' '); };
+  const nextWave = () => { if (G.wave >= C.WAVES) return '마지막 웨이브'; const c = {}, mu = DD.MUTS[G.muts[G.wave + 1]]; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => { const m = DD.DEMONS[t]; return `<span data-tip="<b>${m.name} ×${c[t]}</b>${m.desc}">${icon(m.spr, 2)}${c[t]}</span>`; }).join(' ') + (mu ? ` <span class="mut" data-tip="<b>변이 · ${mu.name}</b>${mu.desc}">${mu.name}</span>` : ''); };
   const UKEY = ['Q', 'W', 'R'], BKEY = ['A', 'S', 'D', 'F', 'G'];
   function drawHud() {
     const d = me(), R = d.R, own = d.units.filter((u) => u.own === d.i).length, hp = d.heart.hp / d.heart.mhp;
     const next = G.nextWaveIn(), span = G.wave === 0 ? C.FIRST_WAVE : C.WAVE_T;
-    set('#top', `<div class="stage">${G.st.name} · ${R.name}</div><div class="timer">${mmss(G.endT - G.t)}</div>
+    set('#top', `<div class="stage">${G.st.name} · ${R.name}${G.diff !== 1 ? ' · ' + G.D.name : ''}</div><div class="timer">${mmss(G.endT - G.t)}</div>
       <div class="wave"><b>WAVE ${G.wave}<small style="display:inline">/${C.WAVES}</small></b><small>다음 ${mmss(next)}</small></div>${DD.canCall(G) ? `<button class="call" data-a="callwave:1"><kbd>N</kbd> ${G.wave >= C.WAVES ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'} <span class="gold">+●${DD.callBonus(G)}</span></button>` : `<button class="call" disabled><kbd>N</kbd> ${G.wave >= C.WAVES ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'}</button>`}
       <div class="nextw">${nextWave()}</div>
       <div class="prog"><i style="width:${Math.round(Math.max(0, 1 - next / span) * 50) * 2}%"></i></div>
-      <div class="res"><span class="gold">${ic('ui_coin')} ${Math.floor(d.gold)}</span><span class="mat">${ic('ui_crate')} ${Math.floor(d.mat)}</span><span class="pop">${ic('ui_pop')} 인구 ${own}/${C.POP}</span></div>
+      <div class="res"><span class="gold">${ic('ui_coin')} ${Math.floor(d.gold)}</span><span class="mat">${ic('ui_crate')} ${Math.floor(d.mat)}</span><span class="pop">${ic('ui_pop')} 인구 ${own}/${d.pop}</span></div>
       <div class="heart">${ic('ui_heart')} ${Math.ceil(d.heart.hp)}<i class="hpbar"><i style="width:${Math.max(0, hp * 100)}%"></i></i></div>`);
     set('#sys', `${[1, 2, 4].map((sp, i) => `<button class="${speed === sp && !paused ? 'on' : ''}" data-a="speed:${sp}" data-tip="<b>${sp}배속</b>단축키 ${i + 1}">${sp}×</button>`).join('')}<button class="${paused ? 'on' : ''}" data-a="pause:1" data-tip="<b>일시정지</b>단축키 Space · 멈춘 동안에도 소환·건설·길 편집을 할 수 있다">Ⅱ</button>
       <button class="wide" data-a="settings:1" data-tip="<b>설정</b>배경음악·효과음 음량, 피격 번쩍임 · Esc">⚙ 설정</button><button class="wide" data-a="quit:1" data-tip="<b>나가기</b>이번 판을 포기한다(보상 없음)">나가기</button>`);
@@ -188,7 +191,7 @@
       + slot('resetmaze:1', `<b class="glyph">↺</b><em>기본 길</em>`, '<b>기본 길</b>ㄹ 모양으로 되돌린다', {}) + slot('undo:1', `<b class="glyph">↶</b><em>되돌리기</em>`, '<b>되돌리기</b>마지막으로 칠한 것을 되돌린다 · Ctrl+Z', { key: '^Z', dim: !dr.hist.length }) + slot('editcancel:1', `<b class="glyph">✖</b><em>취소</em>`, '<b>취소</b>고친 것을 버리고 나간다', { key: 'Esc' });
     const units = R.units.map((u, i) => { const f = DD.reqFail(d, u); return slot('summon:' + i, `<img class="px tier" src="${DD.icon('ui_tier' + u.tier)}" alt="">${icon(u.spr, 2)}${f ? '<span class="cost bad">잠김</span>' : cost(u, d)}`, `<b>${u.name}</b>${ic('ui_coin')} ${u.g}${u.m ? ' ' + ic('ui_crate') + ' ' + u.m : ''} · 보유 ${d.units.filter((x) => x.def === u && x.own === d.i).length}기<br>체력 ${u.hp} · 공격 ${u.atk} · 사거리 ${u.rng}${u.heal ? ' · 치유 ' + u.heal : ''}${u.splash ? ' · 범위' : ''}${f ? `<small class="bad">${f}</small>` : ''}`, { dim: f || no(u), key: UKEY[i], cls: f ? 'lock' : '' }); }).join('')
       + slot('hero:1', `${icon('f_altar', 2)}<span class="cost">${d.heroT <= 0 ? '준비!' : mmss(d.heroT)}</span>`, `<b>영웅 소환</b>${d.heroT <= 0 ? '누가 올지는 모른다' : '대기 ' + mmss(d.heroT)}`, { dim: d.heroT > 0, key: 'T', cls: d.heroT <= 0 ? 'ready' : '' });
-    const bslots = R.blds.map((b, i) => { const c = DD.bldCost(d, b); return slot('build:' + i, `${icon(b.spr + '@' + d.race, 2)}${cost(c, d)}`, `<b>${b.name}</b>${ic('ui_coin')} ${c.g}${c.m ? ' ' + ic('ui_crate') + ' ' + c.m : ''} · 보유 ${d.bc[b.id] || 0}<br>${b.desc}${b.atk ? `<br>공격 ${b.atk} · 사거리 ${b.rng} · 간격 ${b.as}초${b.splash ? ' · 범위' : ''}` : ''}<small>${b.kind === 'wall' ? '길 위에만 세운다 · 악마를 붙잡아 둔다' : '바닥에 세운다'}</small>`, { dim: no(c), on: ui.build === i, key: BKEY[i] }); });
+    const bslots = R.blds.map((b, i) => { const c = DD.bldCost(d, b), have = d.bc[b.id] || 0, full = have >= DD.bldMax(b); return slot('build:' + i, `${icon(b.spr + '@' + d.race, 2)}${full ? '<span class="cost">최대</span>' : cost(c, d)}`, `<b>${b.name}</b>${ic('ui_coin')} ${c.g}${c.m ? ' ' + ic('ui_crate') + ' ' + c.m : ''} · 보유 ${have}/${DD.bldMax(b)}<br>${b.desc}${b.atk ? `<br>공격 ${b.atk} · 사거리 ${b.rng} · 간격 ${b.as}초${b.splash ? ' · 범위' : ''}` : ''}<small>${b.kind === 'wall' ? '길 위에만 세운다 · 악마를 붙잡아 둔다' : '바닥에 세운다'}</small>`, { dim: full || no(c), on: ui.build === i, key: BKEY[i] }); });
     const blds = bslots.filter((x, i) => i !== 3).join('');
     maze = bslots[3] + maze;
     const ac = DD.upCost(d, 'altar'), ap = DD.ALTAR[d.altarLv - 1].p;
@@ -197,6 +200,8 @@
     set('#bar', grp('유닛 소환', units) + grp('건물 · 바닥에', blds) + grp('길 · 방벽은 길 위에', maze, ui.edit ? 'c3' : '') + (ui.edit ? '' : grp('강화', ups))); // 편집 중에는 도구가 한 줄 더 생기므로 강화 묶음을 접는다
     const hl = spotOf(), gm = $('#game'); gm.classList.toggle('guide', !!hl); gm.classList.toggle('dimfield', !!hl && ui.build < 0 && !ui.edit); // 튜토리얼: 목표 칸만 밝게
     set('#tip', ui.tip || inspect() || ''); placeTip();
+    const bp = d.boonPick; // 전리품 고르기: 고를 때까지 게임이 멈춘다
+    set('#boon', bp ? `<div class="box"><h2>전리품</h2><p>악마 군주를 쓰러뜨렸다. 하나를 고른다.</p><div class="cards c3">${bp.map((bi, i) => `<button class="card" data-a="boon:${i}"><kbd>${i + 1}</kbd><b>${DD.BOONS[bi].name}</b><small>${DD.BOONS[bi].desc}</small></button>`).join('')}</div></div>` : ''); $('#boon').hidden = !bp;
     const vd = G.dungeons[ui.view], boss = !ui.world && vd.demons.find((e) => e.def.spr === 'd_boss' && e.hp > 0);
     set('#bossbar', boss ? `<b>${boss.def.name}</b><i><i style="width:${Math.max(0, Math.round((boss.hp / boss.mhp) * 100))}%"></i></i><span>${Math.ceil(boss.hp)}</span>` : '');
     $('#paused').hidden = !(paused && !ui.edit && !dlg && !G.over);
@@ -255,7 +260,8 @@
     b.blur(); // 눌린 버튼에 초점이 남으면 Space·Enter가 그 버튼을 다시 누른다
     const [k, v] = b.dataset.a.split(':');
     DD.Audio.play('click');
-    if (k === 'speed') setSpeed(+v);
+    if (k === 'boon') { act({ a: 'boon', i: +v }); lastHtml = {}; hudT = 0; }
+    else if (k === 'speed') setSpeed(+v);
     else if (k === 'settings') openSettings();
     else if (k === 'pause') togglePause();
     else if (k === 'quit') { if (confirm(DD.tr('포기하고 나갈까요?'))) { G.over = true; G.win = false; G.quit = true; } }
@@ -369,6 +375,7 @@
     if (!$('#title').hidden) { if ((enter || k === 'Space') && !ev.repeat) { ev.preventDefault(); $('#begin').click(); } return; }
     if (!G || G.over) return;
     if (dlg) { if (k === 'Space' || enter) advance(); ev.preventDefault(); return; }
+    if (me().boonPick) { const bi = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[k]; if (bi != null && !ev.repeat) { act({ a: 'boon', i: bi }); lastHtml = {}; hudT = 0; } ev.preventDefault(); return; }
     lastHtml = {}; hudT = 0;
     const mine = !ui.world && ui.view === G.human, rep = ev.repeat;
     if (ctrl) {
@@ -401,11 +408,13 @@
     if (!G) return;
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     runScript(dt);
-    if (!paused && !dlg && !G.over) { acc += dt * speed; let n = 0; while (acc >= DD.DT && n++ < 60) { G.step(); acc -= DD.DT; } }
+    if (!paused && !dlg && !G.over && !me().boonPick) { acc += dt * speed; let n = 0; while (acc >= DD.DT && n++ < 60) { G.step(); acc -= DD.DT; } }
     for (const e of G.events.splice(0)) {
       const who = (i) => (i === G.human ? '내 요새' : G.dungeons[i].R.name);
       if (e.t === 'wave') DD.Audio.play(e.w % 5 === 0 ? 'boss' : 'wave'); else if (e.t === 'fall') DD.Audio.play('fall');
-      if (e.t === 'wave') banner('WAVE ' + e.w, e.w % 5 === 0 ? '악마 군주가 온다' : '악마 침공', e.w % 5 === 0);
+      if (e.t === 'wave') banner('WAVE ' + e.w, e.w % 5 === 0 ? '악마 군주가 온다' : e.mut ? `변이 · ${DD.MUTS[e.mut].name} — ${DD.MUTS[e.mut].desc}` : '악마 침공', e.w % 5 === 0);
+      else if (e.t === 'boon' && e.d === G.human) { DD.Audio.play('ready'); lastHtml = {}; hudT = 0; }
+      else if (e.t === 'boonGot' && e.d === G.human) toast(`전리품 · ${DD.BOONS[e.b].name} — ${DD.BOONS[e.b].desc}`, 'good');
       else if (e.t === 'hero' && e.d === G.human) heroCard(e);
       else if (e.t === 'herodead' && e.d === G.human) toast(`${e.name} 전사`, 'bad');
       else if (e.t === 'fall') banner(who(e.d) + ' 함락', '악마가 남은 요새로 몰려온다', true);
@@ -437,7 +446,13 @@
   }
   function finish() {
     const d = me(), rs = save.races[d.race];
-    const sh = G.quit ? 0 : DD.shardsFor(G.stage, d.wavesCleared, G.win);
+    let sh = G.quit ? 0 : DD.shardsFor(G.stage, d.wavesCleared, G.win, G.diff), recLine = '';
+    if (G.win && !G.tutorial && !G.quit) { // 기록 갱신: 더 높은 난이도, 같은 난이도면 별이 더 많을 때. 오른 만큼 영혼석을 더 준다
+      const s = DD.starsFor(d.heart.hp / d.heart.mhp), sc = (r) => (r ? r.d * 3 + r.s : 0), old = (rs.rec = rs.rec || {})[G.stage], now = { d: G.diff, s };
+      const gain = sc(now) - sc(old), bonus = gain > 0 ? Math.round(gain * 3 * (1 + G.stage * 0.5)) : 0;
+      if (gain > 0) { rs.rec[G.stage] = now; sh += bonus; }
+      recLine = `<p class="stars big">${'★'.repeat(s)}${'☆'.repeat(3 - s)} <small>${G.D.name}${gain > 0 ? ` · 새 기록 +${bonus}` : ''}</small></p>`;
+    }
     rs.shards += sh;
     let unlocked = '';
     const tut = G.tutorial && !G.quit && !save.tutorialDone;
@@ -451,7 +466,7 @@
     const nextOk = !G.tutorial && G.win && G.stage < 5 && rs.stage > G.stage && !DD.DEMO;
     const tipL = !G.win && !G.tutorial ? DD.TIPS_LOSE[Math.floor(Math.random() * DD.TIPS_LOSE.length)] : '';
     $('#result').innerHTML = `<div><h1 class="${G.win ? 'good' : 'bad'}">${G.win ? '승리' : '패배'}</h1>
-      <p>${d.R.name} · ${G.st.name}</p>
+      <p>${d.R.name} · ${G.st.name}${G.tutorial ? '' : ' · ' + G.D.name}</p>${recLine}
       <div class="stats"><span><b>${d.wavesCleared}/${C.WAVES}</b>웨이브</span><span><b>${d.kills}</b>처치</span><span><b>${mmss(G.t)}</b>시간</span>
         <span><b>${d.nSum}</b>소환</span><span><b>${d.heroN}</b>영웅</span><span><b>${d.alive ? pct(d.heart.hp / d.heart.mhp) + '%' : '함락'}</b>심장</span></div>
       <p class="gold">${ic('ui_shard')} 영혼석 +${sh}${sh && !G.tutorial ? ` (보유 ${rs.shards})` : ''}</p>${unlocked}${tipL ? `<p class="tip">팁 · ${tipL}</p>` : ''}
