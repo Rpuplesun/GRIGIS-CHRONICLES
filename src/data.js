@@ -104,7 +104,18 @@
       heroes: [['파도가르는 모르간', 'war'], ['작살잡이 넵타', 'arc'], ['해마기수 코랄', 'rid'], ['진주무녀 나이아', 'heal']],
     },
   };
+  // 전설 유닛: 최상위 유닛을 조합해야만 나온다(소환 불가)
+  const LG = {
+    human: ['성기사', 1100, 82, 16, 1.0, 44, { splash: 12 }], dragon: ['고룡', 1300, 105, 70, 1.2, 40, { splash: 22 }],
+    beast: ['베헤모스', 1700, 90, 18, 1.2, 30, { splash: 16 }], spirit: ['정령왕', 1200, 150, 100, 1.1, 30, { splash: 20 }],
+    merfolk: ['크라켄', 2000, 85, 20, 1.2, 26, { splash: 16 }],
+  };
+  for (const k in LG) { const l = LG[k]; DD.RACES[k].legend = U(l[0], 4, 0, 0, l[1], l[2], l[3], l[4], l[5], 'u_' + k + '_3', Object.assign({ legend: true }, l[6])); }
   DD.RACE_IDS = Object.keys(DD.RACES);
+  // 랜덤 소환: 조건을 무시하고 등급을 뽑는다. 값은 기대값보다 조금 싸다
+  DD.GAMBLE_P = [0.7, 0.25, 0.05];
+  DD.gambleCost = (R) => ({ g: Math.round((0.9 * R.units.reduce((s, u, i) => s + u.g * DD.GAMBLE_P[i], 0)) / 5) * 5, m: 0 });
+  DD.mergeNeed = (race) => (race === 'spirit' ? 2 : 3); // 정령은 둘만 있어도 융합한다
 
   DD.HERO_ROLES = {
     war: { label: '전사', hp: 800, atk: 42, rng: 16, as: 1.0, spd: 34, splash: 10 },
@@ -130,11 +141,12 @@
   };
 
   DD.DEMONS = {
-    imp: { name: '임프', hp: 42, atk: 6, rng: 12, as: 0.9, spd: 34, gold: 7, spr: 'd_imp', desc: '약하지만 떼로 몰려온다' },
-    brute: { name: '악귀', hp: 170, atk: 16, rng: 15, as: 1.2, spd: 20, gold: 15, mat: 3, spr: 'd_brute', desc: '단단하다 · 자재(◆)를 흘린다' },
-    hound: { name: '지옥견', hp: 62, atk: 9, rng: 13, as: 0.7, spd: 54, gold: 8, spr: 'd_hound', desc: '매우 빠르다 · 길을 길게 늘여 붙잡자' },
+    imp: { name: '임프', hp: 42, atk: 6, rng: 12, as: 0.9, spd: 34, gold: 7, light: true, spr: 'd_imp', desc: '약하지만 떼로 몰려온다 · 범위 공격에 약하다' },
+    brute: { name: '악귀', hp: 170, atk: 16, rng: 15, as: 1.2, spd: 20, gold: 15, mat: 3, heavy: true, spr: 'd_brute', desc: '중장갑 · 범위 공격에 강하고 단일 공격에 약하다 · 자재(◆)를 흘린다' },
+    hound: { name: '지옥견', hp: 62, atk: 9, rng: 13, as: 0.7, spd: 54, gold: 8, light: true, spr: 'd_hound', desc: '매우 빠르다 · 범위 공격에 약하다 · 길을 길게 늘여 붙잡자' },
+    bat: { name: '가고일', hp: 38, atk: 3, rng: 12, as: 1.0, spd: 36, gold: 9, fly: true, spr: 'd_imp', desc: '비행 · 길을 무시하고 심장으로 직진 · 원거리 공격과 탑만 닿는다' },
     warlock: { name: '흑마술사', hp: 72, atk: 14, rng: 72, as: 1.4, spd: 22, gold: 13, mat: 3, spr: 'd_warlock', desc: '원거리 · 길가 건물을 부순다 · 벽으로 시야를 막자' },
-    boss: { name: '악마 군주', hp: 1500, atk: 40, rng: 20, as: 1.4, spd: 15, gold: 200, mat: 30, splash: 16, spr: 'd_boss', desc: '광역 공격 · 건물도 부순다 · 다섯 웨이브마다' },
+    boss: { name: '악마 군주', hp: 1500, atk: 40, rng: 20, as: 1.4, spd: 15, gold: 200, mat: 30, splash: 16, heavy: true, spr: 'd_boss', desc: '중장갑 · 광역 공격 · 건물도 부순다 · 다섯 웨이브마다' },
   };
   // 웨이브 w(1~20)의 구성
   DD.waveList = function (w) {
@@ -144,6 +156,7 @@
     if (w >= 3) add('brute', Math.floor(w * 0.8));
     if (w >= 5) add('hound', w - 3);
     if (w >= 7) add('warlock', Math.floor(w / 2));
+    if (w >= 6) add('bat', Math.floor(w / 5));
     if (w % 5 === 0) add('boss', 1);
     return l;
   };

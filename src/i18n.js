@@ -6,6 +6,15 @@
 
   // [한국어, 영어, 일본어]
   const D = [
+    ['성기사', 'Paladin', '聖騎士'], ['고룡', 'Elder Dragon', '古龍'], ['베헤모스', 'Behemoth', 'ベヒーモス'], ['정령왕', 'Spirit King', '精霊王'], ['크라켄', 'Kraken', 'クラーケン'],
+    ['가고일', 'Gargoyle', 'ガーゴイル'], ['비행 · 길을 무시하고 심장으로 직진 · 원거리 공격과 탑만 닿는다', 'Flying · ignores roads and heads straight for the Heart · only ranged attacks and towers can hit it', '飛行 · 道を無視して心臓へ直進 · 遠距離攻撃と塔だけが届く'],
+    ['약하지만 떼로 몰려온다 · 범위 공격에 약하다', 'Weak, but they come in swarms · weak to area attacks', '弱いが群れで来る · 範囲攻撃に弱い'],
+    ['중장갑 · 범위 공격에 강하고 단일 공격에 약하다 · 자재(◆)를 흘린다', 'Heavy armor · resists area attacks, weak to single hits · drops materials (◆)', '重装甲 · 範囲攻撃に強く単体攻撃に弱い · 資材(◆)を落とす'],
+    ['매우 빠르다 · 범위 공격에 약하다 · 길을 길게 늘여 붙잡자', 'Very fast · weak to area attacks · lengthen the road to catch them', 'とても速い · 範囲攻撃に弱い · 道を長くして捕まえよう'],
+    ['중장갑 ·', 'Heavy armor ·', '重装甲 ·'],
+    ['랜덤 소환 ·', 'Random summon ·', 'ランダム召喚 ·'], ['랜덤 소환', 'Random', 'ランダム'], ['건물 조건 없이 유닛 하나를 뽑는다', 'Draws one unit, ignoring building requirements', '建物条件なしでユニットを一体引く'],
+    ['조합 ·', 'Merged ·', '合成 ·'], ['조합', 'Merge', '合成'], ['지금은 합칠 유닛이 없다', 'Nothing to merge right now', '今は合成できるユニットがいない'],
+    ['전설 유닛 탄생', 'A legendary unit is born', '伝説ユニット誕生'], ['V 랜덤 소환 · B 조합', 'V random summon · B merge', 'V ランダム召喚 · B 合成'],
     ['쉬움', 'Easy', 'やさしい'], ['보통', 'Normal', 'ふつう'], ['어려움', 'Hard', 'むずかしい'], ['악몽', 'Nightmare', '悪夢'], ['난이도', 'Difficulty', '難易度'],
     ['악마 체력', 'Demon HP', '悪魔のHP'], ['· 공격 ×', '· ATK ×', '· 攻撃 ×'], ['· 골드 ×', '· Gold ×', '· ゴールド ×'], ['영혼석 ×', 'Soul Shards ×', '魂石 ×'],
     ['이 건물은 더 지을 수 없다', 'You cannot build more of these', 'この建物はこれ以上建てられません'], ['골드 +1.2/초', '+1.2 gold/s', 'ゴールド +1.2/秒'],
@@ -181,7 +190,7 @@
     ['멀티 (AI 동맹)', 'Allied (AI)', 'マルチ (AI同盟)'], ['솔로', 'Solo', 'ソロ'], ['· 스테이지', '· Stage', '· ステージ'], ['스테이지', 'Stages', 'ステージ'],
     ['정식 버전에서', 'In the full game', '製品版で'], ['잠김', 'Locked', 'ロック'], ['· 악마 ×', '· Demons ×', '· 悪魔 ×'], ['✔ 클리어', '✔ Cleared', '✔ クリア'], ['최고 웨이브', 'Best wave', '最高ウェーブ'],
     ['영구 강화', 'Permanent Upgrades', '永久強化'], ['출전', 'To Battle', '出撃'], ['이야기', 'Story', '物語'], ['튜토리얼', 'Tutorial', 'チュートリアル'], ['⚙ 설정', '⚙ Settings', '⚙ 設定'], ['설정', 'Settings', '設定'], ['조작법', 'Controls', '操作方法'],
-    ['클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R 소환 · T 영웅 · 소환소나 제단을 누르면 집결지 지정', 'Click or drag to select (double-click: same type, Ctrl+A: all) → click the ground to post them · Q W R summon · T hero · click the Summoning Circle or Altar to set a rally point', 'クリック·ドラッグで選択(ダブルクリックで同種、Ctrl+Aで全員) → 地面クリックで配置 · Q W R 召喚 · T 英雄 · 召喚陣か祭壇を押すと集合地点を指定'],
+    ['클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R 소환 · T 영웅 · V 랜덤 소환 · B 조합 · 소환소나 제단을 누르면 집결지 지정', 'Click or drag to select (double-click: same type, Ctrl+A: all) → click the ground to post them · Q W R summon · T hero · click the Summoning Circle or Altar to set a rally point', 'クリック·ドラッグで選択(ダブルクリックで同種、Ctrl+Aで全員) → 地面クリックで配置 · Q W R 召喚 · T 英雄 · 召喚陣か祭壇を押すと集合地点を指定'],
     ['A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · 거점 위는 체력 +25% · 고른 건물 Del 철거', 'A S D F G → click a tile (Shift: keep building) · buildings on floor, barricades on roads · +25% HP on platforms · Del demolishes the selected building', 'A S D F G → マスをクリック(Shiftで連続) · 建物は床、防壁は道の上 · 拠点の上は耐久+25% · 選んだ建物はDelで撤去'],
     ['E (Z 길, X 벽, C 지우기, 우클릭 지우기, Ctrl+Z 되돌리기) · 길 최대', 'E (Z road, X wall, C erase, right-click erase, Ctrl+Z undo) · up to', 'E (Z 道, X 壁, C 消去, 右クリックで消去, Ctrl+Z 元に戻す) · 道は最大'],
     [', 벽 최대', ' road tiles,', '、壁は最大'], ['· 입구↔심장 연결 필수', 'wall tiles · the entrance must reach the Heart', '· 入口↔心臓の接続が必須'],
@@ -236,6 +245,10 @@
 
   // 숫자·이름이 끼는 문장. 사전보다 먼저 적용한다. [정규식, 영어, 일본어]
   const R = [
+    [/같은 유닛 (\d+)기를 한 단계 위 유닛 하나로 합친다/, 'Merges $1 identical units into one of the next tier', '同じユニット$1体を一段上のユニット一体に合成する'],
+    [/같은 유닛 (\d+)기가 필요합니다/, 'You need $1 identical units', '同じユニットが$1体必要です'],
+    [/유닛을 골라 두면 그 종류를 합친다 · 최상위 (\d+)기는 전설 /, 'Select units to merge that type · $1 top-tier units make the legendary ', 'ユニットを選ぶとその種類を合成 · 最上位$1体で伝説の'],
+    [/^(\d+)기 필요$/, 'Need $1', '$1体必要'],
     [/길은 (\d+)칸, 벽은 (\d+)칸까지 건설할 수 있습니다\. 벽은 악마들의 진격도, 화살도 막을 수 있습니다\. 잘 활용해보죠\./, 'You may lay up to $1 road tiles and $2 walls. A wall stops demons and arrows alike. Use them well.', '道は$1マス、壁は$2マスまで作れます。壁は悪魔の進軍も、矢も防ぎます。うまく使いましょう。'],
     [/(\d+)초 뒤 첫 침공/, 'First wave in $1s', '$1秒後に最初の侵攻'],
     [/길은 (\d+)칸까지/, 'Roads: up to $1 tiles', '道は$1マスまで'], [/벽은 (\d+)칸까지/, 'Walls: up to $1 tiles', '壁は$1マスまで'],

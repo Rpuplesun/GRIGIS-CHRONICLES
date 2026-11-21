@@ -159,6 +159,18 @@
     if (b.kind === 'wall') return gv !== 1 ? '방벽은 길 위에만 세울 수 있습니다' : is(C.ENT_T, cx, cy) ? '입구는 못 막는다' : null;
     return gv === 1 ? '길 위에는 방벽만' : gv === 2 ? '벽 위에는 못 짓는다' : null;
   };
+  // 조합 계획: 고른 유닛이 있으면 그 종류에서, 없으면 가장 낮은 등급부터 찾는다. {def, us, to} 또는 null
+  DD.mergePlan = function (d, ids) {
+    const need = DD.mergeNeed(d.race), own = d.units.filter((u) => u.own === d.i && !u.hero && !u.def.legend && u.hp > 0);
+    const sel = ids && ids.length ? new Set(own.filter((u) => ids.includes(u.id)).map((u) => u.def)) : null;
+    for (const def of d.R.units) {
+      if (sel && sel.size && !sel.has(def)) continue;
+      const us = own.filter((u) => u.def === def); if (us.length < need) continue;
+      us.sort((a, b) => (ids && ids.includes(b.id) ? 1 : 0) - (ids && ids.includes(a.id) ? 1 : 0) || a.hp - b.hp);
+      return { def, us: us.slice(0, need), to: def.tier < 3 ? d.R.units[def.tier] : d.R.legend };
+    }
+    return null;
+  };
   // 기본 수입(초당). 골드 수급 강화는 처치 골드와 기본 수입 모두에 붙는다
   DD.income = (d) => ({ g: (1.6 + 1.2 * (d.bc.market || 0)) * d.mod.gold, m: (d.race === 'spirit' ? 0.15 : 0) + 0.3 * (d.bc.crystal || 0) });
   DD.callBonus = (G) => Math.floor(DD.canCall(G) * DD.CALL_BONUS);
@@ -257,6 +269,19 @@
         u.hx = Math.max(C.OX + 5, Math.min(C.OX + GW * T - 5, c.x + ((i % n) - (n - 1) / 2) * 12));
         u.hy = Math.max(C.OY + 8, Math.min(C.OY + GH * T - 3, c.y + (Math.floor(i / n) - (n - 1) / 2) * 12));
       });
+    } else if (c.a === 'gamble') { // 랜덤 소환: 해금 조건 없이 등급을 뽑는다
+      if (d.units.filter((x) => x.own === d.i).length >= d.pop) return '인구 한도';
+      if (!pay(d, DD.gambleCost(d.R))) return '자원 부족';
+      const r = G.rnd(), P = DD.GAMBLE_P, ti = r < P[0] ? 0 : r < P[0] + P[1] ? 1 : 2;
+      addUnit(G, d, d.R.units[ti]); d.nSum++;
+      G.events.push({ t: 'gamble', d: d.i, tier: ti + 1, name: d.R.units[ti].name });
+    } else if (c.a === 'merge') { // 조합: 같은 유닛 셋을 한 단계 위 유닛 하나로
+      const p = DD.mergePlan(d, c.ids); if (!p) return `같은 유닛 ${DD.mergeNeed(d.race)}기가 필요합니다`;
+      const f = p.us[0], kills = p.us.reduce((s, u) => s + u.kills, 0);
+      d.units = d.units.filter((u) => !p.us.includes(u));
+      const u = addUnit(G, d, p.to); u.x = f.x; u.y = f.y; u.hx = f.hx; u.hy = f.hy; u.kills = kills;
+      fx(d, 'hero', u.x, u.y, 0.75, { c: p.to.legend ? 'g1' : d.R.color }); if (p.to.legend) snd(d, 'hero');
+      G.events.push({ t: 'merge', d: d.i, name: p.to.name, legend: !!p.to.legend });
     } else if (c.a === 'boon') {
       if (!d.boonPick || d.boonPick[c.i] == null) return '지금은 안 된다';
       applyBoon(G, d, d.boonPick[c.i]); snd(d, 'up');
@@ -337,10 +362,12 @@
     if (src.def.rng > 30 || src.k === 'b') { const k = src.k === 'd' ? 'orb' : SHOT[src.k === 'u' ? G.dungeons[src.own].race : d.race]; shoot(d, src, t, k, col); snd(d, k); }
     else { fx(d, 'hit', t.x + (G.rnd() - 0.5) * 4, t.y - 7, 0.17, { c: src.k === 'd' ? 'r1' : 'W' }); snd(d, 'melee'); }
     if (t.k === 'h') snd(d, 'heart');
-    hurt(G, d, src, t, amt);
+    // 상성: 중장갑은 범위 공격에 강하고 단일 공격에 약하다. 떼로 오는 악마는 범위 공격에 약하다
+    const ty = (x) => (x.k !== 'd' || src.k === 'd' ? 1 : x.def.heavy ? (splash ? 0.8 : 1.2) : x.def.light && splash ? 1.2 : 1);
+    hurt(G, d, src, t, amt * ty(t));
     if (splash) {
       const list = src.k === 'd' ? d.units : d.demons;
-      for (const o of list) if (o !== t && d2(o, t) < splash * splash) hurt(G, d, src, o, amt * 0.6);
+      for (const o of list) if (o !== t && d2(o, t) < splash * splash && !(o.k === 'd' && o.def.fly && src.k === 'u' && src.def.rng <= 30)) hurt(G, d, src, o, amt * 0.6 * ty(o));
       fx(d, 'boom', t.x, t.y - 4, 0.25, { c: col, r: splash });
     }
   }
@@ -410,6 +437,12 @@
   }
 
   function demonStep(G, d, e) {
+    if (e.def.fly) { // 비행: 길도 벽도 유닛도 무시하고 심장으로
+      const h = d.heart, reach = e.def.rng + h.r; e.face = h.x >= e.x ? 1 : -1;
+      if (d2(e, h) <= reach * reach) { e.mv = false; if (e.cd <= 0) { e.cd = e.def.as; e.atkT = 0.3; strike(G, d, e, h, e.atk, 0, 'p2'); } }
+      else { const p = step2(e, h.x, h.y, e.def.spd * (e.spd || 1)); e.mv = !!p; if (p) { e.x = p[0]; e.y = p[1]; } }
+      return;
+    }
     const ranged = e.def.rng > 30, boss = e.def.spr === 'd_boss';
     if (e.rt <= 0 || (e.tg && e.tg.hp <= 0)) {
       e.rt = 0.35; e.tg = null;
@@ -472,7 +505,7 @@
         }
         if (!u.tg) {
           let bd = Math.max(u.def.rng + 12, 64) ** 2;
-          for (const e of d.demons) { if (e.hp <= 0) continue; const q = d2(u, e); if (q < bd && d2(e, home) < 110 * 110 && (!ranged || los(d, u, e))) { bd = q; u.tg = e; } }
+          for (const e of d.demons) { if (e.hp <= 0 || (e.def.fly && !ranged)) continue; const q = d2(u, e); if (q < bd && d2(e, home) < 110 * 110 && (!ranged || e.def.fly || los(d, u, e))) { bd = q; u.tg = e; } }
         }
       }
       const t = u.tg;
@@ -497,7 +530,7 @@
       if (b.cd <= 0) {
         // 사거리 안에서 심장에 가장 가까이 온 악마부터 쏜다(같으면 가까운 쪽)
         let t = null, best = Infinity; const r2 = b.def.rng * b.def.rng;
-        for (const e of d.demons) { if (e.hp <= 0) continue; const q = d2(b, e); if (q >= r2) continue; const sc = prog(d, e) * 1e5 + q; if (sc < best && los(d, b, e)) { best = sc; t = e; } }
+        for (const e of d.demons) { if (e.hp <= 0) continue; const q = d2(b, e); if (q >= r2) continue; const sc = prog(d, e) * 1e5 + q; if (sc < best && (e.def.fly || los(d, b, e))) { best = sc; t = e; } }
         if (t) { b.cd = b.def.as; strike(G, d, b, t, b.def.atk * (1 + 0.15 * d.up.bld) * d.mod.atk, b.def.splash, d.R.color); } else b.cd = 0.2;
       }
     }
@@ -598,6 +631,7 @@
       const c = DD.upCost(d, k);
       if (c && own.length >= 8 + d.up[k] * 2 && can({ g: c.g + 60, m: c.m })) { G.cmd(d.i, { a: 'up', k }); return; }
     }
+    if (own.length >= d.pop && DD.mergePlan(d)) { G.cmd(d.i, { a: 'merge' }); return; } // 인구가 차면 조합으로 질을 올린다
     for (let ui = 2; ui >= 0; ui--) {
       const u = R.units[ui];
       if (DD.reqFail(d, u)) continue;
