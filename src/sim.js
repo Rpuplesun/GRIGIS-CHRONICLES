@@ -167,7 +167,7 @@
       if (sel && sel.size && !sel.has(def)) continue;
       const us = own.filter((u) => u.def === def); if (us.length < need) continue;
       us.sort((a, b) => (ids && ids.includes(b.id) ? 1 : 0) - (ids && ids.includes(a.id) ? 1 : 0) || a.hp - b.hp);
-      const up = d.R.units.filter((x) => x.tier === def.tier + 1); // 1단계는 두 2단계 유닛 중 하나가 무작위로 나온다
+      const up = d.R.units.filter((x) => x.tier === def.tier + 1); // 1단계는 두 2단계 유닛 중 고른다(opts)
       return { def, us: us.slice(0, need), to: def.tier >= 3 ? d.R.legend : up.length === 1 ? up[0] : null, opts: up };
     }
     return null;
@@ -270,17 +270,11 @@
         u.hx = Math.max(C.OX + 5, Math.min(C.OX + GW * T - 5, c.x + ((i % n) - (n - 1) / 2) * 12));
         u.hy = Math.max(C.OY + 8, Math.min(C.OY + GH * T - 3, c.y + (Math.floor(i / n) - (n - 1) / 2) * 12));
       });
-    } else if (c.a === 'gamble') { // 랜덤 소환: 해금 조건 없이 등급을 뽑는다
-      if (d.units.filter((x) => x.own === d.i).length >= d.pop) return '인구 한도';
-      if (!pay(d, DD.gambleCost(d.R))) return '자원 부족';
-      const P = DD.gambleP(d.R); let r = G.rnd(), ti = 0; while (ti < P.length - 1 && r >= P[ti]) r -= P[ti++];
-      addUnit(G, d, d.R.units[ti]); d.nSum++;
-      G.events.push({ t: 'gamble', d: d.i, tier: d.R.units[ti].tier, name: d.R.units[ti].name });
     } else if (c.a === 'merge') { // 조합: 같은 유닛 셋을 한 단계 위 유닛 하나로
       const p = DD.mergePlan(d, c.ids); if (!p) return `같은 유닛 ${DD.mergeNeed(d.race)}기가 필요합니다`;
       const f = p.us[0], kills = p.us.reduce((s, u) => s + u.kills, 0);
       d.units = d.units.filter((u) => !p.us.includes(u));
-      const to = p.to || p.opts[Math.floor(G.rnd() * p.opts.length)];
+      const to = p.to || p.opts[c.pick ? 1 : 0]; // 1단계는 두 2단계 유닛 중 고른 쪽으로
       const u = addUnit(G, d, to); u.x = f.x; u.y = f.y; u.hx = f.hx; u.hy = f.hy; u.kills = kills;
       fx(d, 'hero', u.x, u.y, 0.75, { c: to.legend ? 'g1' : d.R.color }); if (to.legend) snd(d, 'hero');
       G.events.push({ t: 'merge', d: d.i, name: to.name, legend: !!to.legend });
@@ -661,7 +655,7 @@
       const c = DD.upCost(d, k);
       if (c && own.length >= 8 + d.up[k] * 2 && can({ g: c.g + 60, m: c.m })) { G.cmd(d.i, { a: 'up', k }); return; }
     }
-    if (own.length >= d.pop && DD.mergePlan(d)) { G.cmd(d.i, { a: 'merge' }); return; } // 인구가 차면 조합으로 질을 올린다
+    if (own.length >= d.pop && DD.mergePlan(d)) { G.cmd(d.i, { a: 'merge', pick: G.rnd() < 0.5 ? 1 : 0 }); return; } // 인구가 차면 조합으로 질을 올린다
     for (let ui = 2; ui >= 0; ui--) {
       const u = R.units[ui === 1 && G.rnd() < 0.5 && !DD.reqFail(d, R.units[3]) ? 3 : ui];
       if (DD.reqFail(d, u)) continue;

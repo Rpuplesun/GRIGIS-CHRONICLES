@@ -117,10 +117,6 @@
   };
   for (const k in LG) { const l = LG[k]; DD.RACES[k].legend = U(l[0], 4, 0, 0, l[1], l[2], l[3], l[4], l[5], 'u_' + k + '_5', Object.assign({ legend: true }, l[6])); }
   DD.RACE_IDS = Object.keys(DD.RACES);
-  // 랜덤 소환: 조건을 무시하고 등급을 뽑는다. 값은 기대값보다 조금 싸다
-  DD.GAMBLE_P = [0.7, 0.25, 0.05];
-  DD.gambleP = (R) => R.units.map((u) => DD.GAMBLE_P[u.tier - 1] / R.units.filter((x) => x.tier === u.tier).length); // 같은 단계끼리는 확률을 나눈다
-  DD.gambleCost = (R) => { const P = DD.gambleP(R); return { g: Math.round((0.9 * R.units.reduce((s, u, i) => s + u.g * P[i], 0)) / 5) * 5, m: 0 }; };
   DD.mergeNeed = (race) => (race === 'spirit' ? 2 : 3); // 정령은 둘만 있어도 융합한다
 
   DD.HERO_ROLES = {
