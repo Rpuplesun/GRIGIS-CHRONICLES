@@ -209,7 +209,7 @@
     const ms = d.mission; // 진행 중인 미션
     set('#mission', ms ? `<small>미션</small>${DD.MISSION[ms.k].name}${ms.k === 'fast' ? ` · <b>${Math.max(0, Math.ceil(DD.MISSION.fast.t - (G.t - ms.t0)))}초</b>` : ''} <span class="gold">${ic('ui_coin')}${ms.gold}</span>` : ''); $('#mission').hidden = !ms || ui.world;
     const bp = d.boonPick; // 전리품 고르기: 고를 때까지 게임이 멈춘다
-    set('#boon', bp ? `<div class="box"><h2>전리품</h2><p>악마 군주를 쓰러뜨렸다. 하나를 고른다.</p><div class="cards c3">${bp.map((bi, i) => `<button class="card" data-a="boon:${i}"><kbd>${i + 1}</kbd><b>${DD.BOONS[bi].name}</b><small>${DD.BOONS[bi].desc}</small></button>`).join('')}</div></div>` : ''); $('#boon').hidden = !bp;
+    set('#boon', bp ? `<div class="box"><h2>전리품</h2><p>악마 군주를 쓰러뜨렸다. 하나를 고른다.</p><div class="cards c3">${bp.map((bi, i) => `<button class="card" data-a="boon:${i}"><kbd>${i + 1}</kbd>${DD.ATLAS.frames['boon_' + DD.BOONS[bi].id] ? icon('boon_' + DD.BOONS[bi].id, 3) : ''}<b>${DD.BOONS[bi].name}</b><small>${DD.BOONS[bi].desc}</small></button>`).join('')}</div></div>` : ''); $('#boon').hidden = !bp;
     const vd = G.dungeons[ui.view], boss = !ui.world && vd.demons.find((e) => e.def.spr === 'd_boss' && e.hp > 0);
     set('#bossbar', boss ? `<b>${boss.gim && DD.BOSS_GIM[boss.gim] ? DD.BOSS_GIM[boss.gim].name : boss.def.name}</b><i><i style="width:${Math.max(0, Math.round((boss.hp / boss.mhp) * 100))}%"></i></i><span>${Math.ceil(boss.hp)}</span>` : '');
     $('#paused').hidden = !(paused && !ui.edit && !dlg && !G.over);

@@ -179,7 +179,9 @@
       if (e.k === 'b') {
         const id = e.def.spr + '@' + d.race;
         const big = e.def.size === 2, fr = e.hp < e.mhp * 0.5 ? 1 : 0, wh = flash && e.hit > 0.06; let c;
-        if (big) { ctx.save(); ctx.translate(e.x, e.y + 25); ctx.scale(2, 2); c = DD.blit(ctx, id, fr, 0, 0, false, wh); ctx.restore(); c = { height: c.height * 2 - 12 }; } // 큰 건물은 두 배로 그린다
+        const bk = big ? 'B_' + d.race + '_' + d.R.blds.indexOf(e.def) : '';
+        if (big && DD.ATLAS.frames[bk]) { c = DD.blit(ctx, bk, fr, e.x, e.y + 24, false, wh); c = { height: c.height - 11 }; } // 2×2 전용 그림
+        else if (big) { ctx.save(); ctx.translate(e.x, e.y + 25); ctx.scale(2, 2); c = DD.blit(ctx, id, fr, 0, 0, false, wh); ctx.restore(); c = { height: c.height * 2 - 12 }; } // 전용 그림이 없으면 두 배로 그린다
         else c = DD.blit(ctx, id, fr, e.x, e.y + 13, false, wh);
         if (e.hp < e.mhp) bar(ctx, e.x - (big ? 14 : 8), e.y + 13 - c.height - 2, big ? 28 : 16, e.hp / e.mhp, 's2');
         if (ui.selB === e.id) { ctx.fillStyle = P.n1; (big ? [[-25, -25], [23, -25], [-25, 23], [23, 23]] : [[-13, -13], [11, -13], [-13, 11], [11, 11]]).forEach(([a1, b1]) => ctx.fillRect(e.x + a1, e.y + b1, 2, 2)); if (e.def.rng) dotted(ctx, e.x, e.y, e.def.rng, 'n1'); if (e.def.rad) dotted(ctx, e.x, e.y, e.def.rad, 'b1'); }
@@ -228,6 +230,7 @@
       const { cx, cy, b } = ui.ghost, ok = !DD.buildErr(d, b, cx, cy), X = OX + cx * T, Y = OY + cy * T;
       const sz = b.size === 2 ? 2 : 1, W2 = T * sz;
       if (b.kind === 'trap') DD.blit(ctx, b.spr, 0, X + 12, Y + 24);
+      else if (sz === 2 && DD.ATLAS.frames['B_' + d.race + '_' + d.R.blds.indexOf(b)]) DD.blit(ctx, 'B_' + d.race + '_' + d.R.blds.indexOf(b), 0, X + 24, Y + 48);
       else if (sz === 2) { ctx.save(); ctx.translate(X + 24, Y + 49); ctx.scale(2, 2); DD.blit(ctx, b.spr + '@' + d.race, 0, 0, 0); ctx.restore(); }
       else DD.blit(ctx, b.spr + '@' + d.race, 0, X + 12, Y + 25);
       ctx.fillStyle = P[ok ? 'n1' : 'r2']; ctx.fillRect(X, Y, W2, 1); ctx.fillRect(X, Y + W2 - 1, W2, 1); ctx.fillRect(X, Y, 1, W2); ctx.fillRect(X + W2 - 1, Y, 1, W2);
