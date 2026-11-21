@@ -499,7 +499,7 @@
       const tcx0 = tx(e.x), tcy0 = ty(e.y), tr = inG(tcx0, tcy0) ? d.occ[key(tcx0, tcy0)] : null; e.slow = 1;
       if (tr && tr.def.kind === 'trap') {
         if (tr.def.slow) e.slow = e.def.spr === 'd_boss' ? (1 + tr.def.slow) / 2 : tr.def.slow;
-        if (tr.def.dmg) { e.tt = (e.tt || 0) - DT; if (e.tt <= 0) { e.tt = tr.def.every; tr.hit = 0.12; hurt(G, d, tr, e, tr.def.dmg * (1 + 0.15 * d.up.bld) * d.mod.atk); fx(d, 'hit', e.x, e.y - 3, 0.17, { c: 'W' }); if (e.hp <= 0) return; } }
+        if (tr.def.dmg) { e.tt = (e.tt || 0) - DT; if (e.tt <= 0) { e.tt = tr.def.every; tr.hit = 0.3; hurt(G, d, tr, e, tr.def.dmg * (1 + 0.15 * d.up.bld) * d.mod.atk); fx(d, 'hit', e.x, e.y - 3, 0.17, { c: 'W' }); if (e.hp <= 0) return; } }
       }
     }
     const ranged = e.def.rng > 30, boss = e.def.spr === 'd_boss';

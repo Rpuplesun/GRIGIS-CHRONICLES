@@ -167,9 +167,7 @@
       for (let k = -3; k <= 3; k++) { const a = 3 - Math.abs(k); if (dx) { ctx.fillRect(X + dx * a - 1, Y + k, 2, 1); } else { ctx.fillRect(X + k, Y + dy * a - 1, 1, 2); } }
     }));
     for (const b of d.blds) if (b.def.kind === 'trap') { // 함정은 바닥에 깔린다
-      const X = b.x - 12, Y = b.y - 12;
-      if (b.def.slow) { ctx.fillStyle = P.K; ctx.fillRect(X + 3, Y + 5, 18, 15); ctx.fillRect(X + 5, Y + 3, 14, 19); ctx.fillStyle = P.p3; ctx.fillRect(X + 5, Y + 6, 14, 12); ctx.fillStyle = P.p2; const o = ((TT * 2 + b.id) | 0) % 2; ctx.fillRect(X + 7 + o, Y + 8, 3, 2); ctx.fillRect(X + 14 - o, Y + 13, 3, 2); ctx.fillRect(X + 9, Y + 15, 2, 1); }
-      else { const up = b.hit > 0 ? 2 : 0; for (const [sx, sy] of [[5, 8], [12, 8], [19, 8], [8, 16], [15, 16]]) { ctx.fillStyle = P.K; ctx.fillRect(X + sx - 3, Y + sy, 6, 2); ctx.fillRect(X + sx - 2, Y + sy - 3 - up, 4, 3 + up); ctx.fillStyle = P.s1; ctx.fillRect(X + sx - 1, Y + sy - 2 - up, 2, 3 + up); ctx.fillStyle = P.W; ctx.fillRect(X + sx - 1, Y + sy - 3 - up, 1, 1); } }
+      DD.blit(ctx, b.def.spr, b.def.slow ? ((TT * 3 + b.id) | 0) % 4 : b.hit > 0.2 ? 1 : b.hit > 0.1 ? 2 : b.hit > 0 ? 3 : 0, b.x, b.y + 12); // 늪은 끓고, 가시는 악마가 밟을 때 튀어나온다
       if (ui.selB === b.id) ring(ctx, Math.round(b.x), Math.round(b.y), 11, 'n1', true);
     }
     const all = d.blds.filter((b) => b.def.kind !== 'trap').concat(d.units, d.demons).sort((a, b) => (a.k === 'b' ? a.y + 8 : a.y) - (b.k === 'b' ? b.y + 8 : b.y));
