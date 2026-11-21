@@ -395,7 +395,7 @@
       const kg = t.def.gold * (t.gm || 1) * G.D.gold * d.mod.gold * (d.mod.kg || 1) * (1 + 0.2 * Math.min(3, d.bc.hoard || 0)); d.gold += kg;
       if (t.def.spr === 'd_boss' && G.wave < C.WAVES && !G.tutorial) offerBoon(G, d);
       d.mat += (t.def.mat || 0) + (G.rnd() < 0.1 ? 1 : 0);
-      fx(d, 'corpse', t.x, t.y, 0.5, { s: t.def.spr, face: t.face }); fx(d, 'smoke', t.x, t.y, 0.5); fx(d, 'gold', t.x, t.y - 14, 0.7, { n: Math.round(kg) });
+      fx(d, 'corpse', t.x, t.y, 0.5, { s: t.gim ? 'd_lord_' + t.gim : t.def.spr, face: t.face }); fx(d, 'smoke', t.x, t.y, 0.5); fx(d, 'gold', t.x, t.y - 14, 0.7, { n: Math.round(kg) });
       snd(d, t.def.spr === 'd_boss' ? 'bossdie' : 'die');
     }
     if (t.k === 'b' && t.def.thorn && src && src.k === 'd') hurt(G, d, null, src, t.def.thorn);
