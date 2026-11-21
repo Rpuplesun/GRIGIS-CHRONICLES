@@ -8,7 +8,12 @@
   DD.setLayout = function (name) {
     const l = DD.LAYOUTS[name] || DD.LAYOUTS.top, px = (t) => ({ x: C.OX + t[0] * T + 12, y: C.OY + t[1] * T + 12 });
     C.LAYOUT = DD.LAYOUTS[name] ? name : 'top'; C.HEART_T = l.heart; C.SUMMON_T = l.summon; C.ALTAR_T = l.altar;
-    C.HEART = px(l.heart); C.SUMMON = px(l.summon); C.ALTAR = px(l.altar);
+    const p2 = (t) => ({ x: C.OX + t[0] * T + T, y: C.OY + t[1] * T + T }); // 2×2의 한가운데
+    C.HEART = px(l.heart); C.SUMMON = p2(l.summon); C.ALTAR = p2(l.altar);
+    // 시설이 차지하는 칸: 심장 3×3, 소환소·제단 2×2. FAC[칸 번호] = 'h' | 'u' | 'a'
+    C.FAC = {}; const put = (x, y, k) => { C.FAC[x + y * C.GW] = k; };
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) put(l.heart[0] + dx, l.heart[1] + dy, 'h');
+    for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) { put(l.summon[0] + dx, l.summon[1] + dy, 'u'); put(l.altar[0] + dx, l.altar[1] + dy, 'a'); }
   };
   DD.setLayout('top');
 
@@ -25,7 +30,8 @@
   DD.tileAt = (x, y) => [tx(x), ty(y)];
   DD.isPlot = (cx, cy) => C.PLOTS.some((p) => is(p, cx, cy));
   // 고정 칸: 심장·소환소·제단·거점은 길이나 벽으로 바꿀 수 없다. 입구 칸은 언제나 길이다.
-  DD.isFixed = (cx, cy) => is(C.HEART_T, cx, cy) || is(C.SUMMON_T, cx, cy) || is(C.ALTAR_T, cx, cy) || DD.isPlot(cx, cy);
+  DD.facAt = (cx, cy) => (cx >= 0 && cy >= 0 && cx < GW && cy < GH ? C.FAC[cx + cy * GW] || null : null); // 그 칸의 시설('h' 심장, 'u' 소환소, 'a' 제단)
+  DD.isFixed = (cx, cy) => !!DD.facAt(cx, cy) || DD.isPlot(cx, cy);
   const NB = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
   // ── 던전 격자: 0 바닥(건물 자리), 1 길(악마가 걷는 칸), 2 벽(통과·사격 불가) ──
@@ -33,22 +39,22 @@
     const gr = new Uint8Array(GW * GH);
     if (C.LAYOUT === 'center') { // 심장이 가운데: 아래 입구는 오른쪽으로, 위 입구는 왼쪽으로 한 번 돌아 들어온다
       const mx = C.ENT_T[0], hy = C.HEART_T[1], row = (y, a, b) => { for (let x = a; x <= b; x++) gr[key(x, y)] = 1; }, col = (x, a, b) => { for (let y = a; y <= b; y++) gr[key(x, y)] = 1; };
-      col(mx, GH - 2, GH - 1); row(GH - 2, mx, GW - 5); col(GW - 5, GH - 4, GH - 2); row(GH - 4, 8, GW - 5); col(8, hy + 3, GH - 4); row(hy + 3, 8, mx); col(mx, hy + 1, hy + 3);
-      if (nEnt >= 2) { col(mx, 0, 1); row(1, 4, mx); col(4, 1, 3); row(3, 4, GW - 9); col(GW - 9, 3, 5); row(5, mx, GW - 9); col(mx, 5, hy - 1); }
+      col(mx, GH - 2, GH - 1); row(GH - 2, mx, GW - 5); col(GW - 5, GH - 4, GH - 2); row(GH - 4, 8, GW - 5); col(8, hy + 3, GH - 4); row(hy + 3, 8, mx); col(mx, hy + 2, hy + 3);
+      if (nEnt >= 2) { col(mx, 0, 1); row(1, 4, mx); col(4, 1, 3); row(3, 4, GW - 9); col(GW - 9, 3, 5); row(5, mx, GW - 9); col(mx, 5, hy - 2); }
       if (nEnt >= 3) { row(hy, 0, 4); col(4, 3, hy); }
       if (nEnt >= 4) { row(hy, GW - 5, GW - 1); col(GW - 5, hy, GH - 4); }
       return gr;
     }
     // 기본 길은 ㄹ 모양: 입구(아래 가운데) → 왼쪽 → 위 → 오른쪽으로 가로질러 → 위 → 심장(위 가운데)
     const mx = C.ENT_T[0], L = 3, R = GW - 4, row = (y, a, b) => { for (let x = a; x <= b; x++) gr[key(x, y)] = 1; }, col = (x, a, b) => { for (let y = a; y <= b; y++) gr[key(x, y)] = 1; };
-    col(mx, GH - 2, GH - 1); row(GH - 3, L, mx); col(L, GH >> 1, GH - 3); row(GH >> 1, L, R); col(R, 2, GH >> 1); row(2, mx, R); col(mx, 1, 2);
+    col(mx, GH - 2, GH - 1); row(GH - 3, L, mx); col(L, GH >> 1, GH - 3); row(GH >> 1, L, R); col(R, 3, GH >> 1); row(3, mx, R); // 심장(3×3) 바로 아래 칸에서 끝난다
     if (nEnt >= 2) row(GH >> 1, 0, L); // 왼쪽 입구는 가운데 가로길에 붙는다
     if (nEnt >= 3) { row(GH >> 1, GW - 2, GW - 1); col(GW - 2, GH >> 1, GH - 3); row(GH - 3, mx, GW - 2); } // 오른쪽 입구는 아래로 돌아 아래 입구 길에 합류한다
     return gr;
   };
   function flow(gr) { // 심장에서 길을 따라 퍼지는 거리. -1은 심장에 닿지 않는 칸
-    const dist = new Int16Array(GW * GH).fill(-1), q = [C.HEART_T];
-    dist[key(C.HEART_T[0], C.HEART_T[1])] = 0;
+    const dist = new Int16Array(GW * GH).fill(-1), q = [];
+    for (const k in C.FAC) if (C.FAC[k] === 'h') { dist[k] = 0; q.push([k % GW, (k / GW) | 0]); } // 심장의 아홉 칸 모두에서 퍼진다
     for (let i = 0; i < q.length; i++) {
       const [cx, cy] = q[i], dv = dist[key(cx, cy)];
       for (const [dx, dy] of NB) { const nx = cx + dx, ny = cy + dy; if (inG(nx, ny) && gr[key(nx, ny)] === 1 && dist[key(nx, ny)] < 0) { dist[key(nx, ny)] = dv + 1; q.push([nx, ny]); } }
@@ -150,7 +156,7 @@
     };
     d.heroT = DD.HERO_CD.first * d.mod.hcd;
     const hh = Math.round(1000 * (1 + 0.08 * (m.bHp || 0)));
-    d.heart = { k: 'h', x: C.HEART.x, y: C.HEART.y, hp: hh, mhp: hh, r: 12, hit: 0 };
+    d.heart = { k: 'h', x: C.HEART.x, y: C.HEART.y, hp: hh, mhp: hh, r: 38, hit: 0 };
     d.ents = DD.entsFor(G.nEnt, G.layout);
     let gr = DD.defaultGrid(G.nEnt);
     if (p.layout) { const u = Uint8Array.from(p.layout); if (!DD.gridCheck(u, d.ents)) gr = u; }
@@ -181,7 +187,7 @@
   DD.bldTiles = (b, cx, cy) => (b.size === 2 ? [[cx, cy], [cx + 1, cy], [cx, cy + 1], [cx + 1, cy + 1]] : [[cx, cy]]);
   DD.buildErr = function (d, b, cx, cy) { for (const [x, y] of DD.bldTiles(b, cx, cy)) { const e = buildErr1(d, b, x, y); if (e) return e; } return null; };
   const buildErr1 = function (d, b, cx, cy) {
-    if (!inG(cx, cy) || is(C.HEART_T, cx, cy) || is(C.SUMMON_T, cx, cy) || is(C.ALTAR_T, cx, cy)) return '지을 수 없는 위치';
+    if (!inG(cx, cy) || DD.facAt(cx, cy)) return '지을 수 없는 위치';
     if (d.occ[key(cx, cy)]) return '건물이 있는 칸';
     const gv = d.grid[key(cx, cy)];
     if (b.kind === 'trap') return gv !== 1 ? '함정은 길 위에만 놓을 수 있습니다' : null;
@@ -225,7 +231,7 @@
   function addUnit(G, d, def, hero) {
     const h = homeSlot(d, def.rng > 30, !!hero), src = hero ? C.ALTAR : C.SUMMON;
     const mhp = def.hp * d.mod.hp * (1 + 0.1 * d.up.hp);
-    const u = { id: G.nid++, k: 'u', def, x: src.x + (G.rnd() - 0.5) * 10, y: src.y + 14, hx: h.x, hy: h.y, hp: mhp, mhp, cd: 0, rt: 0, tg: null, own: d.i, kills: 0, hero: hero || null, face: 1, hit: 0, r: 7 };
+    const u = { id: G.nid++, k: 'u', def, x: src.x + (G.rnd() - 0.5) * 16, y: src.y + 26, hx: h.x, hy: h.y, hp: mhp, mhp, cd: 0, rt: 0, tg: null, own: d.i, kills: 0, hero: hero || null, face: 1, hit: 0, r: 7 };
     d.units.push(u);
     fx(d, hero ? 'hero' : 'summon', u.x, u.y, hero ? 0.75 : 0.42, { c: hero ? DD.GRADES[hero.grade].col : d.R.color });
     snd(d, hero ? 'hero' : 'summon');
@@ -348,7 +354,7 @@
       const us = d.units.filter((u) => c.ids.includes(u.id) && u.own === d.i);
       if (!us.length) return '선택된 유닛 없음';
       d.units = d.units.filter((u) => !us.includes(u));
-      us.forEach((u) => { const h = homeSlot(to, u.def.rng > 30); u.x = C.SUMMON.x; u.y = C.SUMMON.y + 14; u.hx = h.x; u.hy = h.y; u.tg = null; to.units.push(u); });
+      us.forEach((u) => { const h = homeSlot(to, u.def.rng > 30); u.x = C.SUMMON.x; u.y = C.SUMMON.y + 26; u.hx = h.x; u.hy = h.y; u.tg = null; to.units.push(u); });
       G.events.push({ t: 'support', d: d.i, to: to.i, n: us.length });
     }
     return null;
@@ -389,7 +395,7 @@
     fx(d, 'hero', u.x, u.y, 0.5, { c: 'g1' }); snd(d, 'up');
   }
   function hurt(G, d, src, t, amt) {
-    t.hp -= amt; t.hit = 0.12;
+    t.hp -= amt; t.hit = 0.12; if (t.k === 'h') d.alarmT = 3; // 심장이 맞으면 근처 병력이 달려온다
     if (t.k === 'd' && t.hp <= 0 && !t.dead) {
       t.dead = true; d.kills++; if (src && src.k === 'u') { src.kills++; promote(d, src); }
       const kg = t.def.gold * (t.gm || 1) * G.D.gold * d.mod.gold * (d.mod.kg || 1) * (1 + 0.2 * Math.min(3, d.bc.hoard || 0)); d.gold += kg;
@@ -533,7 +539,7 @@
         const dv = d.dist[key(cx, cy)];
         for (const [dx, dy] of NB) { const ax = cx + dx, ay = cy + dy; if (inG(ax, ay) && d.dist[key(ax, ay)] === dv - 1 && dv > 0) { nx = ax; ny = ay; break; } }
       }
-      if (is(C.HEART_T, nx, ny)) t = d.heart;
+      if (DD.facAt(nx, ny) === 'h') t = d.heart;
       else {
         const blk = [d.occ[key(nx, ny)], inG(cx, cy) && d.occ[key(cx, cy)]].find((b) => b && b.def.kind !== 'trap'); // 함정은 막지 않는다
         if (blk && blk.hp > 0) t = blk; // 바리케이드
@@ -560,6 +566,7 @@
     }
     if (d.heroT > 0) d.heroT -= DT;
     if (d.skillT > 0) d.skillT -= DT;
+    if (d.alarmT > 0) d.alarmT -= DT;
     if (!d.demons.length && !d.queue.length) for (const b of d.blds) if (b.hp < b.mhp) b.hp = Math.min(b.mhp, b.hp + b.mhp * 0.03 * DT); // 전장이 비면 건물을 고친다
     while (d.queue.length && d.queue[0].at <= G.t) {
       const q = d.queue.shift(), def = DD.DEMONS[q.t], mhp = def.hp * q.hp;
@@ -587,6 +594,10 @@
         if (!u.tg) {
           let bd = Math.max(u.def.rng + 12, 64) ** 2;
           for (const e of d.demons) { if (e.hp <= 0 || (e.def.fly && !ranged)) continue; const q = d2(u, e); if (q < bd && d2(e, home) < 110 * 110 && (!ranged || e.def.fly || los(d, u, e))) { bd = q; u.tg = e; } }
+        }
+        if (!u.tg && !heal && d.alarmT > 0 && d2(u, d.heart) < 240 * 240) { // 심장 구원: 심장을 치는 악마에게 달려간다
+          let bd = Infinity;
+          for (const e of d.demons) { if (e.hp <= 0 || (e.def.fly && !ranged) || d2(e, d.heart) > 90 * 90) continue; const q = d2(u, e); if (q < bd) { bd = q; u.tg = e; } }
         }
       }
       const t = u.tg;
@@ -684,7 +695,7 @@
     if (kind === 'wall') return d.path.slice(1, 5).filter(([x, y]) => free(x, y));
     const out = [];
     for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) {
-      if (d.grid[key(cx, cy)] !== 0 || !free(cx, cy) || is(C.HEART_T, cx, cy) || is(C.SUMMON_T, cx, cy) || is(C.ALTAR_T, cx, cy)) continue;
+      if (d.grid[key(cx, cy)] !== 0 || !free(cx, cy) || DD.facAt(cx, cy)) continue;
       let best = 99, bi = 0;
       d.path.forEach(([px, py], i) => { const m = Math.abs(px - cx) + Math.abs(py - cy); if (m < best) { best = m; bi = i; } });
       out.push({ cx, cy, adj: best, off: Math.abs(bi - d.path.length * 0.45), plot: DD.isPlot(cx, cy) });

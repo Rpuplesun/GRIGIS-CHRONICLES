@@ -366,7 +366,7 @@
     if (hit) { const now = performance.now(), dbl = lastHit.id === hit.id && now - lastHit.t < 350; lastHit = { id: hit.id, t: now };
       if (!dn.shift) ui.sel.clear(); ui.selB = null;
       if (dbl) d.units.forEach((u) => { if (u.own === d.i && u.def === hit.def) ui.sel.add(u.id); }); else ui.sel.add(hit.id); return; }
-    const fac = tt[0] === C.SUMMON_T[0] && tt[1] === C.SUMMON_T[1] ? 'U' : tt[0] === C.ALTAR_T[0] && tt[1] === C.ALTAR_T[1] ? 'H' : null;
+    const fk = DD.facAt(tt[0], tt[1]), fac = fk === 'u' ? 'U' : fk === 'a' ? 'H' : null;
     if (fac) { ui.rally = fac; ui.sel.clear(); ui.selB = null; return; } // 소환소·제단을 누르면 집결지를 고른다
     if (ui.sel.size) { act({ a: 'move', ids: [...ui.sel], x: p.x, y: p.y }); return; }
     const b = tt[0] >= 0 && tt[0] < C.GW ? d.occ[tt[0] + tt[1] * C.GW] : null;

@@ -6,7 +6,7 @@
     TILE: 24, GW: 27, GH: 18, OX: 24, OY: 24, W: 696, H: 480,
     WAVES: 20, WAVE_T: 60, FIRST_WAVE: 20, POP: 40, BLD_CAP: 40,
     ROAD_MAX: 140, WALL_MAX: 50, PLOT_HP: 1.25,
-    HEART_T: [13, 0], SUMMON_T: [11, 0], ALTAR_T: [15, 0], ENT_T: [13, 17],
+    HEART_T: [13, 1], SUMMON_T: [8, 0], ALTAR_T: [17, 0], ENT_T: [13, 17],
     PLOTS: [[5, 4], [21, 4], [5, 13], [21, 13]],
   };
 
@@ -232,7 +232,8 @@
   ];
   // 침공로: 스테이지와 난이도가 오르면 좌우 벽에도 입구가 열린다
   // 배치: 넷째 스테이지와 악마성은 심장이 한가운데 있고 위아래에서 쳐들어온다
-  DD.LAYOUTS = { top: { heart: [13, 0], summon: [11, 0], altar: [15, 0] }, center: { heart: [13, 9], summon: [11, 9], altar: [15, 9] } };
+  // heart: 3×3의 가운데 칸, summon·altar: 2×2의 왼쪽 위 칸
+  DD.LAYOUTS = { top: { heart: [13, 1], summon: [8, 0], altar: [17, 0] }, center: { heart: [13, 9], summon: [8, 8], altar: [17, 8] } };
   DD.layoutOf = (stage, tutorial) => (!tutorial && (stage === 3 || stage === 5) ? 'center' : 'top');
   DD.entCount = (stage, diff, tutorial) => {
     if (tutorial) return 1; const s = stage + (diff >= 2 ? 1 : 0) + (diff >= 3 ? 1 : 0);

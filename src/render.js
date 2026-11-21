@@ -111,15 +111,15 @@
     for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) {
       if (!isRoad(cx, cy)) continue; const X = OX + cx * T, Y = OY + cy * T;
       [[0, -1, X, Y, T, 1, X, Y - 2, T, 2], [0, 1, X, Y + T - 1, T, 1, X, Y + T, T, 2], [-1, 0, X, Y, 1, T, X - 2, Y, 2, T], [1, 0, X + T - 1, Y, 1, T, X + T, Y, 2, T]].forEach(([dx, dy, lx, ly, lw, lh, kx, ky, kw, kh]) => {
-        if (isRoad(cx + dx, cy + dy) || (cx + dx === C.HEART_T[0] && cy + dy === C.HEART_T[1])) return;
+        if (isRoad(cx + dx, cy + dy) || DD.facAt(cx + dx, cy + dy) === 'h') return;
         x.fillStyle = P.K; x.fillRect(kx, ky, kw, kh); x.fillStyle = P.w1; x.fillRect(lx, ly, lw, lh);
       });
     }
     dither(x, 7, 'K', OX, OY, GW * T, 3);
     // 색감: 가장자리 어둠 + 심장·화로의 따뜻한 빛, 소환소의 푸른 빛, 입구의 붉은 기운
     for (const [w, lv] of [[10, 6], [22, 3]]) { dither(x, lv, 'K', OX, OY, w, GH * T); dither(x, lv, 'K', OX + GW * T - w, OY, w, GH * T); dither(x, lv, 'K', OX, OY + GH * T - w, GW * T, w); }
-    glow(x, C.HEART.x, C.HEART.y + 4, 58, 'o3'); glow(x, C.HEART.x, C.HEART.y, 30, 'r2');
-    glow(x, C.SUMMON.x, C.SUMMON.y, 30, 'b3'); glow(x, C.ALTAR.x, C.ALTAR.y, 30, 'g3');
+    glow(x, C.HEART.x, C.HEART.y + 4, 76, 'o3'); glow(x, C.HEART.x, C.HEART.y, 46, 'r2');
+    glow(x, C.SUMMON.x, C.SUMMON.y, 40, 'b3'); glow(x, C.ALTAR.x, C.ALTAR.y, 40, 'g3');
     for (const e of d.ents) { if (e[0] === 0) glow(x, OX + 14, tcy(e[1]), 30, 'r3'); else if (e[0] === GW - 1) glow(x, OX + GW * T - 14, tcy(e[1]), 30, 'r3'); else if (e[1] === 0) glow(x, tcx(e[0]), OY + 14, 30, 'r3'); else glow(x, tcx(e[0]), OY + GH * T - 16, 34, 'r3'); }
     for (const [cx, cy] of C.PLOTS) x.drawImage(DD.frame('t_platform', 0, 0), tcx(cx) - 14, tcy(cy) - 13);
     for (const sx of [0, GW - 1]) DD.blit(x, 't_standard', 0, tcx(sx), tcy(0) + 12);
@@ -151,12 +151,13 @@
     // 길 편집 중에는 초안 격자를 보여 준다
     const gd = ui.draft ? Object.assign(Object.create(d), { grid: ui.draft.grid, ver: 'draft' + ui.draft.ver, path: ui.draft.path, paths: ui.draft.paths }) : d;
     ctx.drawImage(bg(G, gd), 0, 0);
-    DD.blit(ctx, 'f_summon', ((TT * 5) | 0) % 4, C.SUMMON.x, C.SUMMON.y + 12);
-    DD.blit(ctx, 'f_altar', ((TT * 6) | 0) % 4, C.ALTAR.x, C.ALTAR.y + 12);
-    if (d.heroT <= 0) { const fr = ((TT * 4) | 0) % 4; dotted(ctx, C.ALTAR.x, C.ALTAR.y, 13 + fr, 'g1', 20); }
-    for (const sx of [-1, 1]) { DD.blit(ctx, 't_brazier', 0, C.HEART.x + sx * 22, C.HEART.y + 10); const f = ((TT * 8 + sx) | 0) % 3; ctx.fillStyle = P.g1; ctx.fillRect(C.HEART.x + sx * 22 - (f === 2 ? 1 : 0), C.HEART.y - 9 - (f === 1 ? 1 : 0), 1, 2); }
-    { const low = d.heart.hp / d.heart.mhp < 0.3; dotted(ctx, C.HEART.x, C.HEART.y - 2, 17 + (((TT * 2) | 0) % 2), low ? 'r1' : 'r3', 28);
-      const c = DD.blit(ctx, 'f_heart', ((TT * 4) | 0) % 4, C.HEART.x, C.HEART.y + 12, false, flash && d.heart.hit > 0.06); bar(ctx, C.HEART.x - 14, C.HEART.y + 12 - c.height - 3, 28, d.heart.hp / d.heart.mhp, 'r2'); }
+    const FK = (n) => (DD.ATLAS.frames['F_' + d.race + '_' + n] ? 'F_' + d.race + '_' + n : null), bigF = !!FK('heart'); // 종족별 시설 그림
+    if (bigF) { DD.blit(ctx, FK('summon'), ((TT * 5) | 0) % 4, C.SUMMON.x, C.SUMMON.y + 24); DD.blit(ctx, FK('altar'), ((TT * 6) | 0) % 4, C.ALTAR.x, C.ALTAR.y + 24); }
+    else { DD.blit(ctx, 'f_summon', ((TT * 5) | 0) % 4, C.SUMMON.x, C.SUMMON.y + 12); DD.blit(ctx, 'f_altar', ((TT * 6) | 0) % 4, C.ALTAR.x, C.ALTAR.y + 12); }
+    if (d.heroT <= 0) { const fr = ((TT * 4) | 0) % 4; dotted(ctx, C.ALTAR.x, C.ALTAR.y, 26 + fr, 'g1', 28); }
+    if (!bigF) for (const sx of [-1, 1]) { DD.blit(ctx, 't_brazier', 0, C.HEART.x + sx * 22, C.HEART.y + 10); const f = ((TT * 8 + sx) | 0) % 3; ctx.fillStyle = P.g1; ctx.fillRect(C.HEART.x + sx * 22 - (f === 2 ? 1 : 0), C.HEART.y - 9 - (f === 1 ? 1 : 0), 1, 2); }
+    { const low = d.heart.hp / d.heart.mhp < 0.3; dotted(ctx, C.HEART.x, C.HEART.y, (bigF ? 42 : 17) + (((TT * 2) | 0) % 2), low ? 'r1' : 'r3', bigF ? 44 : 28);
+      const c = bigF ? DD.blit(ctx, FK('heart'), ((TT * 4) | 0) % 4, C.HEART.x, C.HEART.y + 36, false, flash && d.heart.hit > 0.06) : DD.blit(ctx, 'f_heart', ((TT * 4) | 0) % 4, C.HEART.x, C.HEART.y + 12, false, flash && d.heart.hit > 0.06); bar(ctx, C.HEART.x - 20, C.HEART.y + (bigF ? 36 : 12) - c.height - 3, 40, d.heart.hp / d.heart.mhp, 'r2'); }
     for (const e of d.ents) { const f = ((TT * 6) | 0) % 6; if (e[0] === 0) DD.blit(ctx, 'gate_s', f, OX - 8, tcy(e[1]) + 16); else if (e[0] === GW - 1) DD.blit(ctx, 'gate_s', f, OX + GW * T + 10, tcy(e[1]) + 16); else if (e[1] === 0) DD.blit(ctx, 'gate_s', f, tcx(e[0]) + 2, OY + 8); else DD.blit(ctx, 'gate_s', f, tcx(e[0]) + 2, OY + GH * T + 4); } // 악마가 나오는 게이트
     { // 다음 웨이브의 주공 입구를 미리 깜박여 알린다
       const th = G.thrust[G.wave + 1], e = th != null && d.ents[th];
@@ -166,7 +167,7 @@
     const seenA = new Set(); // 여러 입구의 길이 겹치는 칸은 한 번만
     (gd.paths || [gd.path]).forEach((pth) => pth.forEach(([cx, cy], i) => {
       if ((i + 300 - ((TT * 3) | 0) % 3) % 3 || seenA.has(cx + cy * GW)) return; seenA.add(cx + cy * GW);
-      const nx = i + 1 < pth.length ? pth[i + 1] : C.HEART_T, dx = nx[0] - cx, dy = nx[1] - cy, X = tcx(cx), Y = tcy(cy);
+      const nx = i + 1 < pth.length ? pth[i + 1] : [[0, -1], [1, 0], [0, 1], [-1, 0]].map(([ax, ay]) => [cx + ax, cy + ay]).find((q) => DD.facAt(q[0], q[1]) === 'h') || C.HEART_T, dx = nx[0] - cx, dy = nx[1] - cy, X = tcx(cx), Y = tcy(cy);
       ctx.fillStyle = P.w4;
       for (let k = -3; k <= 3; k++) { const a = 3 - Math.abs(k); if (dx) { ctx.fillRect(X + dx * a - 1, Y + k, 2, 1); } else { ctx.fillRect(X + k, Y + dy * a - 1, 1, 2); } }
     }));
@@ -201,7 +202,7 @@
     // 집결지 깃발(소환소는 푸른색, 제단은 금색)과 선택한 시설 표시
     [[d.rallyU, 'b2'], [d.rallyH, 'g1']].forEach(([r, col]) => { if (!r) return; const X = Math.round(r.x), Y = Math.round(r.y), w = ((TT * 4) | 0) % 2;
       ctx.fillStyle = P.K; ctx.fillRect(X - 1, Y - 15, 3, 16); ctx.fillRect(X + 1, Y - 15 + w, 10, 8); ctx.fillStyle = P.w1; ctx.fillRect(X, Y - 14, 1, 14); ctx.fillStyle = P[col]; ctx.fillRect(X + 2, Y - 14 + w, 8, 6); ctx.fillStyle = P.W; ctx.fillRect(X + 4, Y - 12 + w, 3, 2); });
-    if (ui.rally) { const f = ui.rally === 'H' ? C.ALTAR : C.SUMMON; dotted(ctx, f.x, f.y, 15 + (((TT * 4) | 0) % 2), 'n1', 24); if (ui.hover) { ctx.fillStyle = P.n1; const [hx, hy] = ui.hover; ctx.fillRect(hx - 3, hy, 7, 1); ctx.fillRect(hx, hy - 3, 1, 7); } }
+    if (ui.rally) { const f = ui.rally === 'H' ? C.ALTAR : C.SUMMON; dotted(ctx, f.x, f.y, 28 + (((TT * 4) | 0) % 2), 'n1', 32); if (ui.hover) { ctx.fillStyle = P.n1; const [hx, hy] = ui.hover; ctx.fillRect(hx - 3, hy, 7, 1); ctx.fillRect(hx, hy - 3, 1, 7); } }
     if (ui.ping) { const a = (performance.now() - ui.ping.r) / 400; if (a < 1) dotted(ctx, Math.round(ui.ping.x), Math.round(ui.ping.y), 3 + Math.round(a * 8), 'n1', 12); else ui.ping = null; } // 이동 지점 표시
     for (const u of d.units) if (ui.sel.has(u.id)) { ctx.fillStyle = P.n1; ctx.fillRect(Math.round(u.hx) - 1, Math.round(u.hy), 3, 1); ctx.fillRect(Math.round(u.hx), Math.round(u.hy) - 1, 1, 3); } // 고른 유닛이 지키는 자리
     for (const s of d.shots) drawShot(ctx, s);
