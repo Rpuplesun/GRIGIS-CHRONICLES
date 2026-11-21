@@ -52,7 +52,7 @@
       <span></span><span></span>
       <footer><button class="start" data-m="start:1">출전</button><button data-m="story:1">이야기</button><button data-m="tutorial:1">튜토리얼</button><button data-m="settings:1">설정</button>
         <details class="help"><summary>조작법</summary><div class="helpbox">
-        <p><b>유닛</b> 클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R 소환 · T 영웅 · V 랜덤 소환 · B 조합 · 소환소나 제단을 누르면 집결지 지정</p>
+        <p><b>유닛</b> 클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R Y 소환 · T 영웅 · V 랜덤 소환 · B 조합 · 소환소나 제단을 누르면 집결지 지정</p>
         <p><b>건물</b> A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · 거점 위는 체력 +25% · 고른 건물 Del 철거</p>
         <p><b>길 편집</b> E (Z 길, X 벽, C 지우기, 우클릭 지우기, Ctrl+Z 되돌리기) · 길 최대 ${C.ROAD_MAX}, 벽 최대 ${C.WALL_MAX} · 입구↔심장 연결 필수</p>
         <p><b>기타</b> 1 2 3 속도 · Space 일시정지 · N 다음 웨이브(보너스 골드) · Tab 지도 · Esc 취소 · 한글 입력 상태에서도 단축키가 듣는다</p></div></details></footer>`;
@@ -170,7 +170,7 @@
   const slot = (act, body, tip, o) => `<button class="slot ${o.on ? 'on' : ''} ${o.cls || ''} ${spotOf() === act ? 'spot' : ''}" data-a="${act}" data-tip="${tip.replace(/"/g, '&quot;')}" ${o.dim ? 'data-dim="1"' : ''}>${o.key ? `<kbd>${o.key}</kbd>` : ''}${body}</button>`;
   const grp = (name, slots, cls) => `<div class="grp ${cls || ''}"><h3>${name}</h3><div class="slots">${slots}</div></div>`;
   const nextWave = () => { if (G.wave >= C.WAVES) return '마지막 웨이브'; const c = {}, mu = DD.MUTS[G.muts[G.wave + 1]]; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => { const m = DD.DEMONS[t]; return `<span class="${m.fly ? 'fly' : ''}" data-tip="<b>${m.name} ×${c[t]}</b>${m.desc}">${icon(m.spr, 2)}${c[t]}</span>`; }).join(' ') + (mu ? ` <span class="mut" data-tip="<b>변이 · ${mu.name}</b>${mu.desc}">${mu.name}</span>` : ''); };
-  const UKEY = ['Q', 'W', 'R'], BKEY = ['A', 'S', 'D', 'F', 'G'];
+  const UKEY = ['Q', 'W', 'R', 'Y'], BKEY = ['A', 'S', 'D', 'F', 'G'];
   function drawHud() {
     const d = me(), R = d.R, own = d.units.filter((u) => u.own === d.i).length, hp = d.heart.hp / d.heart.mhp;
     const next = G.nextWaveIn(), span = G.wave === 0 ? C.FIRST_WAVE : C.WAVE_T;
@@ -190,10 +190,10 @@
     if (ui.edit) maze += [[1, '길 깔기', '악마가 걷는 칸을 만든다', 'Z'], [2, '벽 쌓기', '통과와 사격을 막는 칸', 'X'], [0, '지우기', '바닥으로 되돌린다 · 우클릭으로도 지운다', 'C']].map(([t, n, tip, key]) => slot('tool:' + t, `<b class="glyph">${['✕', '▤', '▣'][t]}</b><em>${n}</em>`, `<b>${n}</b>${tip}`, { on: ui.tool === t, key })).join('')
       + slot('resetmaze:1', `<b class="glyph">↺</b><em>기본 길</em>`, '<b>기본 길</b>ㄹ 모양으로 되돌린다', {}) + slot('undo:1', `<b class="glyph">↶</b><em>되돌리기</em>`, '<b>되돌리기</b>마지막으로 칠한 것을 되돌린다 · Ctrl+Z', { key: '^Z', dim: !dr.hist.length }) + slot('editcancel:1', `<b class="glyph">✖</b><em>취소</em>`, '<b>취소</b>고친 것을 버리고 나간다', { key: 'Esc' });
     const units = R.units.map((u, i) => { const f = DD.reqFail(d, u); return slot('summon:' + i, `<img class="px tier" src="${DD.icon('ui_tier' + u.tier)}" alt="">${icon(u.spr, 2)}${f ? '<span class="cost bad">잠김</span>' : cost(u, d)}`, `<b>${u.name}</b>${ic('ui_coin')} ${u.g}${u.m ? ' ' + ic('ui_crate') + ' ' + u.m : ''} · 보유 ${d.units.filter((x) => x.def === u && x.own === d.i).length}기<br>체력 ${u.hp} · 공격 ${u.atk} · 사거리 ${u.rng}${u.heal ? ' · 치유 ' + u.heal : ''}${u.splash ? ' · 범위' : ''}${f ? `<small class="bad">${f}</small>` : ''}`, { dim: f || no(u), key: UKEY[i], cls: f ? 'lock' : '' }); }).join('')
-      + slot('hero:1', `${icon('f_altar', 2)}<span class="cost">${d.heroT <= 0 ? '준비!' : mmss(d.heroT)}</span>`, `<b>영웅 소환</b>${d.heroT <= 0 ? '누가 올지는 모른다' : '대기 ' + mmss(d.heroT)}`, { dim: d.heroT > 0, key: 'T', cls: d.heroT <= 0 ? 'ready' : '' })
-      + (ui.edit ? '' : (() => { const gc2 = DD.gambleCost(R), mp = DD.mergePlan(d, [...ui.sel]), need = DD.mergeNeed(d.race), P = DD.GAMBLE_P;
-        return slot('gamble:1', `<em>랜덤 소환</em>${cost(gc2, d)}`, `<b>랜덤 소환</b>${ic('ui_coin')} ${gc2.g}<br>건물 조건 없이 유닛 하나를 뽑는다<small>${R.units.map((u, i) => `${u.name} ${pct(P[i])}%`).join(' · ')}</small>`, { key: 'V', cls: 'span2 short', dim: no(gc2) || own >= d.pop })
-          + slot('merge:1', `<em>조합</em><span class="cost">${mp ? '→ ' + mp.to.name : need + '기 필요'}</span>`, `<b>조합</b>같은 유닛 ${need}기를 한 단계 위 유닛 하나로 합친다<br>${mp ? `${mp.def.name} ${need}기 → <span class="gold">${mp.to.name}</span>` : '지금은 합칠 유닛이 없다'}<small>유닛을 골라 두면 그 종류를 합친다 · 최상위 ${need}기는 전설 ${R.legend.name}</small>`, { key: 'B', cls: 'span2 short' + (mp && mp.to.legend ? ' ready' : ''), dim: !mp }); })());
+      + (ui.edit ? '' : slot('hero:1', `${icon('f_altar', 2)}<span class="cost">${d.heroT <= 0 ? '준비!' : mmss(d.heroT)}</span>`, `<b>영웅 소환</b>${d.heroT <= 0 ? '누가 올지는 모른다' : '대기 ' + mmss(d.heroT)}`, { dim: d.heroT > 0, key: 'T', cls: 'tall' + (d.heroT <= 0 ? ' ready' : '') })
+      + (() => { const gc2 = DD.gambleCost(R), mp = DD.mergePlan(d, [...ui.sel]), need = DD.mergeNeed(d.race), P = DD.gambleP(R), toN = mp ? (mp.to ? mp.to.name : '2단계 무작위') : '';
+        return slot('gamble:1', `<em>랜덤 소환</em>${cost(gc2, d)}`, `<b>랜덤 소환</b>${ic('ui_coin')} ${gc2.g}<br>건물 조건 없이 유닛 하나를 뽑는다<small>${R.units.map((u, i) => `${u.name} ${pct(P[i])}%`).join(' · ')}</small>`, { key: 'V', cls: 'short', dim: no(gc2) || own >= d.pop })
+          + slot('merge:1', `<em>조합</em><span class="cost">${mp ? '→ ' + (mp.to ? toN : '2단계') : need + '기 필요'}</span>`, `<b>조합</b>같은 유닛 ${need}기를 한 단계 위 유닛 하나로 합친다<br>${mp ? `${mp.def.name} ${need}기 → <span class="gold">${toN}</span>` : '지금은 합칠 유닛이 없다'}<small>유닛을 골라 두면 그 종류를 합친다 · 최상위 ${need}기는 전설 ${R.legend.name}</small>`, { key: 'B', cls: 'short' + (mp && mp.to && mp.to.legend ? ' ready' : ''), dim: !mp }); })());
     const bslots = R.blds.map((b, i) => { const c = DD.bldCost(d, b), have = d.bc[b.id] || 0, full = have >= DD.bldMax(b); return slot('build:' + i, `${icon(b.spr + '@' + d.race, 2)}${full ? '<span class="cost">최대</span>' : cost(c, d)}`, `<b>${b.name}</b>${ic('ui_coin')} ${c.g}${c.m ? ' ' + ic('ui_crate') + ' ' + c.m : ''} · 보유 ${have}/${DD.bldMax(b)}<br>${b.desc}${b.atk ? `<br>공격 ${b.atk} · 사거리 ${b.rng} · 간격 ${b.as}초${b.splash ? ' · 범위' : ''}` : ''}<small>${b.kind === 'wall' ? '길 위에만 세운다 · 악마를 붙잡아 둔다' : '바닥에 세운다'}</small>`, { dim: full || no(c), on: ui.build === i, key: BKEY[i] }); });
     const blds = bslots.filter((x, i) => i !== 3).join('');
     maze = bslots[3] + maze;
@@ -370,7 +370,7 @@
   cv.addEventListener('contextmenu', (ev) => ev.preventDefault());
   cv.addEventListener('pointerleave', () => { if (ui) { ui.mouse = ui.insp = null; hudT = 0; } });
   // 단축키는 ev.code(자판 위치)로 읽는다: 한글 입력 상태·Caps Lock·Shift와 상관없이 듣는다
-  const UCODE = ['KeyQ', 'KeyW', 'KeyR'], BCODE = ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG'], TCODE = { KeyZ: 1, KeyX: 2, KeyC: 0 };
+  const UCODE = ['KeyQ', 'KeyW', 'KeyR', 'KeyY'], BCODE = ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG'], TCODE = { KeyZ: 1, KeyX: 2, KeyC: 0 };
   const SCODE = { Digit1: 1, Digit2: 2, Digit3: 4, Numpad1: 1, Numpad2: 2, Numpad3: 4 };
   window.addEventListener('keydown', (ev) => {
     const k = ev.code, ctrl = ev.ctrlKey || ev.metaKey, enter = k === 'Enter' || k === 'NumpadEnter';

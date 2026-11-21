@@ -25,6 +25,7 @@
         U('보병', 1, 40, 0, 150, 12, 14, 1.0, 30, 'u_human_1'),
         U('궁병', 2, 70, 0, 75, 17, 85, 1.1, 28, 'u_human_2', { req: { b: 'barracks' } }),
         U('기사', 3, 170, 20, 420, 36, 16, 1.0, 44, 'u_human_3', { req: { b: 'forge' } }),
+        U('마법사', 2, 90, 5, 70, 14, 80, 1.4, 26, 'u_human_4', { splash: 16, req: { b: 'barracks' } }),
       ],
       blds: [
         B('barracks', '병영', 'unlock', 100, 0, 500, 'b_unlock1', '궁병 해금'),
@@ -42,6 +43,7 @@
         U('리자드맨', 1, 55, 0, 180, 15, 16, 1.0, 28, 'u_dragon_1'),
         U('드레이크', 2, 110, 10, 140, 22, 70, 1.3, 26, 'u_dragon_2', { splash: 14, req: { b: 'hatchery' } }),
         U('와이번', 3, 240, 40, 540, 48, 60, 1.2, 40, 'u_dragon_3', { splash: 18, req: { b: 'nest', kills: 50 } }),
+        U('용아병', 2, 90, 0, 330, 14, 15, 1.1, 26, 'u_dragon_4', { req: { b: 'hatchery' } }),
       ],
       blds: [
         B('hatchery', '부화장', 'unlock', 120, 0, 500, 'b_unlock1', '드레이크 해금'),
@@ -59,6 +61,7 @@
         U('코볼트', 1, 22, 0, 84, 10, 13, 0.8, 42, 'u_beast_1'),
         U('늑대전사', 2, 60, 0, 170, 23, 14, 0.9, 46, 'u_beast_2', { req: { b: 'den', alive: [0, 5] } }),
         U('미노타우로스', 3, 170, 25, 640, 40, 18, 1.2, 30, 'u_beast_3', { splash: 12, req: { b: 'arena' } }),
+        U('투창꾼', 2, 55, 0, 95, 20, 78, 1.1, 40, 'u_beast_4', { req: { b: 'den' } }),
       ],
       blds: [
         B('den', '사냥굴', 'unlock', 80, 0, 450, 'b_unlock1', '늑대전사 해금 (코볼트 5기)'),
@@ -76,6 +79,7 @@
         U('하급정령', 1, 35, 0, 65, 11, 62, 1.0, 30, 'u_spirit_1'),
         U('중급정령', 2, 50, 0, 190, 28, 76, 1.0, 30, 'u_spirit_2', { req: { b: 'spring', eat: [0, 2] } }),
         U('상급정령', 3, 120, 30, 520, 66, 92, 1.1, 30, 'u_spirit_3', { splash: 16, req: { b: 'tree', eat: [1, 2] } }),
+        U('바위 정령', 2, 60, 0, 360, 16, 15, 1.2, 26, 'u_spirit_4', { req: { b: 'spring' } }),
       ],
       blds: [
         B('spring', '정령의 샘', 'unlock', 100, 0, 450, 'b_unlock1', '중급정령 해금 (하급정령 2기 융합)'),
@@ -93,6 +97,7 @@
         U('갈퀴병', 1, 30, 0, 108, 10, 14, 0.9, 36, 'u_merfolk_1'),
         U('조수 주술사', 2, 80, 5, 95, 10, 72, 1.2, 28, 'u_merfolk_2', { heal: 14, req: { b: 'coral' } }),
         U('심해 거인', 3, 200, 35, 780, 38, 18, 1.2, 26, 'u_merfolk_3', { splash: 12, req: { b: 'trench', cnt: ['pool', 2] } }),
+        U('작살수', 2, 85, 5, 100, 30, 84, 1.5, 28, 'u_merfolk_4', { req: { b: 'coral' } }),
       ],
       blds: [
         B('coral', '산호 제단', 'unlock', 100, 0, 450, 'b_unlock1', '조수 주술사(치유사) 해금'),
@@ -110,11 +115,12 @@
     beast: ['베헤모스', 1700, 90, 18, 1.2, 30, { splash: 16 }], spirit: ['정령왕', 1200, 150, 100, 1.1, 30, { splash: 20 }],
     merfolk: ['크라켄', 2000, 85, 20, 1.2, 26, { splash: 16 }],
   };
-  for (const k in LG) { const l = LG[k]; DD.RACES[k].legend = U(l[0], 4, 0, 0, l[1], l[2], l[3], l[4], l[5], 'u_' + k + '_3', Object.assign({ legend: true }, l[6])); }
+  for (const k in LG) { const l = LG[k]; DD.RACES[k].legend = U(l[0], 4, 0, 0, l[1], l[2], l[3], l[4], l[5], 'u_' + k + '_5', Object.assign({ legend: true }, l[6])); }
   DD.RACE_IDS = Object.keys(DD.RACES);
   // 랜덤 소환: 조건을 무시하고 등급을 뽑는다. 값은 기대값보다 조금 싸다
   DD.GAMBLE_P = [0.7, 0.25, 0.05];
-  DD.gambleCost = (R) => ({ g: Math.round((0.9 * R.units.reduce((s, u, i) => s + u.g * DD.GAMBLE_P[i], 0)) / 5) * 5, m: 0 });
+  DD.gambleP = (R) => R.units.map((u) => DD.GAMBLE_P[u.tier - 1] / R.units.filter((x) => x.tier === u.tier).length); // 같은 단계끼리는 확률을 나눈다
+  DD.gambleCost = (R) => { const P = DD.gambleP(R); return { g: Math.round((0.9 * R.units.reduce((s, u, i) => s + u.g * P[i], 0)) / 5) * 5, m: 0 }; };
   DD.mergeNeed = (race) => (race === 'spirit' ? 2 : 3); // 정령은 둘만 있어도 융합한다
 
   DD.HERO_ROLES = {
@@ -144,7 +150,7 @@
     imp: { name: '임프', hp: 42, atk: 6, rng: 12, as: 0.9, spd: 34, gold: 7, light: true, spr: 'd_imp', desc: '약하지만 떼로 몰려온다 · 범위 공격에 약하다' },
     brute: { name: '악귀', hp: 170, atk: 16, rng: 15, as: 1.2, spd: 20, gold: 15, mat: 3, heavy: true, spr: 'd_brute', desc: '중장갑 · 범위 공격에 강하고 단일 공격에 약하다 · 자재(◆)를 흘린다' },
     hound: { name: '지옥견', hp: 62, atk: 9, rng: 13, as: 0.7, spd: 54, gold: 8, light: true, spr: 'd_hound', desc: '매우 빠르다 · 범위 공격에 약하다 · 길을 길게 늘여 붙잡자' },
-    bat: { name: '가고일', hp: 38, atk: 3, rng: 12, as: 1.0, spd: 36, gold: 9, fly: true, spr: 'd_imp', desc: '비행 · 길을 무시하고 심장으로 직진 · 원거리 공격과 탑만 닿는다' },
+    bat: { name: '가고일', hp: 38, atk: 3, rng: 12, as: 1.0, spd: 36, gold: 9, fly: true, spr: 'd_bat', desc: '비행 · 길을 무시하고 심장으로 직진 · 원거리 공격과 탑만 닿는다' },
     warlock: { name: '흑마술사', hp: 72, atk: 14, rng: 72, as: 1.4, spd: 22, gold: 13, mat: 3, spr: 'd_warlock', desc: '원거리 · 길가 건물을 부순다 · 벽으로 시야를 막자' },
     boss: { name: '악마 군주', hp: 1500, atk: 40, rng: 20, as: 1.4, spd: 15, gold: 200, mat: 30, splash: 16, heavy: true, spr: 'd_boss', desc: '중장갑 · 광역 공격 · 건물도 부순다 · 다섯 웨이브마다' },
   };

@@ -6,6 +6,8 @@
 
   // [한국어, 영어, 일본어]
   const D = [
+    ['마법사', 'Mage', '魔法使い'], ['용아병', 'Dragontooth Guard', '竜牙兵'], ['투창꾼', 'Javelineer', '投槍兵'], ['바위 정령', 'Rock Spirit', '岩の精霊'], ['작살수', 'Harpooner', '銛撃ち'],
+    ['2단계 무작위', 'random tier 2', '2段階ランダム'], ['2단계', 'Tier 2', '2段階'],
     ['성기사', 'Paladin', '聖騎士'], ['고룡', 'Elder Dragon', '古龍'], ['베헤모스', 'Behemoth', 'ベヒーモス'], ['정령왕', 'Spirit King', '精霊王'], ['크라켄', 'Kraken', 'クラーケン'],
     ['가고일', 'Gargoyle', 'ガーゴイル'], ['비행 · 길을 무시하고 심장으로 직진 · 원거리 공격과 탑만 닿는다', 'Flying · ignores roads and heads straight for the Heart · only ranged attacks and towers can hit it', '飛行 · 道を無視して心臓へ直進 · 遠距離攻撃と塔だけが届く'],
     ['약하지만 떼로 몰려온다 · 범위 공격에 약하다', 'Weak, but they come in swarms · weak to area attacks', '弱いが群れで来る · 範囲攻撃に弱い'],
@@ -190,7 +192,7 @@
     ['멀티 (AI 동맹)', 'Allied (AI)', 'マルチ (AI同盟)'], ['솔로', 'Solo', 'ソロ'], ['· 스테이지', '· Stage', '· ステージ'], ['스테이지', 'Stages', 'ステージ'],
     ['정식 버전에서', 'In the full game', '製品版で'], ['잠김', 'Locked', 'ロック'], ['· 악마 ×', '· Demons ×', '· 悪魔 ×'], ['✔ 클리어', '✔ Cleared', '✔ クリア'], ['최고 웨이브', 'Best wave', '最高ウェーブ'],
     ['영구 강화', 'Permanent Upgrades', '永久強化'], ['출전', 'To Battle', '出撃'], ['이야기', 'Story', '物語'], ['튜토리얼', 'Tutorial', 'チュートリアル'], ['⚙ 설정', '⚙ Settings', '⚙ 設定'], ['설정', 'Settings', '設定'], ['조작법', 'Controls', '操作方法'],
-    ['클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R 소환 · T 영웅 · V 랜덤 소환 · B 조합 · 소환소나 제단을 누르면 집결지 지정', 'Click or drag to select (double-click: same type, Ctrl+A: all) → click the ground to post them · Q W R summon · T hero · click the Summoning Circle or Altar to set a rally point', 'クリック·ドラッグで選択(ダブルクリックで同種、Ctrl+Aで全員) → 地面クリックで配置 · Q W R 召喚 · T 英雄 · 召喚陣か祭壇を押すと集合地点を指定'],
+    ['클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R Y 소환 · T 영웅 · V 랜덤 소환 · B 조합 · 소환소나 제단을 누르면 집결지 지정', 'Click or drag to select (double-click: same type, Ctrl+A: all) → click the ground to post them · Q W R summon · T hero · click the Summoning Circle or Altar to set a rally point', 'クリック·ドラッグで選択(ダブルクリックで同種、Ctrl+Aで全員) → 地面クリックで配置 · Q W R 召喚 · T 英雄 · 召喚陣か祭壇を押すと集合地点を指定'],
     ['A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · 거점 위는 체력 +25% · 고른 건물 Del 철거', 'A S D F G → click a tile (Shift: keep building) · buildings on floor, barricades on roads · +25% HP on platforms · Del demolishes the selected building', 'A S D F G → マスをクリック(Shiftで連続) · 建物は床、防壁は道の上 · 拠点の上は耐久+25% · 選んだ建物はDelで撤去'],
     ['E (Z 길, X 벽, C 지우기, 우클릭 지우기, Ctrl+Z 되돌리기) · 길 최대', 'E (Z road, X wall, C erase, right-click erase, Ctrl+Z undo) · up to', 'E (Z 道, X 壁, C 消去, 右クリックで消去, Ctrl+Z 元に戻す) · 道は最大'],
     [', 벽 최대', ' road tiles,', '、壁は最大'], ['· 입구↔심장 연결 필수', 'wall tiles · the entrance must reach the Heart', '· 入口↔心臓の接続が必須'],
