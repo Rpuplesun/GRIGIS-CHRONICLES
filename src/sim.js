@@ -83,7 +83,7 @@
   // 진행 중인 요새에 격자 전체를 적용할 수 있는가. 사유 또는 null
   DD.gridErr = function (d, gr) {
     const e0 = DD.gridCheck(gr, d.ents); if (e0) return e0;
-    for (const b of d.blds) if (gr[key(b.cx, b.cy)] !== (b.def.kind === 'wall' || b.def.kind === 'trap' ? 1 : 0)) return '건물 아래 칸은 바꿀 수 없습니다';
+    for (const b of d.blds) if (DD.bldTiles(b.def, b.cx, b.cy).some(([x, y]) => gr[key(x, y)] !== (b.def.kind === 'wall' || b.def.kind === 'trap' ? 1 : 0))) return '건물 아래 칸은 바꿀 수 없습니다';
     const nd = flow(gr);
     for (const e of d.demons) { const ex = tx(e.x), ey = ty(e.y); if (inG(ex, ey) && nd[key(ex, ey)] < 0) return '악마가 서 있는 길도 심장과 이어져 있어야 합니다'; }
     return null;
@@ -121,12 +121,13 @@
 
   DD.newGame = function (opt) {
     const G = {
-      t: 0, wave: 0, over: false, win: false, stage: opt.stage || 0, tutorial: !!opt.tutorial, diff: opt.tutorial || opt.diff == null ? 1 : opt.diff, muts: {},
+      t: 0, wave: 0, over: false, win: false, stage: opt.stage || 0, tutorial: !!opt.tutorial, diff: opt.tutorial || opt.diff == null ? 1 : opt.diff, muts: {}, thrust: {},
       st: DD.stageOf(opt.players[Math.max(0, opt.players.findIndex((p) => !p.bot))].race, opt.stage || 0),
       rnd: rng(opt.seed || 1), nid: 1, dungeons: [], events: [], human: opt.players.findIndex((p) => !p.bot),
     };
     G.D = DD.DIFFS[G.diff]; G.nEnt = DD.entCount(G.stage, G.diff, G.tutorial); G.layout = DD.layoutOf(G.stage, G.tutorial); DD.setLayout(G.layout);
     if (!G.tutorial) { const ks = Object.keys(DD.MUTS); for (let w = 3; w < C.WAVES; w++) if (w % 5 && G.rnd() < 0.4) G.muts[w] = ks[Math.floor(G.rnd() * ks.length)]; }
+    if (G.nEnt > 1) for (let w = 1; w <= C.WAVES; w++) G.thrust[w] = Math.floor(G.rnd() * G.nEnt);
     G.dungeons = opt.players.map((p, i) => mkDungeon(G, i, p));
     G.step = () => step(G);
     G.cmd = (di, c) => cmd(G, G.dungeons[di], c);
@@ -140,7 +141,7 @@
     const d = {
       i, race: p.race, R, bot: !!p.bot, alive: true, gold: 150 + 30 * (m.sGold || 0) + (p.bonusGold || 0), mat: 0, kills: 0,
       units: [], blds: [], demons: [], shots: [], fx: [], snd: {}, queue: [], occ: {}, bc: {}, ver: 0, walls: 0,
-      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, nSum: 0, nBld: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0, lost: 0, skillT: 0, mission: null, pop: C.POP, boons: [], boonPick: null,
+      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, nSum: 0, nBld: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0, lost: 0, skillT: 0, nMerge: 0, mission: null, pop: C.POP, boons: [], boonPick: null,
       mod: {
         atk: (sm.atk || 1) * (1 + 0.05 * (m.uAtk || 0)), hp: (sm.hp || 1) * (1 + 0.05 * (m.uHp || 0)), spd: sm.spd || 1,
         bhp: (1 + 0.08 * (m.bHp || 0)) * (p.race === 'human' ? 1.2 : 1), gold: 1 + 0.05 * (m.gold || 0), hcd: 1 - 0.04 * (m.hCd || 0),
@@ -176,7 +177,10 @@
     return null;
   };
   // 건설 불가 사유 또는 null. 방벽(바리케이드)은 길 위에만, 나머지 건물은 바닥에만.
-  DD.buildErr = function (d, b, cx, cy) {
+  // 건물이 차지하는 칸(왼쪽 위 칸 기준). 큰 건물은 2×2
+  DD.bldTiles = (b, cx, cy) => (b.size === 2 ? [[cx, cy], [cx + 1, cy], [cx, cy + 1], [cx + 1, cy + 1]] : [[cx, cy]]);
+  DD.buildErr = function (d, b, cx, cy) { for (const [x, y] of DD.bldTiles(b, cx, cy)) { const e = buildErr1(d, b, x, y); if (e) return e; } return null; };
+  const buildErr1 = function (d, b, cx, cy) {
     if (!inG(cx, cy) || is(C.HEART_T, cx, cy) || is(C.SUMMON_T, cx, cy) || is(C.ALTAR_T, cx, cy)) return '지을 수 없는 위치';
     if (d.occ[key(cx, cy)]) return '건물이 있는 칸';
     const gv = d.grid[key(cx, cy)];
@@ -248,9 +252,9 @@
       if ((d.bc[b.id] || 0) >= DD.bldMax(b)) return '이 건물은 더 지을 수 없다';
       if (d.blds.length >= C.BLD_CAP) return '건물 한도';
       if (!pay(d, cost)) return '자원 부족';
-      const mhp = b.hp * d.mod.bhp * (1 + 0.15 * d.up.bld) * (DD.isPlot(c.cx, c.cy) ? C.PLOT_HP : 1);
-      const e = { id: G.nid++, k: 'b', def: b, cx: c.cx, cy: c.cy, x: tcx(c.cx), y: tcy(c.cy), hp: mhp, mhp, cd: 0, hit: 0, r: 12, paid: cost };
-      d.blds.push(e); d.occ[key(c.cx, c.cy)] = e; recount(d);
+      const mhp = b.hp * d.mod.bhp * (1 + 0.15 * d.up.bld) * (DD.bldTiles(b, c.cx, c.cy).some(([x, y]) => DD.isPlot(x, y)) ? C.PLOT_HP : 1);
+      const e = { id: G.nid++, k: 'b', def: b, cx: c.cx, cy: c.cy, x: tcx(c.cx) + (b.size === 2 ? 12 : 0), y: tcy(c.cy) + (b.size === 2 ? 12 : 0), hp: mhp, mhp, cd: 0, hit: 0, r: b.size === 2 ? 20 : 12, paid: cost };
+      d.blds.push(e); for (const [x, y] of DD.bldTiles(b, c.cx, c.cy)) d.occ[key(x, y)] = e; recount(d);
       fx(d, 'dust', e.x, e.y + 8, 0.42, { c: 'e' }); snd(d, 'build'); d.nBld++;
     } else if (c.a === 'tile') { // 길·벽 편집. t: 0 바닥, 1 길, 2 벽
       const { cx, cy, t } = c;
@@ -282,7 +286,7 @@
     } else if (c.a === 'sell') {
       const b = d.blds.find((x) => x.id === c.id); if (!b) return '없음';
       const k = 0.5 * (b.hp / b.mhp); d.gold += Math.floor(b.paid.g * k); d.mat += Math.floor(b.paid.m * k); b.hp = 0; snd(d, 'coin');
-      delete d.occ[key(b.cx, b.cy)]; d.blds = d.blds.filter((x) => x !== b); recount(d); fx(d, 'dust', b.x, b.y + 6, 0.42, { c: 'e' }); // 멈춘 동안에도 바로 사라지게
+      for (const [x, y] of DD.bldTiles(b.def, b.cx, b.cy)) delete d.occ[key(x, y)]; d.blds = d.blds.filter((x) => x !== b); recount(d); fx(d, 'dust', b.x, b.y + 6, 0.42, { c: 'e' }); // 멈춘 동안에도 바로 사라지게
     } else if (c.a === 'dismiss') { // 고른 유닛을 돌려보내 인구를 비운다(영웅 제외, 비용의 30% 환급)
       const us = d.units.filter((u) => c.ids.includes(u.id) && u.own === d.i && !u.hero);
       if (!us.length) return '해산할 유닛이 없습니다(영웅은 해산 불가)';
@@ -300,7 +304,7 @@
       const f = p.us[0], kills = p.us.reduce((s, u) => s + u.kills, 0);
       d.units = d.units.filter((u) => !p.us.includes(u));
       const to = p.to || p.opts[c.pick ? 1 : 0]; // 1단계는 두 2단계 유닛 중 고른 쪽으로
-      const u = addUnit(G, d, to); u.x = f.x; u.y = f.y; u.hx = f.hx; u.hy = f.hy; u.kills = kills;
+      const u = addUnit(G, d, to); u.x = f.x; u.y = f.y; u.hx = f.hx; u.hy = f.hy; u.kills = kills; d.nMerge++; promote(d, u);
       fx(d, 'hero', u.x, u.y, 0.75, { c: to.legend ? 'g1' : d.R.color }); if (to.legend) snd(d, 'hero');
       G.events.push({ t: 'merge', d: d.i, name: to.name, legend: !!to.legend });
     } else if (c.a === 'skill') { // 영웅 기술: 살아 있는 내 영웅이 모두 쓴다
@@ -353,7 +357,7 @@
   // ── 전투 ──
   function unitAtk(G, d, u) {
     const o = G.dungeons[u.own];
-    let a = u.def.atk * o.mod.atk * (1 + 0.1 * o.up.atk);
+    let a = u.def.atk * o.mod.atk * (1 + 0.1 * o.up.atk) * (1 + 0.15 * (u.rk || 0));
     if (o.bc.forge && o.race === 'human') a *= 1.15;
     if (o.race === 'dragon') a *= 1 + Math.min(0.5, 0.02 * u.kills);
     if (o.race === 'beast') a *= 1 + Math.min(0.4, 0.015 * d.units.length);
@@ -379,10 +383,15 @@
     else if (k === 'regen') d.mod.regen = (d.mod.regen || 0) + 0.005;
     G.events.push({ t: 'boonGot', d: d.i, b: bi });
   }
+  function promote(d, u) { // 처치 수가 차면 승급: 최대 체력이 늘고(공격은 unitAtk에서) 표식이 붙는다
+    const r = DD.rankOf(u), was = u.rk || 0; if (r <= was) return;
+    const k = (1 + 0.15 * r) / (1 + 0.15 * was); u.mhp *= k; u.hp *= k; u.rk = r;
+    fx(d, 'hero', u.x, u.y, 0.5, { c: 'g1' }); snd(d, 'up');
+  }
   function hurt(G, d, src, t, amt) {
     t.hp -= amt; t.hit = 0.12;
     if (t.k === 'd' && t.hp <= 0 && !t.dead) {
-      t.dead = true; d.kills++; if (src && src.k === 'u') src.kills++;
+      t.dead = true; d.kills++; if (src && src.k === 'u') { src.kills++; promote(d, src); }
       const kg = t.def.gold * (t.gm || 1) * G.D.gold * d.mod.gold * (d.mod.kg || 1) * (1 + 0.2 * Math.min(3, d.bc.hoard || 0)); d.gold += kg;
       if (t.def.spr === 'd_boss' && G.wave < C.WAVES && !G.tutorial) offerBoon(G, d);
       d.mat += (t.def.mat || 0) + (G.rnd() < 0.1 ? 1 : 0);
@@ -465,8 +474,9 @@
     const n = Math.round(base.length * d.share * (mu.n || 1));
     for (let i = 0; i < n; i++) list.push(base[i % base.length]);
     const easy = G.tutorial ? (w <= 5 ? 0.6 : 0.85) : 1; // 튜토리얼의 첫 다섯 웨이브는 약하다
-    const ne = d.ents.length;
-    list.forEach((t, i) => d.queue.push({ ent: t === 'boss' ? 0 : i % ne, at: G.t + (i / list.length) * 25, t, hp: sc.hp * G.st.mul * easy * D.hp * (mu.hp || 1), atk: sc.atk * Math.sqrt(G.st.mul) * D.atk * (mu.atk || 1), spd: mu.spd || 1, gm: mu.gold || 1, gim: t === 'boss' ? DD.BOSS[w] || null : null }));
+    const ne = d.ents.length, th = G.thrust[w], rest = d.ents.map((e, i) => i).filter((i) => i !== th); // 주공 입구로 6할, 나머지는 고르게
+    const entOf = (i) => (ne < 2 || th == null ? 0 : i % 5 < 3 ? th : rest[((i / 5) | 0) % rest.length]);
+    list.forEach((t, i) => d.queue.push({ ent: t === 'boss' ? 0 : entOf(i), at: G.t + (i / list.length) * 25, t, hp: sc.hp * G.st.mul * easy * D.hp * (mu.hp || 1), atk: sc.atk * Math.sqrt(G.st.mul) * D.atk * (mu.atk || 1), spd: mu.spd || 1, gm: mu.gold || 1, gim: t === 'boss' ? DD.BOSS[w] || null : null }));
     d.queue.sort((a, b) => a.at - b.at);
   }
 
@@ -550,6 +560,7 @@
     }
     if (d.heroT > 0) d.heroT -= DT;
     if (d.skillT > 0) d.skillT -= DT;
+    if (!d.demons.length && !d.queue.length) for (const b of d.blds) if (b.hp < b.mhp) b.hp = Math.min(b.mhp, b.hp + b.mhp * 0.03 * DT); // 전장이 비면 건물을 고친다
     while (d.queue.length && d.queue[0].at <= G.t) {
       const q = d.queue.shift(), def = DD.DEMONS[q.t], mhp = def.hp * q.hp;
       const en = d.ents[q.ent || 0] || d.ents[0], jx = (G.rnd() - 0.5) * 12, jo = G.rnd() * 6; // 입구가 난 벽 쪽 끝에서 나온다
@@ -622,7 +633,7 @@
       d.units = d.units.filter((u) => u.hp > 0);
     }
     if (d.blds.some((b) => b.hp <= 0)) {
-      d.blds.forEach((b) => { if (b.hp <= 0) { delete d.occ[key(b.cx, b.cy)]; fx(d, 'collapse', b.x, b.y, 0.6); snd(d, 'bfall'); } });
+      d.blds.forEach((b) => { if (b.hp <= 0) { for (const [x, y] of DD.bldTiles(b.def, b.cx, b.cy)) delete d.occ[key(x, y)]; fx(d, 'collapse', b.x, b.y, 0.6); snd(d, 'bfall'); } });
       d.blds = d.blds.filter((b) => b.hp > 0); recount(d);
     }
     for (const s of d.shots) s.t -= DT; for (const f of d.fx) f.t -= DT;
@@ -691,7 +702,7 @@
       const b = R.blds[bi], n = d.bc[b.id] || 0;
       if (n >= max) return false;
       const bc = DD.bldCost(d, b); if (d.mat < bc.m) return false; if (d.gold < bc.g) return true; // 골드만 모자라면 저축
-      const s = spots(d, kind)[0];
+      const s = spots(d, kind).find((q) => !DD.buildErr(d, b, q[0], q[1]));
       if (s) G.cmd(d.i, { a: 'build', b: bi, cx: s[0], cy: s[1] });
       return !!s;
     };

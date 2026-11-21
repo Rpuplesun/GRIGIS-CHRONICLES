@@ -169,7 +169,7 @@
   const spotOf = () => (script.goal && script.steps[script.i] ? script.steps[script.i].hl : null);
   const slot = (act, body, tip, o) => `<button class="slot ${o.on ? 'on' : ''} ${o.cls || ''} ${spotOf() === act ? 'spot' : ''}" data-a="${act}" data-tip="${tip.replace(/"/g, '&quot;')}" ${o.dim ? 'data-dim="1"' : ''}>${o.key ? `<kbd>${o.key}</kbd>` : ''}${body}</button>`;
   const grp = (name, slots, cls) => `<div class="grp ${cls || ''}"><h3>${name}</h3><div class="slots">${slots}</div></div>`;
-  const nextWave = () => { if (G.wave >= C.WAVES) return '마지막 웨이브'; const c = {}, mu = DD.MUTS[G.muts[G.wave + 1]]; const bg = DD.BOSS_GIM[DD.BOSS[G.wave + 1]]; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => { const m = t === 'boss' && bg && !G.tutorial ? Object.assign({}, DD.DEMONS[t], bg) : DD.DEMONS[t]; return `<span class="${m.fly ? 'fly' : ''}" data-tip="<b>${m.name} ×${c[t]}</b>${m.desc}">${icon(m.spr, 2)}${c[t]}</span>`; }).join(' ') + (mu ? ` <span class="mut" data-tip="<b>변이 · ${mu.name}</b>${mu.desc}">${mu.name}</span>` : ''); };
+  const nextWave = () => { if (G.wave >= C.WAVES) return '마지막 웨이브'; const c = {}, mu = DD.MUTS[G.muts[G.wave + 1]]; const bg = DD.BOSS_GIM[DD.BOSS[G.wave + 1]]; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => { const m = t === 'boss' && bg && !G.tutorial ? Object.assign({}, DD.DEMONS[t], bg) : DD.DEMONS[t]; return `<span class="${m.fly ? 'fly' : ''}" data-tip="<b>${m.name} ×${c[t]}</b>${m.desc}">${icon(m.spr, 2)}${c[t]}</span>`; }).join(' ') + (G.thrust[G.wave + 1] != null ? ` <span class="thr" data-tip="<b>주공 · ${DD.gateName(me().ents[G.thrust[G.wave + 1]])} 입구</b>다음 웨이브의 악마 열에 여섯이 이 입구로 온다">주공 ${DD.gateName(me().ents[G.thrust[G.wave + 1]])}</span>` : '') + (mu ? ` <span class="mut" data-tip="<b>변이 · ${mu.name}</b>${mu.desc}">${mu.name}</span>` : ''); };
   const UKEY = ['Q', 'W', 'R', 'Y'], BKEY = ['A', 'S', 'D', 'F', 'G', 'H', 'J'];
   function drawHud() {
     const d = me(), R = d.R, own = d.units.filter((u) => u.own === d.i).length, hp = d.heart.hp / d.heart.mhp;
@@ -197,7 +197,7 @@
         const hn = d.units.filter((u) => u.hero && u.own === d.i).length, sk = hn && d.skillT <= 0;
         const skill = slot('skill:1', `<em>기술</em><span class="cost">${!hn ? '—' : sk ? '준비!' : mmss(d.skillT)}</span>`, `<b>영웅 기술</b>살아 있는 영웅이 모두 기술을 쓴다 · 대기 ${DD.SKILL_CD}초<small>${Object.keys(DD.HERO_SKILL).map((r) => `${DD.HERO_ROLES[r].label} · ${DD.HERO_SKILL[r].name} — ${DD.HERO_SKILL[r].desc}`).join('<br>')}</small>`, { key: 'X', cls: 'mini' + (sk ? ' ready' : ''), dim: !sk });
         return one(0, 'B') + skill + one(1, 'V'); })());
-    const bslots = R.blds.map((b, i) => { const c = DD.bldCost(d, b), have = d.bc[b.id] || 0, full = have >= DD.bldMax(b); return slot('build:' + i, `${b.kind === 'trap' ? icon(b.spr, 2) : icon(b.spr + '@' + d.race, 2)}${full ? '<span class="cost">최대</span>' : cost(c, d)}`, `<b>${b.name}</b>${ic('ui_coin')} ${c.g}${c.m ? ' ' + ic('ui_crate') + ' ' + c.m : ''} · 보유 ${have}/${DD.bldMax(b)}<br>${b.desc}${b.atk ? `<br>공격 ${b.atk} · 사거리 ${b.rng} · 간격 ${b.as}초${b.splash ? ' · 범위' : ''}` : ''}<small>${b.kind === 'wall' ? '길 위에만 세운다 · 악마를 붙잡아 둔다' : b.kind === 'trap' ? '길 위에 깐다 · 악마는 부수지 못한다' : '바닥에 세운다'}</small>`, { dim: full || no(c), on: ui.build === i, key: BKEY[i] }); });
+    const bslots = R.blds.map((b, i) => { const c = DD.bldCost(d, b), have = d.bc[b.id] || 0, full = have >= DD.bldMax(b); return slot('build:' + i, `${b.kind === 'trap' ? icon(b.spr, 2) : icon(b.spr + '@' + d.race, 2)}${full ? '<span class="cost">최대</span>' : cost(c, d)}`, `<b>${b.name}</b>${ic('ui_coin')} ${c.g}${c.m ? ' ' + ic('ui_crate') + ' ' + c.m : ''} · 보유 ${have}/${DD.bldMax(b)}<br>${b.desc}${b.atk ? `<br>공격 ${b.atk} · 사거리 ${b.rng} · 간격 ${b.as}초${b.splash ? ' · 범위' : ''}` : ''}<small>${b.kind === 'wall' ? '길 위에만 세운다 · 악마를 붙잡아 둔다' : b.kind === 'trap' ? '길 위에 깐다 · 악마는 부수지 못한다' : b.size === 2 ? '바닥 2×2칸에 세운다' : '바닥에 세운다'}</small>`, { dim: full || no(c), on: ui.build === i, key: BKEY[i] }); });
     const blds = bslots.filter((x, i) => i !== 3 && i < 5).join('');
     maze = bslots[3] + bslots[5] + bslots[6] + maze;
     const ac = DD.upCost(d, 'altar'), ap = DD.ALTAR[d.altarLv - 1].p;
@@ -249,7 +249,7 @@
     const d = G.dungeons[ui.view], e = (q.k === 'd' ? d.demons : q.k === 'u' ? d.units : d.blds).find((x) => x.id === q.id && x.hp > 0); if (!e) return '';
     const hp = `♥ ${Math.ceil(e.hp)}/${Math.ceil(e.mhp)}`;
     if (q.k === 'd') { const bg = e.gim && DD.BOSS_GIM[e.gim]; return `<b>${bg ? bg.name : e.def.name}</b>${hp} · 공격 ${Math.round(e.atk)}${e.def.rng > 30 ? ' · 원거리' : ''}<small>${bg ? bg.desc + ' · 중장갑' : e.def.desc}</small>`; }
-    if (q.k === 'u') { const o = G.dungeons[e.own]; return `<b>${e.hero ? `[${DD.GRADES[e.hero.grade].id}] ` : ''}${e.def.name}</b>${hp} · 처치 ${e.kills}${e.own !== d.i ? `<small>${o.R.name} 지원군</small>` : e.hero ? `<small>${DD.HERO_ROLES[e.hero.role].label}</small>` : ''}`; }
+    if (q.k === 'u') { const o = G.dungeons[e.own]; return `<b>${e.hero ? `[${DD.GRADES[e.hero.grade].id}] ` : ''}${e.def.name}</b>${hp} · 처치 ${e.kills}${e.rk ? ` · <span class="gold">${DD.RANKS[e.rk]}</span>` : e.hero || e.def.legend ? '' : ` <small style="display:inline">(${DD.RANK_KILLS[1]}에 승급)</small>`}${e.own !== d.i ? `<small>${o.R.name} 지원군</small>` : e.hero ? `<small>${DD.HERO_ROLES[e.hero.role].label}</small>` : ''}`; }
     if (e.def.kind === 'trap') return `<b>${e.def.name}</b>${e.def.desc}<small>고른 뒤 Del로 걷는다</small>`;
     return `<b>${e.def.name}</b>${hp}<br>${e.def.desc}${e.def.atk ? `<small>공격 ${e.def.atk} · 사거리 ${e.def.rng}</small>` : ''}`;
   }
@@ -425,7 +425,7 @@
     for (const e of G.events.splice(0)) {
       const who = (i) => (i === G.human ? '내 요새' : G.dungeons[i].R.name);
       if (e.t === 'wave') DD.Audio.play(e.w % 5 === 0 ? 'boss' : 'wave'); else if (e.t === 'fall') DD.Audio.play('fall');
-      if (e.t === 'wave') banner('WAVE ' + e.w, e.w % 5 === 0 ? (DD.BOSS[e.w] && !G.tutorial ? `${DD.BOSS_GIM[DD.BOSS[e.w]].name} — ${DD.BOSS_GIM[DD.BOSS[e.w]].desc}` : '악마 군주가 온다') : e.mut ? `변이 · ${DD.MUTS[e.mut].name} — ${DD.MUTS[e.mut].desc}` : '악마 침공', e.w % 5 === 0);
+      if (e.t === 'wave') banner('WAVE ' + e.w, e.w % 5 === 0 ? (DD.BOSS[e.w] && !G.tutorial ? `${DD.BOSS_GIM[DD.BOSS[e.w]].name} — ${DD.BOSS_GIM[DD.BOSS[e.w]].desc}` : '악마 군주가 온다') : (e.mut ? `변이 · ${DD.MUTS[e.mut].name} — ${DD.MUTS[e.mut].desc}` : '악마 침공') + (G.thrust[e.w] != null ? ` · 주공 ${DD.gateName(me().ents[G.thrust[e.w]])}` : ''), e.w % 5 === 0);
       else if (e.t === 'merge' && e.d === G.human) { if (e.legend) banner(e.name, '전설 유닛 탄생'); else toast(`조합 · ${e.name}`, 'good'); }
       else if (e.t === 'missionNew' && e.d === G.human) { toast(`미션 · ${DD.MISSION[e.k].name}`, 'info'); DD.Audio.play('alert'); }
       else if (e.t === 'mission' && e.d === G.human) { toast(e.ok ? `미션 성공 · ${DD.MISSION[e.k].name} (+●${e.gold})` : `미션 실패 · ${DD.MISSION[e.k].name}`, e.ok ? 'good' : 'bad'); if (e.ok) DD.Audio.play('coin'); }

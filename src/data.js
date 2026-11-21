@@ -121,7 +121,7 @@
     B('spike', '가시 함정', 'trap', 40, 0, 1, 'trap_spike', '밟고 지나는 악마에게 0.5초마다 피해', { dmg: 9, every: 0.5 }),
     B('tar', '끈끈이 늪', 'trap', 35, 0, 1, 'trap_tar', '밟고 지나는 악마의 이동 -45%', { slow: 0.55 }),
   ];
-  for (const k in DD.RACES) DD.RACES[k].blds.push(...TRAPS);
+  for (const k in DD.RACES) { DD.RACES[k].blds.forEach((b) => { if (b.kind === 'unlock' || b.kind === 'eco' || b.kind === 'aura') b.size = 2; }); DD.RACES[k].blds.push(...TRAPS); } // 해금·특수 건물은 2×2칸을 차지한다
   DD.RACE_IDS = Object.keys(DD.RACES);
   DD.mergeNeed = (race) => (race === 'spirit' ? 2 : 3); // 정령은 둘만 있어도 융합한다
 
@@ -239,6 +239,12 @@
     return DD.layoutOf(stage) === 'center' ? (s < 4 ? 2 : s < 6 ? 3 : 4) : s < 2 ? 1 : s < 4 ? 2 : 3;
   };
   DD.entsFor = (n, lay) => { const C = DD.C, mx = C.ENT_T[0], L = [0, C.GH >> 1], R = [C.GW - 1, C.GH >> 1]; return ((lay || C.LAYOUT) === 'center' ? [C.ENT_T, [mx, 0], L, R] : [C.ENT_T, L, R]).slice(0, n); };
+  // 숙련: 악마를 많이 잡은 유닛은 승급한다(영웅 제외). 단계마다 공격·체력 +15%
+  DD.RANKS = ['', '정예', '백전노장'];
+  DD.RANK_KILLS = [0, 8, 25];
+  DD.rankOf = (u) => (u.hero ? 0 : u.kills >= DD.RANK_KILLS[2] ? 2 : u.kills >= DD.RANK_KILLS[1] ? 1 : 0);
+  // 주공: 입구가 여럿이면 웨이브마다 한 곳으로 악마의 6할이 몰린다. 미리 알려 준다
+  DD.gateName = (e) => (e[0] === 0 ? '왼쪽' : e[0] === DD.C.GW - 1 ? '오른쪽' : e[1] === 0 ? '위' : '아래');
   // 영웅 기술: 살아 있는 영웅이 한꺼번에 쓴다
   DD.SKILL_CD = 40;
   DD.HERO_SKILL = {
