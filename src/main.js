@@ -15,7 +15,7 @@
   const pct = (v) => Math.round(v * 100);
 
   // ───────── 메뉴 ─────────
-  const menu = Object.assign({ race: 'human', mode: 'solo', allies: 3, diff: 1 }, save.menu);
+  const menu = Object.assign({ race: 'human', mode: 'solo', allies: 3, diff: 1 }, save.menu); menu.endless = false;
   if (!DD.DIFFS[menu.diff]) menu.diff = 1; // 마지막으로 고른 종족·방식을 기억한다
   if (!DD.RACES[menu.race]) menu.race = 'human';
   const topStage = (race) => (DD.DEMO ? 0 : Math.min(5, save.races[race].stage)); // 열린 스테이지 중 가장 뒤
@@ -28,7 +28,7 @@
   const fmtMeta = (m) => (lv) => '+' + (m.unit === '%' ? pct(m.per * lv) + '%' : m.per * lv);
   function drawMenu() {
     const rs = save.races[menu.race], R = DD.RACES[menu.race], best = rs.best || {}, rec = rs.rec || {}, endl = rs.endless || {}, DF = DD.DIFFS[menu.diff];
-    const xm = (v) => '×' + v;
+    const xm = (v) => '×' + v, cleared = !!rec[menu.stage]; if (!cleared) menu.endless = false; // 무한 침공은 깬 스테이지에서만
     if (menu.stage > rs.stage) menu.stage = rs.stage;
     $('#menu').innerHTML = `
       <header><h1>${DD.TITLE.name}</h1><p class="sub">${DD.TITLE.sub}${DD.DEMO ? ' · 데모' : ''}${save.bonusGold ? ` · <span class="gold">전쟁 자금 ●${save.bonusGold} (다음 출전에 지급)</span>` : ''}</p></header>
@@ -41,7 +41,7 @@
           <b>${r.name}</b><small>${r.trait}</small><small class="gold">${ic('ui_shard')} ${save.races[id].shards} · 스테이지 ${save.races[id].stage + 1}</small>
         </button>`; }).join('')}</div></section>
       <section><h2>스테이지 <span class="row"><span class="lbl">난이도</span>${DD.DIFFS.map((x, i) => `<button class="${menu.diff === i ? 'on' : ''}" data-m="diff:${i}">${x.name}</button>`).join('')}</span></h2>
-        <p class="diffnote">악마 체력 ${xm(DF.hp)} · 공격 ${xm(DF.atk)} · 골드 ${xm(DF.gold)} · <span class="gold">영혼석 ${xm(DF.shard)}</span></p><div class="cards c3">${DD.stageOrder(menu.race).map((id, i) => { const st = DD.stageOf(menu.race, i), lock = i > rs.stage, demo = DD.DEMO && i > 0; return `
+        <p class="diffnote">악마 체력 ${xm(DF.hp)} · 공격 ${xm(DF.atk)} · 골드 ${xm(DF.gold)} · <span class="gold">영혼석 ${xm(DF.shard)}</span> <button class="endl ${menu.endless ? 'on' : ''}" ${cleared && !DD.DEMO ? '' : 'disabled'} data-m="endless:1" title="">∞ 무한 침공${cleared ? '' : ' · 클리어 후'}</button></p><div class="cards c3">${DD.stageOrder(menu.race).map((id, i) => { const st = DD.stageOf(menu.race, i), lock = i > rs.stage, demo = DD.DEMO && i > 0; return `
         <button class="card ${menu.stage === i ? 'on' : ''}" ${lock || demo ? 'disabled' : ''} data-m="stage:${i}">
           <b>${i + 1}. ${st.name}</b><small>${demo ? '정식 버전에서' : lock ? '잠김' : st.desc} · 악마 ×${st.mul}</small><small>${[st.mods[menu.race] || !(DD.entCount(i, menu.diff) > 1) ? modText(st, menu.race) : '', DD.entCount(i, menu.diff) > 1 ? `입구 ${DD.entCount(i, menu.diff)}` : '', DD.layoutOf(i) === 'center' ? '심장 중앙' : ''].filter(Boolean).join(' · ')}</small>${rec[i] ? `<small class="rec"><span class="stars">${'★'.repeat(rec[i].s)}${'☆'.repeat(3 - rec[i].s)}</span> ${DD.DIFFS[rec[i].d].name}${endl[i] ? ` · ∞ ${endl[i]}` : ''}</small>` : best[i] ? `<small class="rec">${best[i] > C.WAVES ? '✔ 클리어' : `최고 웨이브 ${best[i]}/${C.WAVES}`}</small>` : ''}
         </button>`; }).join('')}</div></section>
@@ -64,6 +64,7 @@
     if (k === 'mode') menu.mode = v;
     else if (k === 'race') { menu.race = v; menu.stage = topStage(v); }
     else if (k === 'allies' || k === 'stage' || k === 'diff') menu[k] = +v;
+    else if (k === 'endless') menu.endless = !menu.endless;
     else if (k === 'meta') { const rs = save.races[menu.race], lv = rs.meta[v] || 0, c = DD.metaCost(lv); if (rs.shards >= c) { rs.shards -= c; rs.meta[v] = lv + 1; persist(); } }
     else if (k === 'start') { save.menu = { race: menu.race, mode: menu.mode, allies: menu.allies, diff: menu.diff }; persist(); return startGame(); }
     else if (k === 'story') return showStory(showMenu);
@@ -82,7 +83,7 @@
     const players = [{ race, meta: save.races[race].meta, layout: tutorial ? null : (save.lay || {})[DD.layoutOf(menu.stage) + DD.entCount(menu.stage, menu.diff)], bonusGold: tutorial ? 0 : save.bonusGold || 0 }];
     if (!tutorial && menu.mode === 'multi') for (let i = 0; i < menu.allies - 1; i++) players.push({ race: others[i], bot: true });
     if (!tutorial && save.bonusGold) { save.bonusGold = 0; persist(); }
-    G = DD.newGame({ players, stage: tutorial ? 0 : menu.stage, diff: menu.diff, tutorial: !!tutorial, seed: (Date.now() & 0xffff) + 1 });
+    G = DD.newGame({ players, stage: tutorial ? 0 : menu.stage, diff: menu.diff, endless: !tutorial && menu.endless, tutorial: !!tutorial, seed: (Date.now() & 0xffff) + 1 });
     ui = { sel: new Set(), selB: null, ghost: null, box: null, view: 0, build: -1, veil: 16, flash: save.opt.flash, edit: false, tool: 1, hover: null, rally: null, insp: null, seenD: new Set(), heroReady: false, busy: false };
     DD.Audio.ambience(G.st.id); DD.Audio.preload(); DD.Music.play(G.st.id); DD.Music.preload(['boss', 'victory', 'defeat']); ui.music = G.st.id;
     speed = 1; paused = false; acc = 0; lastHtml = {}; dlg = null; drawDlg(); setGoal('');
@@ -90,7 +91,7 @@
     $('#game').hidden = false; $('#feed').innerHTML = ''; $('#herocard').innerHTML = ''; $('#banner').innerHTML = '';
     buildScript();
     resize(); last = performance.now(); requestAnimationFrame(loop);
-    if (!script.steps.length || script.steps[0].when) banner(G.st.name, `${C.FIRST_WAVE}초 뒤 첫 침공` + (G.nEnt > 1 ? ` · 입구 ${G.nEnt}곳` : '') + (G.layout === 'center' ? ' · 심장이 한가운데' : ''));
+    if (!script.steps.length || script.steps[0].when) banner(G.st.name, `${C.FIRST_WAVE}초 뒤 첫 침공` + (G.nEnt > 1 ? ` · 입구 ${G.nEnt}곳` : '') + (G.layout === 'center' ? ' · 심장이 한가운데' : '') + (G.endless ? ' · 무한 침공' : ''));
   }
 
   // ───────── 참모 대화·대본 ─────────
@@ -208,6 +209,8 @@
     set('#tip', ui.tip || inspect() || ''); placeTip();
     const ms = d.mission; // 진행 중인 미션
     set('#mission', ms ? `<small>미션</small>${DD.MISSION[ms.k].name}${ms.k === 'fast' ? ` · <b>${Math.max(0, Math.ceil(DD.MISSION.fast.t - (G.t - ms.t0)))}초</b>` : ''} <span class="gold">${ic('ui_coin')}${ms.gold}</span>` : ''); $('#mission').hidden = !ms || ui.world;
+    const hzd = G.hz && DD.HAZ[G.hz]; // 진행 중인 지형 현상
+    set('#hazard', hzd ? `<small>지형</small>${hzd.name} · <b>${Math.max(0, Math.ceil(G.haz.left))}초</b>` : ''); $('#hazard').hidden = !hzd || ui.world; $('#hazard').style.top = d.mission ? '176px' : '110px';
     const bp = d.boonPick; // 전리품 고르기: 고를 때까지 게임이 멈춘다
     set('#boon', bp ? `<div class="box"><h2>전리품</h2><p>악마 군주를 쓰러뜨렸다. 하나를 고른다.</p><div class="cards c3">${bp.map((bi, i) => `<button class="card" data-a="boon:${i}"><kbd>${i + 1}</kbd>${DD.ATLAS.frames['boon_' + DD.BOONS[bi].id] ? icon('boon_' + DD.BOONS[bi].id, 3) : ''}<b>${DD.BOONS[bi].name}</b><small>${DD.BOONS[bi].desc}</small></button>`).join('')}</div></div>` : ''); $('#boon').hidden = !bp;
     const vd = G.dungeons[ui.view], boss = !ui.world && vd.demons.find((e) => e.def.spr === 'd_boss' && e.hp > 0);
@@ -429,12 +432,13 @@
     if (!paused && !dlg && !G.over && !me().boonPick) { acc += dt * speed; let n = 0; while (acc >= DD.DT && n++ < 60) { G.step(); acc -= DD.DT; } }
     for (const e of G.events.splice(0)) {
       const who = (i) => (i === G.human ? '내 요새' : G.dungeons[i].R.name);
-      if (e.t === 'wave') DD.Audio.play(e.w % 5 === 0 ? 'boss' : 'wave'); else if (e.t === 'fall') DD.Audio.play('fall');
+      if (e.t === 'wave') { DD.Audio.play(e.w % 5 === 0 ? 'boss' : 'wave'); if (e.w % 5 === 0) ui.shake = 0.5; } else if (e.t === 'fall') DD.Audio.play('fall');
       if (e.t === 'wave') banner('WAVE ' + e.w, e.w % 5 === 0 ? (DD.BOSS[e.w] && !G.tutorial ? `${DD.BOSS_GIM[DD.BOSS[e.w]].name} — ${DD.BOSS_GIM[DD.BOSS[e.w]].desc}` : '악마 군주가 온다') : (e.mut ? `변이 · ${DD.MUTS[e.mut].name} — ${DD.MUTS[e.mut].desc}` : '악마 침공') + (G.thrust[e.w] != null ? ` · 주공 ${DD.gateName(me().ents[G.thrust[e.w]])}` : ''), e.w % 5 === 0);
       else if (e.t === 'merge' && e.d === G.human) { if (e.legend) banner(e.name, '전설 유닛 탄생'); else toast(`조합 · ${e.name}`, 'good'); }
       else if (e.t === 'missionNew' && e.d === G.human) { toast(`미션 · ${DD.MISSION[e.k].name}`, 'info'); DD.Audio.play('alert'); }
       else if (e.t === 'mission' && e.d === G.human) { toast(e.ok ? `미션 성공 · ${DD.MISSION[e.k].name} (+●${e.gold})` : `미션 실패 · ${DD.MISSION[e.k].name}`, e.ok ? 'good' : 'bad'); if (e.ok) DD.Audio.play('coin'); }
       else if (e.t === 'bossRage' && e.d === ui.view) toast('군주가 돌진한다!', 'bad');
+      else if (e.t === 'haz') { const h = DD.HAZ[e.id]; banner(h.name, h.desc, true); DD.Audio.play('alarm'); ui.shake = 0.4; }
       else if (e.t === 'boon' && e.d === G.human) { DD.Audio.play('ready'); lastHtml = {}; hudT = 0; }
       else if (e.t === 'boonGot' && e.d === G.human) toast(`전리품 · ${DD.BOONS[e.b].name} — ${DD.BOONS[e.b].desc}`, 'good');
       else if (e.t === 'hero' && e.d === G.human) heroCard(e);
@@ -460,7 +464,11 @@
     // 보고 있는 요새에서 이번 프레임에 난 소리만 낸다
     for (const d of G.dungeons) { if (d.i === ui.view && !paused) for (const k in d.snd) DD.Audio.play(k); d.snd = {}; }
     if (ui.veil > 0) { veilT -= dt; if (veilT <= 0) { veilT = 1 / 12; ui.veil -= 4; } } // 디더 가림막을 12fps로 4단계씩 걷는다
-    ctx.setTransform(K, 0, 0, K, 0, 0);
+    { // 화면 흔들림: 심장이 맞거나 군주·지형 현상이 올 때 잠깐(피격 번쩍임을 끄면 같이 꺼진다)
+      const hp = me().heart.hp; if (ui.lastHp != null && hp < ui.lastHp - 0.5 && !(ui.shake > 0.12)) ui.shake = 0.12; ui.lastHp = hp;
+      if (ui.shake > 0) ui.shake -= dt; const sk = ui.shake > 0 && ui.flash !== false && !paused && ui.view === G.human && !ui.world ? Math.min(3, Math.ceil(ui.shake * 10)) : 0;
+      ctx.setTransform(K, 0, 0, K, sk ? (((now / 33) | 0) % 2 ? sk : -sk) * K : 0, sk ? (((now / 47) | 0) % 2 ? 1 : -1) * K : 0);
+    }
     if (ui.world) DD.drawWorld(ctx, G, ui); else DD.draw(ctx, G, G.dungeons[ui.view], ui);
     hudT -= dt; if (hudT <= 0) { hudT = 0.2; drawHud(); }
     if (G.over) return finish();
@@ -493,22 +501,18 @@
       <div class="stats"><span><b>${d.wavesCleared}/${C.WAVES}</b>웨이브</span><span><b>${d.kills}</b>처치</span><span><b>${mmss(G.t)}</b>시간</span>
         <span><b>${d.nSum}</b>소환</span><span><b>${d.heroN}</b>영웅</span><span><b>${d.alive ? pct(d.heart.hp / d.heart.mhp) + '%' : '함락'}</b>심장</span></div>
       <p class="gold">${ic('ui_shard')} 영혼석 +${sh}${sh && !G.tutorial ? ` (보유 ${rs.shards})` : ''}</p>${unlocked}${tipL ? `<p class="tip">팁 · ${tipL}</p>` : ''}
-      ${nextOk ? '<button id="next2" class="on">다음 스테이지 ▸</button> ' : ''}${G.win && !G.tutorial && !DD.DEMO && d.alive ? '<button id="endless">계속 버틴다 · 무한 침공</button> ' : ''}${tut || G.tutorial ? '' : `<button id="again" class="${nextOk ? '' : 'on'}">다시 도전</button> `}<button id="back">${tut ? '종족 선택' : '돌아가기'}</button>
+      ${nextOk ? '<button id="next2" class="on">다음 스테이지 ▸</button> ' : ''}${tut || G.tutorial ? '' : `<button id="again" class="${nextOk ? '' : 'on'}">다시 도전</button> `}<button id="back">${tut ? '종족 선택' : '돌아가기'}</button>
       <small>Enter · ${nextOk ? '다음 스테이지' : tut || G.tutorial ? '종족 선택' : '다시 도전'}</small></div>`;
     $('#result').hidden = false;
     if ($('#again')) $('#again').onclick = () => startGame();
-    if ($('#endless')) $('#endless').onclick = () => { // 이긴 판을 이어서 21웨이브부터
-      $('#result').hidden = true; G.goEndless(); paused = false; acc = 0; lastHtml = {}; ui.music = G.st.id;
-      DD.Audio.ambience(G.st.id); DD.Music.play(G.st.id); banner('무한 침공', '쓰러질 때까지 버틴다', true); last = performance.now(); requestAnimationFrame(loop);
-    };
     if ($('#next2')) $('#next2').onclick = () => { menu.stage = G.stage + 1; startGame(); };
     $('#back').onclick = () => { G = null; $('#game').hidden = true; $('#result').hidden = true; showMenu(); };
   }
   function finishEndless() { // 무한 침공이 끝났다: 20웨이브 뒤로 버틴 만큼 영혼석, 스테이지별 최고 기록
     const d = me(), rs = save.races[d.race], extra = Math.max(0, d.wavesCleared - C.WAVES);
-    const sh = Math.round(extra * 3 * (1 + G.stage * 0.5) * G.D.shard), best = (rs.endless = rs.endless || {}), isBest = extra > 0 && d.wavesCleared > (best[G.stage] || 0);
-    if (isBest) best[G.stage] = d.wavesCleared; rs.shards += sh; persist();
-    DD.Audio.stopAmbience(); DD.Music.play('defeat', { fade: 0.4 }); dlg = null; drawDlg(); setGoal('');
+    const sh = G.quit ? 0 : DD.shardsFor(G.stage, Math.min(C.WAVES, d.wavesCleared), false, G.diff) + Math.round(extra * 3 * (1 + G.stage * 0.5) * G.D.shard), best = (rs.endless = rs.endless || {}), isBest = extra > 0 && d.wavesCleared > (best[G.stage] || 0);
+    if (isBest) best[G.stage] = d.wavesCleared; rs.shards += sh; (save.lay = save.lay || {})[G.layout + d.ents.length] = Array.from(d.grid); persist();
+    DD.Audio.stopAmbience(); if (G.quit) DD.Music.stop(); else DD.Music.play('defeat', { fade: 0.4 }); dlg = null; drawDlg(); setGoal('');
     $('#result').innerHTML = `<div><h1 class="gold">무한 침공 종료</h1>
       <p>${d.R.name} · ${G.st.name} · ${G.D.name}</p>
       <div class="stats"><span><b>${d.wavesCleared}</b>웨이브</span><span><b>${d.kills}</b>처치</span><span><b>${mmss(G.t)}</b>시간</span></div>

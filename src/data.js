@@ -179,6 +179,15 @@
     water: { id: 'water', home: 'merfolk', name: '수몰된 회랑', desc: '어인족의 땅', mods: { merfolk: { atk: 1.2, hp: 1.2 }, dragon: { atk: 0.85 }, human: { spd: 0.85 }, beast: { spd: 0.85 } } },
     abyss: { id: 'abyss', home: null, name: '악마성', desc: '게이트 너머', mods: { human: { hp: 0.9 }, dragon: { hp: 0.9 }, beast: { hp: 0.9 }, spirit: { hp: 0.9 }, merfolk: { hp: 0.9 } } },
   };
+  // 지형 현상: 땅마다 주기적으로 일어난다(첫 90초 뒤, 그 뒤로 75초마다 12초 동안). 그 땅이 고향인 종족은 해를 입지 않는다
+  DD.HAZ = {
+    fire: { name: '용암 분출', desc: '길 위의 악마와 유닛이 초당 체력 2%를 잃는다', col: 'r2' },
+    wild: { name: '모래폭풍', desc: '원거리 유닛과 탑의 피해 -30%', col: 'g2' },
+    forest: { name: '숲의 숨결', desc: '아군 유닛이 초당 체력 2%를 되찾는다', col: 'n2' },
+    water: { name: '밀물', desc: '악마와 유닛 모두 이동 -35%', col: 'b2' },
+    abyss: { name: '악마의 포효', desc: '악마의 공격 +30%', col: 'p2' },
+  };
+  DD.HAZ_T = { first: 90, every: 75, len: 12 };
   DD.HOME = { human: 'cave', dragon: 'fire', beast: 'wild', spirit: 'forest', merfolk: 'water' };
   DD.STAGE_MUL = [0.8, 1.1, 1.4, 1.75, 2.15, 2.6]; // 차례가 뒤로 갈수록 악마가 강해진다
   // 종족별 스테이지 순서: 고향 → 다른 네 종족의 땅 → 악마성

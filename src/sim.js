@@ -127,10 +127,11 @@
 
   DD.newGame = function (opt) {
     const G = {
-      t: 0, wave: 0, over: false, win: false, stage: opt.stage || 0, tutorial: !!opt.tutorial, diff: opt.tutorial || opt.diff == null ? 1 : opt.diff, muts: {}, thrust: {},
+      t: 0, wave: 0, over: false, win: false, stage: opt.stage || 0, tutorial: !!opt.tutorial, diff: opt.tutorial || opt.diff == null ? 1 : opt.diff, muts: {}, thrust: {}, endless: !!opt.endless && !opt.tutorial, hz: null,
       st: DD.stageOf(opt.players[Math.max(0, opt.players.findIndex((p) => !p.bot))].race, opt.stage || 0),
       rnd: rng(opt.seed || 1), nid: 1, dungeons: [], events: [], human: opt.players.findIndex((p) => !p.bot),
     };
+    G.haz = DD.HAZ[G.st.id] && !G.tutorial ? { next: DD.HAZ_T.first, left: 0 } : null;
     G.D = DD.DIFFS[G.diff]; G.nEnt = DD.entCount(G.stage, G.diff, G.tutorial); G.layout = DD.layoutOf(G.stage, G.tutorial); DD.setLayout(G.layout);
     if (!G.tutorial) { const ks = Object.keys(DD.MUTS); for (let w = 3; w < C.WAVES; w++) if (w % 5 && G.rnd() < 0.4) G.muts[w] = ks[Math.floor(G.rnd() * ks.length)]; }
     if (G.nEnt > 1) for (let w = 1; w <= C.WAVES; w++) G.thrust[w] = Math.floor(G.rnd() * G.nEnt);
@@ -139,8 +140,6 @@
     G.cmd = (di, c) => cmd(G, G.dungeons[di], c);
     G.endT = C.FIRST_WAVE + C.WAVES * C.WAVE_T;
     G.nextWaveIn = () => (!G.endless && G.wave >= C.WAVES ? G.endT - G.t : C.FIRST_WAVE + G.wave * C.WAVE_T - G.t);
-    // 무한 침공: 이긴 판을 끝내지 않고 21웨이브부터 계속 버틴다
-    G.goEndless = () => { G.over = false; G.win = false; G.endless = true; };
     return G;
   };
 
@@ -420,6 +419,7 @@
     if (t.k === 'b' && t.def.thorn && src && src.k === 'd') hurt(G, d, null, src, t.def.thorn * lvMul(t));
   }
   function strike(G, d, src, t, amt, splash, col) {
+    if (G.hz === 'wild' && src.k !== 'd' && (src.k === 'b' || src.def.rng > 30) && (src.k === 'u' ? G.dungeons[src.own].race : d.race) !== G.st.home) amt *= 0.7; // 모래폭풍(그 땅의 종족은 익숙하다)
     if (src.def.rng > 30 || src.k === 'b') { const k = src.k === 'd' ? 'orb' : SHOT[src.k === 'u' ? G.dungeons[src.own].race : d.race]; shoot(d, src, t, k, col); snd(d, k); }
     else { fx(d, 'hit', t.x + (G.rnd() - 0.5) * 4, t.y - 7, 0.17, { c: src.k === 'd' ? 'r1' : 'W' }); snd(d, 'melee'); }
     if (t.k === 'h') snd(d, 'heart');
@@ -525,9 +525,10 @@
       return;
     }
     { // 함정: 서 있는 칸의 함정이 듣는다(군주는 늪에 반만 걸린다)
-      const tcx0 = tx(e.x), tcy0 = ty(e.y), tr = inG(tcx0, tcy0) ? d.occ[key(tcx0, tcy0)] : null; e.slow = 1;
+      const tcx0 = tx(e.x), tcy0 = ty(e.y), tr = inG(tcx0, tcy0) ? d.occ[key(tcx0, tcy0)] : null; e.slow = G.hz === 'water' ? 0.65 : 1;
+      if (G.hz === 'fire') e.hp = Math.max(1, e.hp - e.mhp * 0.02 * DT);
       if (tr && tr.def.kind === 'trap') {
-        if (tr.def.slow) { const sl = tr.def.slow - 0.1 * ((tr.lv || 1) - 1); e.slow = e.def.spr === 'd_boss' ? (1 + sl) / 2 : sl; }
+        if (tr.def.slow) { const sl = tr.def.slow - 0.1 * ((tr.lv || 1) - 1); e.slow *= e.def.spr === 'd_boss' ? (1 + sl) / 2 : sl; }
         if (tr.def.dmg) { e.tt = (e.tt || 0) - DT; if (e.tt <= 0) { e.tt = tr.def.every; tr.hit = 0.3; hurt(G, d, tr, e, tr.def.dmg * lvMul(tr) * (1 + 0.15 * d.up.bld) * d.mod.atk); fx(d, 'hit', e.x, e.y - 3, 0.17, { c: 'W' }); if (e.hp <= 0) return; } }
       }
     }
@@ -562,7 +563,7 @@
     const reach = e.def.rng + t.r;
     if (d2(e, t) <= reach * reach) {
       e.mv = false; e.face = t.x >= e.x ? 1 : -1;
-      if (e.cd <= 0) { e.cd = e.def.as; e.atkT = 0.3; strike(G, d, e, t, e.atk * (t.k === 'b' && (e.gim === 'ram' || e.gim === 'all') ? 4 : 1), e.def.splash, 'p2'); }
+      if (e.cd <= 0) { e.cd = e.def.as; e.atkT = 0.3; strike(G, d, e, t, e.atk * (t.k === 'b' && (e.gim === 'ram' || e.gim === 'all') ? 4 : 1) * (G.hz === 'abyss' ? 1.3 : 1), e.def.splash, 'p2'); }
     } else {
       const p = step2(e, t.x, t.y, e.def.spd * (e.spd || 1) * (e.slow || 1));
       if (p && (t.k !== 'u' || roadAt(d, p[0], p[1]))) { e.x = p[0]; e.y = p[1]; e.mv = true; } else { e.tg = null; e.rt = 0.2; }
@@ -592,7 +593,8 @@
     for (const u of d.units) {
       if (u.hit > 0) u.hit -= DT; u.cd -= DT; u.rt -= DT;
       const o = G.dungeons[u.own];
-      let reg = u.mhp * ((o.race === 'merfolk' ? 0.01 : 0) + (o.mod.regen || 0));
+      let reg = u.mhp * ((o.race === 'merfolk' ? 0.01 : 0) + (o.mod.regen || 0) + (G.hz === 'forest' ? 0.02 : 0));
+      if (G.hz === 'fire' && o.race !== G.st.home && roadAt(d, u.x, u.y)) u.hp = Math.max(1, u.hp - u.mhp * 0.02 * DT); // 용암 분출
       for (const p of pools) if (d2(u, p) < p.def.rad * p.def.rad) reg += p.def.regen;
       if (reg && u.hp < u.mhp) u.hp = Math.min(u.mhp, u.hp + reg * DT);
       if (u.rush > 0) u.rush -= DT;
@@ -623,8 +625,8 @@
             if (ally) { t.hp = Math.min(t.mhp, t.hp + heal * o.mod.atk * (1 + 0.1 * o.up.atk)); shoot(d, u, t, 'heal', 'n1'); fx(d, 'heal', t.x, t.y - 12, 0.4, { c: 'n1' }); snd(d, 'heal'); }
             else strike(G, d, u, t, unitAtk(G, d, u), u.def.splash, o.R.color);
           }
-        } else moveUnit(d, u, t.x, t.y, u.def.spd * o.mod.spd * (u.rush > 0 ? 1.6 : 1));
-      } else moveUnit(d, u, u.hx, u.hy, u.def.spd * o.mod.spd * (u.rush > 0 ? 1.6 : 1));
+        } else moveUnit(d, u, t.x, t.y, u.def.spd * o.mod.spd * (u.rush > 0 ? 1.6 : 1) * (G.hz === 'water' && o.race !== G.st.home ? 0.65 : 1));
+      } else moveUnit(d, u, u.hx, u.hy, u.def.spd * o.mod.spd * (u.rush > 0 ? 1.6 : 1) * (G.hz === 'water' && o.race !== G.st.home ? 0.65 : 1));
       if (u.atkT > 0) u.atkT -= DT;
     }
     // 탑
@@ -689,6 +691,12 @@
   function step(G) {
     if (G.over) return;
     G.t += DT;
+    if (G.haz) { // 지형 현상
+      const h = G.haz;
+      if (h.left > 0) { h.left -= DT; if (h.left <= 0) G.events.push({ t: 'hazEnd' }); }
+      else if (G.t >= h.next) { h.left = DD.HAZ_T.len; h.next = G.t + DD.HAZ_T.every; G.events.push({ t: 'haz', id: G.st.id }); }
+      G.hz = h.left > 0 ? G.st.id : null;
+    }
     if ((G.endless || G.wave < C.WAVES) && G.t >= C.FIRST_WAVE + G.wave * C.WAVE_T) {
       G.wave++;
       if (G.nEnt > 1 && G.thrust[G.wave + 1] == null) G.thrust[G.wave + 1] = Math.floor(G.rnd() * G.nEnt);

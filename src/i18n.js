@@ -6,11 +6,17 @@
 
   // [한국어, 영어, 일본어]
   const D = [
+    ['용암 분출', 'Lava Surge', '溶岩噴出'], ['길 위의 악마와 유닛이 초당 체력 2%를 잃는다', 'Demons and units on roads lose 2% HP per second', '道の上の悪魔とユニットが毎秒HP 2%を失う'],
+    ['모래폭풍', 'Sandstorm', '砂嵐'], ['원거리 유닛과 탑의 피해 -30%', 'Ranged units and towers deal 30% less damage', '遠距離ユニットと塔のダメージ -30%'],
+    ['숲의 숨결', 'Breath of the Forest', '森の息吹'], ['아군 유닛이 초당 체력 2%를 되찾는다', 'Your units regain 2% HP per second', '味方ユニットが毎秒HP 2%回復'],
+    ['밀물', 'High Tide', '満ち潮'], ['악마와 유닛 모두 이동 -35%', 'Demons and units alike move 35% slower', '悪魔もユニットも移動 -35%'],
+    ['악마의 포효', "Demons' Roar", '悪魔の咆哮'], ['악마의 공격 +30%', 'Demons hit 30% harder', '悪魔の攻撃 +30%'],
+    ['∞ 무한 침공', '∞ Endless', '∞ 無限侵攻'], ['· 클리어 후', '· after clearing', '· クリア後'], ['· 무한 침공', '· Endless Invasion', '· 無限侵攻'], ['지형', 'Terrain', '地形'],
     ['길 위에만 세운다 · 악마를 붙잡아 둔다 · 골라서 U로 강화', 'Built on roads only · holds demons in place · select it and press U to upgrade', '道の上にのみ建てる · 悪魔を足止めする · 選んでUで強化'],
     ['길 위에 깐다 · 악마는 부수지 못한다 · 골라서 U로 강화', 'Laid on roads · demons cannot destroy it · select it and press U to upgrade', '道の上に置く · 悪魔には壊せない · 選んでUで強化'],
     ['바닥에 세운다 · 골라서 U로 강화', 'Built on floor tiles · select it and press U to upgrade', '床に建てる · 選んでUで強化'],
     ['더 강화할 수 없습니다', 'It cannot be upgraded further', 'これ以上強化できません'], ['최대 강화', 'Max level', '最大強化'], ['강화 Lv.', 'Upgrade Lv.', '強化 Lv.'],
-    ['계속 버틴다 · 무한 침공', 'Hold on · Endless Invasion', '戦い続ける · 無限侵攻'], ['무한 침공 종료', 'Endless Invasion Over', '無限侵攻 終了'], ['무한 침공', 'Endless Invasion', '無限侵攻'],
+    ['무한 침공 종료', 'Endless Invasion Over', '無限侵攻 終了'], ['무한 침공', 'Endless Invasion', '無限侵攻'],
     ['쓰러질 때까지 버틴다', 'Hold until you fall', '倒れるまで耐えろ'], ['최고 기록 갱신', 'New best record', '最高記録更新'], ['무한', 'endless', '無限'],
     ['같은 병사 셋을 합치면 한 단계 위의 병사가 됩니다.', 'Merge three of the same soldier and you get one of the next tier.', '同じ兵士を三体合わせると、一段上の兵士になります。'],
     ['보병 셋은 궁병이나 마법사 중 고르신 쪽이 됩니다. 인구는 줄고 전력은 오르죠.', 'Three footmen become an archer or a mage, your choice. Fewer mouths, more strength.', '歩兵三体は弓兵か魔法使い、お選びの方になります。人口は減り、戦力は上がります。'],

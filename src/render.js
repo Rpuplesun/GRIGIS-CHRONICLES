@@ -240,6 +240,7 @@
       if (b.rng) dotted(ctx, X + 12, Y + 12, b.rng, 'n1'); if (b.rad) dotted(ctx, X + W2 / 2, Y + W2 / 2, b.rad, 'b1');
     }
     if (ui.box) { const b = ui.box; ctx.fillStyle = P.W; const x0 = Math.min(b.x0, b.x1) | 0, y0 = Math.min(b.y0, b.y1) | 0, w = Math.abs(b.x1 - b.x0) | 0, h = Math.abs(b.y1 - b.y0) | 0; for (let i = 0; i < w; i += 2) { ctx.fillRect(x0 + i, y0, 1, 1); ctx.fillRect(x0 + i, y0 + h, 1, 1); } for (let i = 0; i < h; i += 2) { ctx.fillRect(x0, y0 + i, 1, 1); ctx.fillRect(x0 + w, y0 + i, 1, 1); } }
+    if (G.hz && DD.HAZ[G.hz] && ((TT * 2) | 0) % 2) { const hc = DD.HAZ[G.hz].col; dither(ctx, 6, hc, 0, 0, C.W, 4); dither(ctx, 6, hc, 0, C.H - 4, C.W, 4); dither(ctx, 6, hc, 0, 0, 4, C.H); dither(ctx, 6, hc, C.W - 4, 0, 4, C.H); } // 지형 현상 중에는 테두리가 깜박인다
     if (d.alive && d.heart.hp / d.heart.mhp < 0.3) { dither(ctx, 8, 'r2', 0, 0, C.W, 3); dither(ctx, 8, 'r2', 0, C.H - 3, C.W, 3); dither(ctx, 8, 'r2', 0, 0, 3, C.H); dither(ctx, 8, 'r2', C.W - 3, 0, 3, C.H); }
     if (!d.alive) DD.veil(ctx, 10);
     if (ui.veil > 0) DD.veil(ctx, ui.veil);
