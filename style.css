@@ -193,3 +193,4 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 /* 랜덤 소환·조합 줄, 비행 악마 */
 .slot.short{height:74px}.slot.short em{margin:8px 0 0 30px;font-size:22px}.slot.short .cost{height:30px;flex-direction:row;gap:8px;box-shadow:none}
 .nextw .fly img{filter:hue-rotate(200deg) brightness(1.25)}
+:root:not([lang=ko]) .slot.short .cost{font-size:19px;letter-spacing:-1px;gap:4px}
