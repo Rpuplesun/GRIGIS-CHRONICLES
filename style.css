@@ -55,7 +55,7 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #banner .boss b{color:var(--bad)}#banner .boss{border-color:var(--blood)}
 #banner span{font-size:33px;color:var(--tx)}
 @keyframes ban{0%{opacity:0;transform:scaleY(.2)}8%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
-#herocard{position:absolute;right:120px;top:120px;pointer-events:none}
+#herocard{position:absolute;right:120px;top:470px;pointer-events:none}
 #herocard div{display:flex;align-items:center;gap:22px;padding:16px 30px 20px 16px;background:var(--pn);box-shadow:var(--frame);animation:card 3.6s steps(18) forwards}
 #herocard img{width:128px;height:128px;object-fit:contain;background:var(--edge)}
 #herocard b{display:block;font:44px/1.2 "Galmuri14"}#herocard .g0 b{color:#7cc4ff}#herocard .g1 b{color:#d39bff}#herocard .g2 b{color:var(--gold)}
@@ -89,7 +89,7 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #tip{position:absolute;right:100%;margin-right:12px;width:640px;z-index:30;pointer-events:none;background:var(--edge);font-size:26px;line-height:1.4}#tip[hidden]{display:none}#tip b{color:var(--gold);display:block;font-size:28px}#tip small{font-size:22px}
 #sys{margin-top:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}#sys button{padding:6px 0 10px;font-size:24px}#sys .wide{grid-column:span 2}
 /* ── 결과 ── */
-#result{position:absolute;inset:0;background:#07050ae6;display:flex;align-items:center;justify-content:center;text-align:center}
+#result{position:absolute;inset:0;z-index:60;background:#07050ae6;display:flex;align-items:center;justify-content:center;text-align:center}
 #result>div{background:var(--pn);box-shadow:var(--frame);padding:60px 140px 70px;min-width:1000px}
 #result h1{font:132px/1 "Galmuri14";margin:0 0 30px;letter-spacing:12px;text-shadow:8px 8px 0 var(--edge)}#result h1.good{color:var(--gold)}#result h1.bad{color:var(--bad)}
 #result button{margin-top:30px;font-size:44px;padding:16px 60px 22px}

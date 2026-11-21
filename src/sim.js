@@ -138,7 +138,9 @@
     G.step = () => step(G);
     G.cmd = (di, c) => cmd(G, G.dungeons[di], c);
     G.endT = C.FIRST_WAVE + C.WAVES * C.WAVE_T;
-    G.nextWaveIn = () => (G.wave >= C.WAVES ? G.endT - G.t : C.FIRST_WAVE + G.wave * C.WAVE_T - G.t);
+    G.nextWaveIn = () => (!G.endless && G.wave >= C.WAVES ? G.endT - G.t : C.FIRST_WAVE + G.wave * C.WAVE_T - G.t);
+    // 무한 침공: 이긴 판을 끝내지 않고 21웨이브부터 계속 버틴다
+    G.goEndless = () => { G.over = false; G.win = false; G.endless = true; };
     return G;
   };
 
@@ -194,6 +196,10 @@
     if (b.kind === 'wall') return gv !== 1 ? '방벽은 길 위에만 세울 수 있습니다' : d.ents.some((e) => is(e, cx, cy)) ? '입구는 못 막는다' : null;
     return gv === 1 ? '길 위에는 방벽만' : gv === 2 ? '벽 위에는 못 짓는다' : null;
   };
+  // 방어 시설 강화: 탑(공격·사거리), 방벽(체력·반사), 함정(피해·감속)을 3단계까지. 비용은 지을 때 값의 80% × 지금 단계
+  DD.BLD_LV_MAX = 3;
+  DD.bldUpCost = (d, b) => { if (!['tower', 'wall', 'trap'].includes(b.def.kind) || (b.lv || 1) >= DD.BLD_LV_MAX) return null; const c = DD.bldCost(d, b.def), k = 0.8 * (b.lv || 1); return { g: Math.round(c.g * k), m: Math.round(c.m * k) }; };
+  const lvMul = (b) => 1 + 0.4 * ((b.lv || 1) - 1);
   // 조합 계획: 고른 유닛이 있으면 그 종류에서, 없으면 가장 낮은 등급부터 찾는다. {def, us, to} 또는 null
   DD.mergePlan = function (d, ids) {
     const need = DD.mergeNeed(d.race), own = d.units.filter((u) => u.own === d.i && !u.hero && !u.def.legend && u.hp > 0);
@@ -289,6 +295,13 @@
       const k = c.which === 'H' ? 'rallyH' : 'rallyU';
       if (c.x === undefined) d[k] = null;
       else { if (wallAt(d, c.x, c.y)) return '벽 위에는 세울 수 없습니다'; d[k] = { x: Math.max(C.OX + 8, Math.min(C.OX + GW * T - 8, c.x)), y: Math.max(C.OY + 12, Math.min(C.OY + GH * T - 4, c.y)), n: 0 }; }
+    } else if (c.a === 'upb') {
+      const b = d.blds.find((x) => x.id === c.id); if (!b) return '없음';
+      const cost = DD.bldUpCost(d, b); if (!cost) return '더 강화할 수 없습니다';
+      if (!pay(d, cost)) return '자원 부족';
+      b.lv = (b.lv || 1) + 1; b.paid = { g: b.paid.g + cost.g, m: b.paid.m + cost.m };
+      if (b.def.kind === 'wall') { b.mhp *= 1.5; b.hp *= 1.5; }
+      fx(d, 'hero', b.x, b.y, 0.5, { c: 'g1' }); snd(d, 'up');
     } else if (c.a === 'sell') {
       const b = d.blds.find((x) => x.id === c.id); if (!b) return '없음';
       const k = 0.5 * (b.hp / b.mhp); d.gold += Math.floor(b.paid.g * k); d.mat += Math.floor(b.paid.m * k); b.hp = 0; snd(d, 'coin');
@@ -399,12 +412,12 @@
     if (t.k === 'd' && t.hp <= 0 && !t.dead) {
       t.dead = true; d.kills++; if (src && src.k === 'u') { src.kills++; promote(d, src); }
       const kg = t.def.gold * (t.gm || 1) * G.D.gold * d.mod.gold * (d.mod.kg || 1) * (1 + 0.2 * Math.min(3, d.bc.hoard || 0)); d.gold += kg;
-      if (t.def.spr === 'd_boss' && G.wave < C.WAVES && !G.tutorial) offerBoon(G, d);
+      if (t.def.spr === 'd_boss' && (G.endless || G.wave < C.WAVES) && !G.tutorial) offerBoon(G, d);
       d.mat += (t.def.mat || 0) + (G.rnd() < 0.1 ? 1 : 0);
       fx(d, 'corpse', t.x, t.y, 0.5, { s: t.gim ? 'd_lord_' + t.gim : t.def.spr, face: t.face }); fx(d, 'smoke', t.x, t.y, 0.5); fx(d, 'gold', t.x, t.y - 14, 0.7, { n: Math.round(kg) });
       snd(d, t.def.spr === 'd_boss' ? 'bossdie' : 'die');
     }
-    if (t.k === 'b' && t.def.thorn && src && src.k === 'd') hurt(G, d, null, src, t.def.thorn);
+    if (t.k === 'b' && t.def.thorn && src && src.k === 'd') hurt(G, d, null, src, t.def.thorn * lvMul(t));
   }
   function strike(G, d, src, t, amt, splash, col) {
     if (src.def.rng > 30 || src.k === 'b') { const k = src.k === 'd' ? 'orb' : SHOT[src.k === 'u' ? G.dungeons[src.own].race : d.race]; shoot(d, src, t, k, col); snd(d, k); }
@@ -482,7 +495,7 @@
     const easy = G.tutorial ? (w <= 5 ? 0.6 : 0.85) : 1; // 튜토리얼의 첫 다섯 웨이브는 약하다
     const ne = d.ents.length, th = G.thrust[w], rest = d.ents.map((e, i) => i).filter((i) => i !== th); // 주공 입구로 6할, 나머지는 고르게
     const entOf = (i) => (ne < 2 || th == null ? 0 : i % 5 < 3 ? th : rest[((i / 5) | 0) % rest.length]);
-    list.forEach((t, i) => d.queue.push({ ent: t === 'boss' ? 0 : entOf(i), at: G.t + (i / list.length) * 25, t, hp: sc.hp * G.st.mul * easy * D.hp * (mu.hp || 1), atk: sc.atk * Math.sqrt(G.st.mul) * D.atk * (mu.atk || 1), spd: mu.spd || 1, gm: mu.gold || 1, gim: t === 'boss' ? DD.BOSS[w] || null : null }));
+    list.forEach((t, i) => d.queue.push({ ent: t === 'boss' ? 0 : entOf(i), at: G.t + (i / list.length) * 25, t, hp: sc.hp * G.st.mul * easy * D.hp * (mu.hp || 1), atk: sc.atk * Math.sqrt(G.st.mul) * D.atk * (mu.atk || 1), spd: mu.spd || 1, gm: mu.gold || 1, gim: t === 'boss' ? DD.BOSS[w] || (w > C.WAVES ? 'all' : null) : null }));
     d.queue.sort((a, b) => a.at - b.at);
   }
 
@@ -514,8 +527,8 @@
     { // 함정: 서 있는 칸의 함정이 듣는다(군주는 늪에 반만 걸린다)
       const tcx0 = tx(e.x), tcy0 = ty(e.y), tr = inG(tcx0, tcy0) ? d.occ[key(tcx0, tcy0)] : null; e.slow = 1;
       if (tr && tr.def.kind === 'trap') {
-        if (tr.def.slow) e.slow = e.def.spr === 'd_boss' ? (1 + tr.def.slow) / 2 : tr.def.slow;
-        if (tr.def.dmg) { e.tt = (e.tt || 0) - DT; if (e.tt <= 0) { e.tt = tr.def.every; tr.hit = 0.3; hurt(G, d, tr, e, tr.def.dmg * (1 + 0.15 * d.up.bld) * d.mod.atk); fx(d, 'hit', e.x, e.y - 3, 0.17, { c: 'W' }); if (e.hp <= 0) return; } }
+        if (tr.def.slow) { const sl = tr.def.slow - 0.1 * ((tr.lv || 1) - 1); e.slow = e.def.spr === 'd_boss' ? (1 + sl) / 2 : sl; }
+        if (tr.def.dmg) { e.tt = (e.tt || 0) - DT; if (e.tt <= 0) { e.tt = tr.def.every; tr.hit = 0.3; hurt(G, d, tr, e, tr.def.dmg * lvMul(tr) * (1 + 0.15 * d.up.bld) * d.mod.atk); fx(d, 'hit', e.x, e.y - 3, 0.17, { c: 'W' }); if (e.hp <= 0) return; } }
       }
     }
     const ranged = e.def.rng > 30, boss = e.def.spr === 'd_boss';
@@ -621,9 +634,9 @@
       b.cd -= DT;
       if (b.cd <= 0) {
         // 사거리 안에서 심장에 가장 가까이 온 악마부터 쏜다(같으면 가까운 쪽)
-        let t = null, best = Infinity; const r2 = b.def.rng * b.def.rng;
+        let t = null, best = Infinity; const rg = b.def.rng * (1 + 0.1 * ((b.lv || 1) - 1)), r2 = rg * rg;
         for (const e of d.demons) { if (e.hp <= 0) continue; const q = d2(b, e); if (q >= r2) continue; const sc = prog(d, e) * 1e5 + q; if (sc < best && (e.def.fly || los(d, b, e))) { best = sc; t = e; } }
-        if (t) { b.cd = b.def.as; strike(G, d, b, t, b.def.atk * (1 + 0.15 * d.up.bld) * d.mod.atk, b.def.splash, d.R.color); } else b.cd = 0.2;
+        if (t) { b.cd = b.def.as; strike(G, d, b, t, b.def.atk * lvMul(b) * (1 + 0.15 * d.up.bld) * d.mod.atk, b.def.splash, d.R.color); } else b.cd = 0.2;
       }
     }
     // 악마
@@ -676,8 +689,9 @@
   function step(G) {
     if (G.over) return;
     G.t += DT;
-    if (G.wave < C.WAVES && G.t >= C.FIRST_WAVE + G.wave * C.WAVE_T) {
+    if ((G.endless || G.wave < C.WAVES) && G.t >= C.FIRST_WAVE + G.wave * C.WAVE_T) {
       G.wave++;
+      if (G.nEnt > 1 && G.thrust[G.wave + 1] == null) G.thrust[G.wave + 1] = Math.floor(G.rnd() * G.nEnt);
       G.dungeons.forEach((d) => { if (d.alive) { d.wavesCleared = G.wave - 1; spawnWave(G, d, G.wave); } });
       for (const d of G.dungeons) if (d.alive && !d.bot && !G.tutorial && G.wave >= 2 && G.wave % 5 && G.rnd() < 0.5) {
         const ks = Object.keys(DD.MISSION), k = ks[Math.floor(G.rnd() * ks.length)];
@@ -686,7 +700,7 @@
       G.events.push({ t: 'wave', w: G.wave, mut: G.muts[G.wave] || null });
     }
     for (const d of G.dungeons) if (d.alive) stepDungeon(G, d);
-    if (!G.over && G.t >= G.endT) { G.over = true; G.win = true; G.dungeons.forEach((d) => d.alive && (d.wavesCleared = C.WAVES)); }
+    if (!G.over && !G.endless && G.t >= G.endT) { G.over = true; G.win = true; G.dungeons.forEach((d) => d.alive && (d.wavesCleared = C.WAVES)); }
   }
 
   // ── 봇(동맹 AI 겸 밸런스 시험용). 어떤 길 모양에서도 자리를 스스로 찾는다 ──
@@ -723,6 +737,7 @@
     if (w >= 3 && build(2, 'tower', Math.min(6, Math.floor(w / 2)))) return;
     if (w >= 5 && own.length >= 8 && build(1, 'far', 1)) return;
     if (w >= 6 && build(3, 'wall', 3)) return;
+    if (w >= 9) { const tb = d.blds.find((b) => b.def.kind === 'tower' && DD.bldUpCost(d, b)), tc = tb && DD.bldUpCost(d, tb); if (tc && can({ g: tc.g + 200, m: tc.m })) { G.cmd(d.i, { a: 'upb', id: tb.id }); return; } }
     if (w >= 8 && d.altarLv < 3) { const c = DD.upCost(d, 'altar'); if (c && can({ g: c.g + 100, m: c.m })) { G.cmd(d.i, { a: 'up', k: 'altar' }); return; } }
     for (const k of d.up.atk <= d.up.hp ? ['atk', 'hp'] : ['hp', 'atk']) {
       const c = DD.upCost(d, k);

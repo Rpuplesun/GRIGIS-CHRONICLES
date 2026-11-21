@@ -27,7 +27,7 @@
   }
   const fmtMeta = (m) => (lv) => '+' + (m.unit === '%' ? pct(m.per * lv) + '%' : m.per * lv);
   function drawMenu() {
-    const rs = save.races[menu.race], R = DD.RACES[menu.race], best = rs.best || {}, rec = rs.rec || {}, DF = DD.DIFFS[menu.diff];
+    const rs = save.races[menu.race], R = DD.RACES[menu.race], best = rs.best || {}, rec = rs.rec || {}, endl = rs.endless || {}, DF = DD.DIFFS[menu.diff];
     const xm = (v) => '×' + v;
     if (menu.stage > rs.stage) menu.stage = rs.stage;
     $('#menu').innerHTML = `
@@ -43,7 +43,7 @@
       <section><h2>스테이지 <span class="row"><span class="lbl">난이도</span>${DD.DIFFS.map((x, i) => `<button class="${menu.diff === i ? 'on' : ''}" data-m="diff:${i}">${x.name}</button>`).join('')}</span></h2>
         <p class="diffnote">악마 체력 ${xm(DF.hp)} · 공격 ${xm(DF.atk)} · 골드 ${xm(DF.gold)} · <span class="gold">영혼석 ${xm(DF.shard)}</span></p><div class="cards c3">${DD.stageOrder(menu.race).map((id, i) => { const st = DD.stageOf(menu.race, i), lock = i > rs.stage, demo = DD.DEMO && i > 0; return `
         <button class="card ${menu.stage === i ? 'on' : ''}" ${lock || demo ? 'disabled' : ''} data-m="stage:${i}">
-          <b>${i + 1}. ${st.name}</b><small>${demo ? '정식 버전에서' : lock ? '잠김' : st.desc} · 악마 ×${st.mul}</small><small>${[st.mods[menu.race] || !(DD.entCount(i, menu.diff) > 1) ? modText(st, menu.race) : '', DD.entCount(i, menu.diff) > 1 ? `입구 ${DD.entCount(i, menu.diff)}` : '', DD.layoutOf(i) === 'center' ? '심장 중앙' : ''].filter(Boolean).join(' · ')}</small>${rec[i] ? `<small class="rec"><span class="stars">${'★'.repeat(rec[i].s)}${'☆'.repeat(3 - rec[i].s)}</span> ${DD.DIFFS[rec[i].d].name}</small>` : best[i] ? `<small class="rec">${best[i] > C.WAVES ? '✔ 클리어' : `최고 웨이브 ${best[i]}/${C.WAVES}`}</small>` : ''}
+          <b>${i + 1}. ${st.name}</b><small>${demo ? '정식 버전에서' : lock ? '잠김' : st.desc} · 악마 ×${st.mul}</small><small>${[st.mods[menu.race] || !(DD.entCount(i, menu.diff) > 1) ? modText(st, menu.race) : '', DD.entCount(i, menu.diff) > 1 ? `입구 ${DD.entCount(i, menu.diff)}` : '', DD.layoutOf(i) === 'center' ? '심장 중앙' : ''].filter(Boolean).join(' · ')}</small>${rec[i] ? `<small class="rec"><span class="stars">${'★'.repeat(rec[i].s)}${'☆'.repeat(3 - rec[i].s)}</span> ${DD.DIFFS[rec[i].d].name}${endl[i] ? ` · ∞ ${endl[i]}` : ''}</small>` : best[i] ? `<small class="rec">${best[i] > C.WAVES ? '✔ 클리어' : `최고 웨이브 ${best[i]}/${C.WAVES}`}</small>` : ''}
         </button>`; }).join('')}</div></section>
       <section><h2>영구 강화 <span class="gold">${ic('ui_shard')} ${rs.shards}</span></h2><div class="cards c3">${DD.META.map((m) => { const fmt = fmtMeta(m), lv = rs.meta[m.k] || 0, cost = DD.metaCost(lv), max = lv >= DD.META_MAX; return `
         <button class="card" ${max || rs.shards < cost ? 'disabled' : ''} data-m="meta:${m.k}">
@@ -53,7 +53,7 @@
       <footer><button class="start" data-m="start:1">출전</button><button data-m="story:1">이야기</button><button data-m="tutorial:1">튜토리얼</button><button data-m="settings:1">설정</button>
         <details class="help"><summary>조작법</summary><div class="helpbox">
         <p><b>유닛</b> 클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R Y 소환 · T 영웅 · X 영웅 기술 · B V 조합 · 소환소나 제단을 누르면 집결지 지정</p>
-        <p><b>건물</b> A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · H J 함정 · 거점 위는 체력 +25% · 고른 건물 Del 철거</p>
+        <p><b>건물</b> A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · H J 함정 · 거점 위는 체력 +25% · 고른 건물 U 강화 · Del 철거</p>
         <p><b>길 편집</b> E (Z 길, X 벽, C 지우기, 우클릭 지우기, Ctrl+Z 되돌리기) · 길 최대 ${C.ROAD_MAX}, 벽 최대 ${C.WALL_MAX} · 입구↔심장 연결 필수</p>
         <p><b>기타</b> 1 2 3 속도 · Space 일시정지 · N 다음 웨이브(보너스 골드) · Tab 지도 · Esc 취소 · 한글 입력 상태에서도 단축키가 듣는다</p></div></details></footer>`;
   }
@@ -169,13 +169,13 @@
   const spotOf = () => (script.goal && script.steps[script.i] ? script.steps[script.i].hl : null);
   const slot = (act, body, tip, o) => `<button class="slot ${o.on ? 'on' : ''} ${o.cls || ''} ${spotOf() === act ? 'spot' : ''}" data-a="${act}" data-tip="${tip.replace(/"/g, '&quot;')}" ${o.dim ? 'data-dim="1"' : ''}>${o.key ? `<kbd>${o.key}</kbd>` : ''}${body}</button>`;
   const grp = (name, slots, cls) => `<div class="grp ${cls || ''}"><h3>${name}</h3><div class="slots">${slots}</div></div>`;
-  const nextWave = () => { if (G.wave >= C.WAVES) return '마지막 웨이브'; const c = {}, mu = DD.MUTS[G.muts[G.wave + 1]]; const bg = DD.BOSS_GIM[DD.BOSS[G.wave + 1]]; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => { const m = t === 'boss' && bg && !G.tutorial ? Object.assign({}, DD.DEMONS[t], bg, DD.ATLAS.frames['d_lord_' + DD.BOSS[G.wave + 1]] ? { spr: 'd_lord_' + DD.BOSS[G.wave + 1] } : {}) : DD.DEMONS[t]; return `<span class="${m.fly ? 'fly' : ''}" data-tip="<b>${m.name} ×${c[t]}</b>${m.desc}">${icon(m.spr, 2)}${c[t]}</span>`; }).join(' ') + (G.thrust[G.wave + 1] != null ? ` <span class="thr" data-tip="<b>주공 · ${DD.gateName(me().ents[G.thrust[G.wave + 1]])} 입구</b>다음 웨이브의 악마 열에 여섯이 이 입구로 온다">주공 ${DD.gateName(me().ents[G.thrust[G.wave + 1]])}</span>` : '') + (mu ? ` <span class="mut" data-tip="<b>변이 · ${mu.name}</b>${mu.desc}">${mu.name}</span>` : ''); };
+  const nextWave = () => { if ((!G.endless && G.wave >= C.WAVES)) return '마지막 웨이브'; const c = {}, mu = DD.MUTS[G.muts[G.wave + 1]]; const bg = DD.BOSS_GIM[DD.BOSS[G.wave + 1]]; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => { const m = t === 'boss' && bg && !G.tutorial ? Object.assign({}, DD.DEMONS[t], bg, DD.ATLAS.frames['d_lord_' + DD.BOSS[G.wave + 1]] ? { spr: 'd_lord_' + DD.BOSS[G.wave + 1] } : {}) : DD.DEMONS[t]; return `<span class="${m.fly ? 'fly' : ''}" data-tip="<b>${m.name} ×${c[t]}</b>${m.desc}">${icon(m.spr, 2)}${c[t]}</span>`; }).join(' ') + (G.thrust[G.wave + 1] != null ? ` <span class="thr" data-tip="<b>주공 · ${DD.gateName(me().ents[G.thrust[G.wave + 1]])} 입구</b>다음 웨이브의 악마 열에 여섯이 이 입구로 온다">주공 ${DD.gateName(me().ents[G.thrust[G.wave + 1]])}</span>` : '') + (mu ? ` <span class="mut" data-tip="<b>변이 · ${mu.name}</b>${mu.desc}">${mu.name}</span>` : ''); };
   const UKEY = ['Q', 'W', 'R', 'Y'], BKEY = ['A', 'S', 'D', 'F', 'G', 'H', 'J'];
   function drawHud() {
     const d = me(), R = d.R, own = d.units.filter((u) => u.own === d.i).length, hp = d.heart.hp / d.heart.mhp;
     const next = G.nextWaveIn(), span = G.wave === 0 ? C.FIRST_WAVE : C.WAVE_T;
-    set('#top', `<div class="stage">${G.st.name} · ${R.name}${G.diff !== 1 ? ' · ' + G.D.name : ''}</div><div class="timer">${mmss(G.endT - G.t)}</div>
-      <div class="wave"><b>WAVE ${G.wave}<small style="display:inline">/${C.WAVES}</small></b><small>다음 ${mmss(next)}</small></div>${DD.canCall(G) ? `<button class="call" data-a="callwave:1"><kbd>N</kbd> ${G.wave >= C.WAVES ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'} <span class="gold">+●${DD.callBonus(G)}</span></button>` : `<button class="call" disabled><kbd>N</kbd> ${G.wave >= C.WAVES ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'}</button>`}
+    set('#top', `<div class="stage">${G.st.name} · ${R.name}${G.diff !== 1 ? ' · ' + G.D.name : ''}</div><div class="timer">${G.endless ? '∞' : mmss(G.endT - G.t)}</div>
+      <div class="wave"><b>WAVE ${G.wave}<small style="display:inline">${G.endless ? ' 무한' : '/' + C.WAVES}</small></b><small>다음 ${mmss(next)}</small></div>${DD.canCall(G) ? `<button class="call" data-a="callwave:1"><kbd>N</kbd> ${(!G.endless && G.wave >= C.WAVES) ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'} <span class="gold">+●${DD.callBonus(G)}</span></button>` : `<button class="call" disabled><kbd>N</kbd> ${(!G.endless && G.wave >= C.WAVES) ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'}</button>`}
       <div class="nextw">${nextWave()}</div>
       <div class="prog"><i style="width:${Math.round(Math.max(0, 1 - next / span) * 50) * 2}%"></i></div>
       <div class="res"><span class="gold">${ic('ui_coin')} ${Math.floor(d.gold)}</span><span class="mat">${ic('ui_crate')} ${Math.floor(d.mat)}</span><span class="pop">${ic('ui_pop')} 인구 ${own}/${d.pop}</span></div>
@@ -197,7 +197,7 @@
         const hn = d.units.filter((u) => u.hero && u.own === d.i).length, sk = hn && d.skillT <= 0;
         const skill = slot('skill:1', `<em>기술</em><span class="cost">${!hn ? '—' : sk ? '준비!' : mmss(d.skillT)}</span>`, `<b>영웅 기술</b>살아 있는 영웅이 모두 기술을 쓴다 · 대기 ${DD.SKILL_CD}초<small>${Object.keys(DD.HERO_SKILL).map((r) => `${DD.HERO_ROLES[r].label} · ${DD.HERO_SKILL[r].name} — ${DD.HERO_SKILL[r].desc}`).join('<br>')}</small>`, { key: 'X', cls: 'mini' + (sk ? ' ready' : ''), dim: !sk });
         return one(0, 'B') + skill + one(1, 'V'); })());
-    const bslots = R.blds.map((b, i) => { const c = DD.bldCost(d, b), have = d.bc[b.id] || 0, full = have >= DD.bldMax(b); return slot('build:' + i, `${b.kind === 'trap' ? icon(b.spr, 2) : icon(b.spr + '@' + d.race, 2)}${full ? '<span class="cost">최대</span>' : cost(c, d)}`, `<b>${b.name}</b>${ic('ui_coin')} ${c.g}${c.m ? ' ' + ic('ui_crate') + ' ' + c.m : ''} · 보유 ${have}/${DD.bldMax(b)}<br>${b.desc}${b.atk ? `<br>공격 ${b.atk} · 사거리 ${b.rng} · 간격 ${b.as}초${b.splash ? ' · 범위' : ''}` : ''}<small>${b.kind === 'wall' ? '길 위에만 세운다 · 악마를 붙잡아 둔다' : b.kind === 'trap' ? '길 위에 깐다 · 악마는 부수지 못한다' : b.size === 2 ? '바닥 2×2칸에 세운다' : '바닥에 세운다'}</small>`, { dim: full || no(c), on: ui.build === i, key: BKEY[i] }); });
+    const bslots = R.blds.map((b, i) => { const c = DD.bldCost(d, b), have = d.bc[b.id] || 0, full = have >= DD.bldMax(b); return slot('build:' + i, `${b.kind === 'trap' ? icon(b.spr, 2) : icon(b.spr + '@' + d.race, 2)}${full ? '<span class="cost">최대</span>' : cost(c, d)}`, `<b>${b.name}</b>${ic('ui_coin')} ${c.g}${c.m ? ' ' + ic('ui_crate') + ' ' + c.m : ''} · 보유 ${have}/${DD.bldMax(b)}<br>${b.desc}${b.atk ? `<br>공격 ${b.atk} · 사거리 ${b.rng} · 간격 ${b.as}초${b.splash ? ' · 범위' : ''}` : ''}<small>${b.kind === 'wall' ? '길 위에만 세운다 · 악마를 붙잡아 둔다 · 골라서 U로 강화' : b.kind === 'trap' ? '길 위에 깐다 · 악마는 부수지 못한다 · 골라서 U로 강화' : b.kind === 'tower' ? '바닥에 세운다 · 골라서 U로 강화' : b.size === 2 ? '바닥 2×2칸에 세운다' : '바닥에 세운다'}</small>`, { dim: full || no(c), on: ui.build === i, key: BKEY[i] }); });
     const blds = bslots.filter((x, i) => i !== 3 && i < 5).join('');
     maze = bslots[3] + bslots[5] + bslots[6] + maze;
     const ac = DD.upCost(d, 'altar'), ap = DD.ALTAR[d.altarLv - 1].p;
@@ -229,7 +229,10 @@
       G.dungeons.forEach((x) => { if (x.i !== d.i && x.alive) info += ` <button data-a="support:${x.i}">→ ${x.R.name}</button>`; });
     } else if (ui.selB) {
       const b = d.blds.find((x) => x.id === ui.selB);
-      if (b) info = `<b>${b.def.name}</b> · ♥ ${Math.ceil(b.hp)}/${Math.ceil(b.mhp)} · ${b.def.desc} <button data-a="sell:${b.id}">철거 (50% 환급) · Del</button>`;
+      if (b) { const uc = DD.bldUpCost(d, b), lv = b.lv || 1, canUp = ['tower', 'wall', 'trap'].includes(b.def.kind);
+        info = `<b>${b.def.name}${canUp ? ' Lv.' + lv : ''}</b>${b.def.kind === 'trap' ? '' : ` · ♥ ${Math.ceil(b.hp)}/${Math.ceil(b.mhp)}`} · ${b.def.desc}`
+          + (uc ? ` <button data-a="upb:${b.id}" ${d.gold < uc.g || d.mat < uc.m ? 'data-dim="1"' : ''}>강화 Lv.${lv + 1} · ${ic('ui_coin')}${uc.g}${uc.m ? ' ' + ic('ui_crate') + uc.m : ''} · U</button>` : canUp ? ' <span class="gold">최대 강화</span>' : '')
+          + ` <button data-a="sell:${b.id}">철거 (50% 환급) · Del</button>`; }
     }
     set('#info', (paused && !ui.edit ? '<b class="gold">Ⅱ 일시정지</b> · ' : '') + info); $('#info').hidden = !!ui.world;
   }
@@ -251,7 +254,7 @@
     if (q.k === 'd') { const bg = e.gim && DD.BOSS_GIM[e.gim]; return `<b>${bg ? bg.name : e.def.name}</b>${hp} · 공격 ${Math.round(e.atk)}${e.def.rng > 30 ? ' · 원거리' : ''}<small>${bg ? bg.desc + ' · 중장갑' : e.def.desc}</small>`; }
     if (q.k === 'u') { const o = G.dungeons[e.own]; return `<b>${e.hero ? `[${DD.GRADES[e.hero.grade].id}] ` : ''}${e.def.name}</b>${hp} · 처치 ${e.kills}${e.rk ? ` · <span class="gold">${DD.RANKS[e.rk]}</span>` : e.hero || e.def.legend ? '' : ` <small style="display:inline">(${DD.RANK_KILLS[1]}에 승급)</small>`}${e.own !== d.i ? `<small>${o.R.name} 지원군</small>` : e.hero ? `<small>${DD.HERO_ROLES[e.hero.role].label}</small>` : ''}`; }
     if (e.def.kind === 'trap') return `<b>${e.def.name}</b>${e.def.desc}<small>고른 뒤 Del로 걷는다</small>`;
-    return `<b>${e.def.name}</b>${hp}<br>${e.def.desc}${e.def.atk ? `<small>공격 ${e.def.atk} · 사거리 ${e.def.rng}</small>` : ''}`;
+    return `<b>${e.def.name}</b>${hp}<br>${e.def.desc}${e.def.atk ? `<small>공격 ${Math.round(e.def.atk * (1 + 0.4 * ((e.lv || 1) - 1)))} · 사거리 ${Math.round(e.def.rng * (1 + 0.1 * ((e.lv || 1) - 1)))}${e.lv > 1 ? ' · Lv.' + e.lv : ''}</small>` : ''}`;
   }
   function pickAt(p) {
     const d = G.dungeons[ui.view]; let best = null, bd = 120;
@@ -292,6 +295,7 @@
     else if (k === 'hero') act({ a: 'hero' });
     else if (k === 'skill') act({ a: 'skill' });
     else if (k === 'sell') { act({ a: 'sell', id: +v }); ui.selB = null; }
+    else if (k === 'upb') act({ a: 'upb', id: +v });
     else if (k === 'dismiss') { if (act({ a: 'dismiss', ids: [...ui.sel] })) ui.sel.clear(); }
     else if (k === 'support') { if (act({ a: 'support', ids: [...ui.sel], to: +v })) ui.sel.clear(); }
     lastHtml = {}; drawHud();
@@ -406,6 +410,7 @@
     else if (mine && BCODE.includes(k)) { if (!rep && applyEdit()) { const i = BCODE.indexOf(k); ui.build = ui.build === i ? -1 : i; ui.ghost = null; ui.sel.clear(); ui.selB = null; } }
     else if (k === 'Space') { ev.preventDefault(); if (!rep) togglePause(); }
     else if (k in SCODE) setSpeed(SCODE[k]);
+    else if (k === 'KeyU' && mine && ui.selB) { if (!rep) act({ a: 'upb', id: ui.selB }); }
     else if ((k === 'Delete' || k === 'Backspace') && mine && ui.selB) { ev.preventDefault(); act({ a: 'sell', id: ui.selB }); ui.selB = null; }
   });
 
@@ -463,6 +468,7 @@
   }
   function finish() {
     const d = me(), rs = save.races[d.race];
+    if (G.endless) return finishEndless();
     let sh = G.quit ? 0 : DD.shardsFor(G.stage, d.wavesCleared, G.win, G.diff), recLine = '';
     if (G.win && !G.tutorial && !G.quit) { // 기록 갱신: 더 높은 난이도, 같은 난이도면 별이 더 많을 때. 오른 만큼 영혼석을 더 준다
       const s = DD.starsFor(d.heart.hp / d.heart.mhp), sc = (r) => (r ? r.d * 3 + r.s : 0), old = (rs.rec = rs.rec || {})[G.stage], now = { d: G.diff, s };
@@ -487,11 +493,30 @@
       <div class="stats"><span><b>${d.wavesCleared}/${C.WAVES}</b>웨이브</span><span><b>${d.kills}</b>처치</span><span><b>${mmss(G.t)}</b>시간</span>
         <span><b>${d.nSum}</b>소환</span><span><b>${d.heroN}</b>영웅</span><span><b>${d.alive ? pct(d.heart.hp / d.heart.mhp) + '%' : '함락'}</b>심장</span></div>
       <p class="gold">${ic('ui_shard')} 영혼석 +${sh}${sh && !G.tutorial ? ` (보유 ${rs.shards})` : ''}</p>${unlocked}${tipL ? `<p class="tip">팁 · ${tipL}</p>` : ''}
-      ${nextOk ? '<button id="next2" class="on">다음 스테이지 ▸</button> ' : ''}${tut || G.tutorial ? '' : `<button id="again" class="${nextOk ? '' : 'on'}">다시 도전</button> `}<button id="back">${tut ? '종족 선택' : '돌아가기'}</button>
+      ${nextOk ? '<button id="next2" class="on">다음 스테이지 ▸</button> ' : ''}${G.win && !G.tutorial && !DD.DEMO && d.alive ? '<button id="endless">계속 버틴다 · 무한 침공</button> ' : ''}${tut || G.tutorial ? '' : `<button id="again" class="${nextOk ? '' : 'on'}">다시 도전</button> `}<button id="back">${tut ? '종족 선택' : '돌아가기'}</button>
       <small>Enter · ${nextOk ? '다음 스테이지' : tut || G.tutorial ? '종족 선택' : '다시 도전'}</small></div>`;
     $('#result').hidden = false;
     if ($('#again')) $('#again').onclick = () => startGame();
+    if ($('#endless')) $('#endless').onclick = () => { // 이긴 판을 이어서 21웨이브부터
+      $('#result').hidden = true; G.goEndless(); paused = false; acc = 0; lastHtml = {}; ui.music = G.st.id;
+      DD.Audio.ambience(G.st.id); DD.Music.play(G.st.id); banner('무한 침공', '쓰러질 때까지 버틴다', true); last = performance.now(); requestAnimationFrame(loop);
+    };
     if ($('#next2')) $('#next2').onclick = () => { menu.stage = G.stage + 1; startGame(); };
+    $('#back').onclick = () => { G = null; $('#game').hidden = true; $('#result').hidden = true; showMenu(); };
+  }
+  function finishEndless() { // 무한 침공이 끝났다: 20웨이브 뒤로 버틴 만큼 영혼석, 스테이지별 최고 기록
+    const d = me(), rs = save.races[d.race], extra = Math.max(0, d.wavesCleared - C.WAVES);
+    const sh = Math.round(extra * 3 * (1 + G.stage * 0.5) * G.D.shard), best = (rs.endless = rs.endless || {}), isBest = extra > 0 && d.wavesCleared > (best[G.stage] || 0);
+    if (isBest) best[G.stage] = d.wavesCleared; rs.shards += sh; persist();
+    DD.Audio.stopAmbience(); DD.Music.play('defeat', { fade: 0.4 }); dlg = null; drawDlg(); setGoal('');
+    $('#result').innerHTML = `<div><h1 class="gold">무한 침공 종료</h1>
+      <p>${d.R.name} · ${G.st.name} · ${G.D.name}</p>
+      <div class="stats"><span><b>${d.wavesCleared}</b>웨이브</span><span><b>${d.kills}</b>처치</span><span><b>${mmss(G.t)}</b>시간</span></div>
+      ${isBest ? '<p class="good">최고 기록 갱신</p>' : best[G.stage] ? `<p>최고 기록 ${best[G.stage]}웨이브</p>` : ''}
+      <p class="gold">${ic('ui_shard')} 영혼석 +${sh} (보유 ${rs.shards})</p>
+      <button id="again" class="on">다시 도전</button> <button id="back">돌아가기</button><small>Enter · 다시 도전</small></div>`;
+    $('#result').hidden = false;
+    $('#again').onclick = () => startGame();
     $('#back').onclick = () => { G = null; $('#game').hidden = true; $('#result').hidden = true; showMenu(); };
   }
   // ───────── 설정(배경음악·효과음 음량, 번쩍임). 메뉴의 설정 버튼, 게임 중 ⚙ 또는 Esc ─────────

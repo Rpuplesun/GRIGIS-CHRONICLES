@@ -173,6 +173,7 @@
     }));
     for (const b of d.blds) if (b.def.kind === 'trap') { // 함정은 바닥에 깔린다
       DD.blit(ctx, b.def.spr, b.def.slow ? ((TT * 3 + b.id) | 0) % 4 : b.hit > 0.2 ? 1 : b.hit > 0.1 ? 2 : b.hit > 0 ? 3 : 0, b.x, b.y + 12); // 늪은 끓고, 가시는 악마가 밟을 때 튀어나온다
+      if (b.lv > 1) { ctx.fillStyle = P.K; ctx.fillRect(b.x + 5, b.y + 6, 2 + (b.lv - 1) * 3, 4); ctx.fillStyle = P.g1; for (let i = 0; i < b.lv - 1; i++) ctx.fillRect(b.x + 6 + i * 3, b.y + 7, 2, 2); }
       if (ui.selB === b.id) ring(ctx, Math.round(b.x), Math.round(b.y), 11, 'n1', true);
     }
     const all = d.blds.filter((b) => b.def.kind !== 'trap').concat(d.units, d.demons).sort((a, b) => (a.k === 'b' ? a.y + 8 : a.y) - (b.k === 'b' ? b.y + 8 : b.y));
@@ -184,8 +185,9 @@
         if (big && DD.ATLAS.frames[bk]) { c = DD.blit(ctx, bk, fr, e.x, e.y + 24, false, wh); c = { height: c.height - 11 }; } // 2×2 전용 그림
         else if (big) { ctx.save(); ctx.translate(e.x, e.y + 25); ctx.scale(2, 2); c = DD.blit(ctx, id, fr, 0, 0, false, wh); ctx.restore(); c = { height: c.height * 2 - 12 }; } // 전용 그림이 없으면 두 배로 그린다
         else c = DD.blit(ctx, id, fr, e.x, e.y + 13, false, wh);
+        if (e.lv > 1) { ctx.fillStyle = P.K; ctx.fillRect(e.x + 6, e.y + 6, 2 + (e.lv - 1) * 3, 4); ctx.fillStyle = P.g1; for (let i = 0; i < e.lv - 1; i++) ctx.fillRect(e.x + 7 + i * 3, e.y + 7, 2, 2); } // 강화 단계
         if (e.hp < e.mhp) bar(ctx, e.x - (big ? 14 : 8), e.y + 13 - c.height - 2, big ? 28 : 16, e.hp / e.mhp, 's2');
-        if (ui.selB === e.id) { ctx.fillStyle = P.n1; (big ? [[-25, -25], [23, -25], [-25, 23], [23, 23]] : [[-13, -13], [11, -13], [-13, 11], [11, 11]]).forEach(([a1, b1]) => ctx.fillRect(e.x + a1, e.y + b1, 2, 2)); if (e.def.rng) dotted(ctx, e.x, e.y, e.def.rng, 'n1'); if (e.def.rad) dotted(ctx, e.x, e.y, e.def.rad, 'b1'); }
+        if (ui.selB === e.id) { ctx.fillStyle = P.n1; (big ? [[-25, -25], [23, -25], [-25, 23], [23, 23]] : [[-13, -13], [11, -13], [-13, 11], [11, 11]]).forEach(([a1, b1]) => ctx.fillRect(e.x + a1, e.y + b1, 2, 2)); if (e.def.rng) dotted(ctx, e.x, e.y, Math.round(e.def.rng * (1 + 0.1 * ((e.lv || 1) - 1))), 'n1'); if (e.def.rad) dotted(ctx, e.x, e.y, e.def.rad, 'b1'); }
       } else {
         const x0 = Math.round(e.x), y0 = Math.round(e.y);
         if (e.k === 'u') {

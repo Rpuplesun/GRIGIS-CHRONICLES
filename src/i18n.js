@@ -6,6 +6,12 @@
 
   // [한국어, 영어, 일본어]
   const D = [
+    ['길 위에만 세운다 · 악마를 붙잡아 둔다 · 골라서 U로 강화', 'Built on roads only · holds demons in place · select it and press U to upgrade', '道の上にのみ建てる · 悪魔を足止めする · 選んでUで強化'],
+    ['길 위에 깐다 · 악마는 부수지 못한다 · 골라서 U로 강화', 'Laid on roads · demons cannot destroy it · select it and press U to upgrade', '道の上に置く · 悪魔には壊せない · 選んでUで強化'],
+    ['바닥에 세운다 · 골라서 U로 강화', 'Built on floor tiles · select it and press U to upgrade', '床に建てる · 選んでUで強化'],
+    ['더 강화할 수 없습니다', 'It cannot be upgraded further', 'これ以上強化できません'], ['최대 강화', 'Max level', '最大強化'], ['강화 Lv.', 'Upgrade Lv.', '強化 Lv.'],
+    ['계속 버틴다 · 무한 침공', 'Hold on · Endless Invasion', '戦い続ける · 無限侵攻'], ['무한 침공 종료', 'Endless Invasion Over', '無限侵攻 終了'], ['무한 침공', 'Endless Invasion', '無限侵攻'],
+    ['쓰러질 때까지 버틴다', 'Hold until you fall', '倒れるまで耐えろ'], ['최고 기록 갱신', 'New best record', '最高記録更新'], ['무한', 'endless', '無限'],
     ['같은 병사 셋을 합치면 한 단계 위의 병사가 됩니다.', 'Merge three of the same soldier and you get one of the next tier.', '同じ兵士を三体合わせると、一段上の兵士になります。'],
     ['보병 셋은 궁병이나 마법사 중 고르신 쪽이 됩니다. 인구는 줄고 전력은 오르죠.', 'Three footmen become an archer or a mage, your choice. Fewer mouths, more strength.', '歩兵三体は弓兵か魔法使い、お選びの方になります。人口は減り、戦力は上がります。'],
     ['보병 3기 조합 · B 또는 V', 'Merge 3 footmen · B or V', '歩兵3体を合成 · B または V'],
@@ -234,7 +240,7 @@
     ['정식 버전에서', 'In the full game', '製品版で'], ['잠김', 'Locked', 'ロック'], ['· 악마 ×', '· Demons ×', '· 悪魔 ×'], ['✔ 클리어', '✔ Cleared', '✔ クリア'], ['최고 웨이브', 'Best wave', '最高ウェーブ'],
     ['영구 강화', 'Permanent Upgrades', '永久強化'], ['출전', 'To Battle', '出撃'], ['이야기', 'Story', '物語'], ['튜토리얼', 'Tutorial', 'チュートリアル'], ['⚙ 설정', '⚙ Settings', '⚙ 設定'], ['설정', 'Settings', '設定'], ['조작법', 'Controls', '操作方法'],
     ['클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R Y 소환 · T 영웅 · X 영웅 기술 · B V 조합 · 소환소나 제단을 누르면 집결지 지정', 'Click or drag to select (double-click: same type, Ctrl+A: all) → click the ground to post them · Q W R Y summon · T hero · X hero skills · B V merge · click the Summoning Circle or Altar to set a rally point', 'クリック·ドラッグで選択(ダブルクリックで同種、Ctrl+Aで全員) → 地面クリックで配置 · Q W R Y 召喚 · T 英雄 · X 英雄スキル · B V 合成 · 召喚陣か祭壇を押すと集合地点を指定'],
-    ['A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · H J 함정 · 거점 위는 체력 +25% · 고른 건물 Del 철거', 'A S D F G → click a tile (Shift: keep building) · buildings on floor, barricades on roads · H J traps · +25% HP on platforms · Del demolishes the selected building', 'A S D F G → マスをクリック(Shiftで連続) · 建物は床、防壁は道の上 · 拠点の上は耐久+25% · 選んだ建物はDelで撤去'],
+    ['A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · H J 함정 · 거점 위는 체력 +25% · 고른 건물 U 강화 · Del 철거', 'A S D F G → click a tile (Shift: keep building) · buildings on floor, barricades on roads · H J traps · +25% HP on platforms · U upgrades and Del demolishes the selected building', 'A S D F G → マスをクリック(Shiftで連続) · 建物は床、防壁は道の上 · 拠点の上は耐久+25% · 選んだ建物はDelで撤去'],
     ['E (Z 길, X 벽, C 지우기, 우클릭 지우기, Ctrl+Z 되돌리기) · 길 최대', 'E (Z road, X wall, C erase, right-click erase, Ctrl+Z undo) · up to', 'E (Z 道, X 壁, C 消去, 右クリックで消去, Ctrl+Z 元に戻す) · 道は最大'],
     [', 벽 최대', ' road tiles,', '、壁は最大'], ['· 입구↔심장 연결 필수', 'wall tiles · the entrance must reach the Heart', '· 入口↔心臓の接続が必須'],
     ['1 2 3 속도 · Space 일시정지 · N 다음 웨이브(보너스 골드) · Tab 지도 · Esc 취소 · 한글 입력 상태에서도 단축키가 듣는다', '1 2 3 speed · Space pause · N next wave (bonus gold) · Tab map · Esc cancel', '1 2 3 速度 · Space 一時停止 · N 次のウェーブ(ボーナスゴールド) · Tab 地図 · Esc キャンセル · 日本語入力中でもショートカットが効く'],
@@ -288,6 +294,7 @@
 
   // 숫자·이름이 끼는 문장. 사전보다 먼저 적용한다. [정규식, 영어, 일본어]
   const R = [
+    [/최고 기록 (\d+)웨이브/, 'Best: wave $1', '最高記録 ウェーブ$1'],
     [/주공 · 위 입구/, 'Main thrust · top gate', '主攻 · 上の入口'], [/주공 · (왼쪽|오른쪽|아래) 입구/, 'Main thrust · $1 gate', '主攻 · $1の入口'], [/주공 위/, 'Thrust top', '主攻 上'],
     [/ · 입구 (\d+)곳/, ' · $1 gates', ' · 入口$1か所'], [/입구 (\d+)/, '$1 gates', '入口$1'],
     [/(\d+)초 안에 격퇴/, 'Repel the wave within $1s', '$1秒以内に撃退'],
