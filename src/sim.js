@@ -148,7 +148,7 @@
     const d = {
       i, race: p.race, R, bot: !!p.bot, alive: true, gold: 150 + 30 * (m.sGold || 0) + (p.bonusGold || 0), mat: 0, kills: 0,
       units: [], blds: [], demons: [], shots: [], fx: [], snd: {}, queue: [], occ: {}, bc: {}, ver: 0, walls: 0,
-      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, nSum: 0, nBld: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0, lost: 0, skillT: 0, nMerge: 0, mission: null, pop: C.POP, boons: [], boonPick: null,
+      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, nSum: 0, nBld: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0, lost: 0, skillT: 0, nMerge: 0, mission: null, pop: C.POP + (p.race === 'beast' ? 10 : 0), boons: [], boonPick: null,
       mod: {
         atk: (sm.atk || 1) * (1 + 0.05 * (m.uAtk || 0)), hp: (sm.hp || 1) * (1 + 0.05 * (m.uHp || 0)), spd: sm.spd || 1,
         bhp: (1 + 0.08 * (m.bHp || 0)) * (p.race === 'human' ? 1.2 : 1), gold: 1 + 0.05 * (m.gold || 0), hcd: 1 - 0.04 * (m.hCd || 0),
@@ -260,7 +260,7 @@
     } else if (c.a === 'build') {
       const b = d.R.blds[c.b], cost = DD.bldCost(d, b), e0 = DD.buildErr(d, b, c.cx, c.cy);
       if (e0) return e0;
-      if ((d.bc[b.id] || 0) >= DD.bldMax(b)) return '이 건물은 더 지을 수 없다';
+      if ((d.bc[b.id] || 0) >= DD.bldMax(b, d.race)) return '이 건물은 더 지을 수 없다';
       if (d.blds.length >= C.BLD_CAP) return '건물 한도';
       if (!pay(d, cost)) return '자원 부족';
       const mhp = b.hp * d.mod.bhp * (1 + 0.15 * d.up.bld) * (DD.bldTiles(b, c.cx, c.cy).some(([x, y]) => DD.isPlot(x, y)) ? C.PLOT_HP : 1);
@@ -322,7 +322,7 @@
       const f = p.us[0], kills = p.us.reduce((s, u) => s + u.kills, 0);
       d.units = d.units.filter((u) => !p.us.includes(u));
       const to = p.to || p.opts[c.pick ? 1 : 0]; // 1단계는 두 2단계 유닛 중 고른 쪽으로
-      const u = addUnit(G, d, to); u.x = f.x; u.y = f.y; u.hx = f.hx; u.hy = f.hy; u.kills = kills; d.nMerge++; promote(d, u);
+      const u = addUnit(G, d, to); u.x = f.x; u.y = f.y; u.hx = f.hx; u.hy = f.hy; u.kills = d.race === 'spirit' ? Math.max(kills, DD.RANK_KILLS[1]) : kills; d.nMerge++; promote(G, d, u); // 정령은 조합하면 정예로 태어난다
       fx(d, 'hero', u.x, u.y, 0.75, { c: to.legend ? 'g1' : d.R.color }); if (to.legend) snd(d, 'hero');
       G.events.push({ t: 'merge', d: d.i, name: to.name, legend: !!to.legend });
     } else if (c.a === 'skill') { // 영웅 기술: 살아 있는 내 영웅이 모두 쓴다
@@ -401,15 +401,15 @@
     else if (k === 'regen') d.mod.regen = (d.mod.regen || 0) + 0.005;
     G.events.push({ t: 'boonGot', d: d.i, b: bi });
   }
-  function promote(d, u) { // 처치 수가 차면 승급: 최대 체력이 늘고(공격은 unitAtk에서) 표식이 붙는다
-    const r = DD.rankOf(u), was = u.rk || 0; if (r <= was) return;
+  function promote(G, d, u) { // 처치 수가 차면 승급: 최대 체력이 늘고(공격은 unitAtk에서) 표식이 붙는다
+    const r = DD.rankOf(u, G.dungeons[u.own].race), was = u.rk || 0; if (r <= was) return;
     const k = (1 + 0.15 * r) / (1 + 0.15 * was); u.mhp *= k; u.hp *= k; u.rk = r;
     fx(d, 'hero', u.x, u.y, 0.5, { c: 'g1' }); snd(d, 'up');
   }
   function hurt(G, d, src, t, amt) {
     t.hp -= amt; t.hit = 0.12; if (t.k === 'h') d.alarmT = 3; // 심장이 맞으면 근처 병력이 달려온다
     if (t.k === 'd' && t.hp <= 0 && !t.dead) {
-      t.dead = true; d.kills++; if (src && src.k === 'u') { src.kills++; promote(d, src); }
+      t.dead = true; d.kills++; if (src && src.k === 'u') { src.kills++; promote(G, d, src); }
       const kg = t.def.gold * (t.gm || 1) * G.D.gold * d.mod.gold * (d.mod.kg || 1) * (1 + 0.2 * Math.min(3, d.bc.hoard || 0)); d.gold += kg;
       if (t.def.spr === 'd_boss' && (G.endless || G.wave < C.WAVES) && !G.tutorial) offerBoon(G, d);
       d.mat += (t.def.mat || 0) + (G.rnd() < 0.1 ? 1 : 0);
@@ -593,7 +593,7 @@
     for (const u of d.units) {
       if (u.hit > 0) u.hit -= DT; u.cd -= DT; u.rt -= DT;
       const o = G.dungeons[u.own];
-      let reg = u.mhp * ((o.race === 'merfolk' ? 0.01 : 0) + (o.mod.regen || 0) + (G.hz === 'forest' ? 0.02 : 0));
+      let reg = u.mhp * ((o.race === 'merfolk' ? (d.demons.length || d.queue.length ? 0.01 : 0.05) : 0) + (o.mod.regen || 0) + (G.hz === 'forest' ? 0.02 : 0));
       if (G.hz === 'fire' && o.race !== G.st.home && roadAt(d, u.x, u.y)) u.hp = Math.max(1, u.hp - u.mhp * 0.02 * DT); // 용암 분출
       for (const p of pools) if (d2(u, p) < p.def.rad * p.def.rad) reg += p.def.regen;
       if (reg && u.hp < u.mhp) u.hp = Math.min(u.mhp, u.hp + reg * DT);

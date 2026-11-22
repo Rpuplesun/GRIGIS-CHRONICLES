@@ -56,6 +56,7 @@
         <p><b>건물</b> A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · H J 함정 · 거점 위는 체력 +25% · 고른 건물 U 강화 · Del 철거</p>
         <p><b>길 편집</b> E (Z 길, X 벽, C 지우기, 우클릭 지우기, Ctrl+Z 되돌리기) · 길 최대 ${C.ROAD_MAX}, 벽 최대 ${C.WALL_MAX} · 입구↔심장 연결 필수</p>
         <p><b>기타</b> 1 2 3 속도 · Space 일시정지 · N 다음 웨이브(보너스 골드) · Tab 지도 · Esc 취소 · 한글 입력 상태에서도 단축키가 듣는다</p></div></details></footer>`;
+    fitMenu(); setTimeout(fitMenu, 0); // 번역이 끝난 뒤의 길이로 한 번 더 맞춘다
   }
   $('#menu').addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-m]'); if (!b || b.disabled) return;
@@ -126,10 +127,12 @@
   }
 
   // ───────── 타이틀·이야기 ─────────
-  function showMenu() { $('#menu').hidden = false; drawMenu(); DD.Music.play('menu'); }
+  // 글이 긴 언어에서는 메뉴가 화면보다 길어진다. 넘치면 통째로 줄여 한 화면에 담는다
+  function fitMenu() { const m = $('#menu'); m.style.zoom = 1; if (m.hidden) return; const f = m.querySelector('footer'); if (!f) return; const need = f.offsetTop + f.offsetHeight + 40; if (need > 1440) m.style.zoom = Math.max(0.7, 1440 / need); }
+  function showMenu() { $('#menu').hidden = false; drawMenu(); fitMenu(); DD.Music.play('menu'); }
   // 언어 버튼(타이틀·설정). 누르면 화면의 글이 그 자리에서 바뀐다
   const langRow = () => Object.keys(DD.LANGS).map((l) => `<button class="${DD.lang === l ? 'on' : ''}" data-lang="${l}" data-no-i18n>${DD.LANGS[l]}</button>`).join('');
-  document.addEventListener('click', (ev) => { const b = ev.target.closest('[data-lang]'); if (!b) return; DD.Audio.play('click'); DD.setLang(b.dataset.lang); document.querySelectorAll('[data-lang]').forEach((x) => x.classList.toggle('on', x.dataset.lang === DD.lang)); });
+  document.addEventListener('click', (ev) => { const b = ev.target.closest('[data-lang]'); if (!b) return; DD.Audio.play('click'); DD.setLang(b.dataset.lang); document.querySelectorAll('[data-lang]').forEach((x) => x.classList.toggle('on', x.dataset.lang === DD.lang)); setTimeout(fitMenu, 0); });
   function showTitle() {
     DD.Music.play('title'); DD.Music.preload(['menu']);
     const rs0 = document.documentElement.style; for (const k of ['panel', 'btn_gold', 'btn_dark', 'btn_blue']) rs0.setProperty('--ui-' + k.replace('_', '-'), `url(${DD.icon('ui_' + k)})`); // UI 시트의 패널·버튼을 CSS 테두리 그림으로
@@ -198,7 +201,7 @@
         const hn = d.units.filter((u) => u.hero && u.own === d.i).length, sk = hn && d.skillT <= 0;
         const skill = slot('skill:1', `<em>기술</em><span class="cost">${!hn ? '—' : sk ? '준비!' : mmss(d.skillT)}</span>`, `<b>영웅 기술</b>살아 있는 영웅이 모두 기술을 쓴다 · 대기 ${DD.SKILL_CD}초<small>${Object.keys(DD.HERO_SKILL).map((r) => `${DD.HERO_ROLES[r].label} · ${DD.HERO_SKILL[r].name} — ${DD.HERO_SKILL[r].desc}`).join('<br>')}</small>`, { key: 'X', cls: 'mini' + (sk ? ' ready' : ''), dim: !sk });
         return one(0, 'B') + skill + one(1, 'V'); })());
-    const bslots = R.blds.map((b, i) => { const c = DD.bldCost(d, b), have = d.bc[b.id] || 0, full = have >= DD.bldMax(b); return slot('build:' + i, `${b.kind === 'trap' ? icon(b.spr, 2) : icon(b.spr + '@' + d.race, 2)}${full ? '<span class="cost">최대</span>' : cost(c, d)}`, `<b>${b.name}</b>${ic('ui_coin')} ${c.g}${c.m ? ' ' + ic('ui_crate') + ' ' + c.m : ''} · 보유 ${have}/${DD.bldMax(b)}<br>${b.desc}${b.atk ? `<br>공격 ${b.atk} · 사거리 ${b.rng} · 간격 ${b.as}초${b.splash ? ' · 범위' : ''}` : ''}<small>${b.kind === 'wall' ? '길 위에만 세운다 · 악마를 붙잡아 둔다 · 골라서 U로 강화' : b.kind === 'trap' ? '길 위에 깐다 · 악마는 부수지 못한다 · 골라서 U로 강화' : b.kind === 'tower' ? '바닥에 세운다 · 골라서 U로 강화' : b.size === 2 ? '바닥 2×2칸에 세운다' : '바닥에 세운다'}</small>`, { dim: full || no(c), on: ui.build === i, key: BKEY[i] }); });
+    const bslots = R.blds.map((b, i) => { const c = DD.bldCost(d, b), have = d.bc[b.id] || 0, full = have >= DD.bldMax(b, d.race); return slot('build:' + i, `${b.kind === 'trap' ? icon(b.spr, 2) : icon(b.spr + '@' + d.race, 2)}${full ? '<span class="cost">최대</span>' : cost(c, d)}`, `<b>${b.name}</b>${ic('ui_coin')} ${c.g}${c.m ? ' ' + ic('ui_crate') + ' ' + c.m : ''} · 보유 ${have}/${DD.bldMax(b, d.race)}<br>${b.desc}${b.atk ? `<br>공격 ${b.atk} · 사거리 ${b.rng} · 간격 ${b.as}초${b.splash ? ' · 범위' : ''}` : ''}<small>${b.kind === 'wall' ? '길 위에만 세운다 · 악마를 붙잡아 둔다 · 골라서 U로 강화' : b.kind === 'trap' ? '길 위에 깐다 · 악마는 부수지 못한다 · 골라서 U로 강화' : b.kind === 'tower' ? '바닥에 세운다 · 골라서 U로 강화' : b.size === 2 ? '바닥 2×2칸에 세운다' : '바닥에 세운다'}</small>`, { dim: full || no(c), on: ui.build === i, key: BKEY[i] }); });
     const blds = bslots.filter((x, i) => i !== 3 && i < 5).join('');
     maze = bslots[3] + bslots[5] + bslots[6] + maze;
     const ac = DD.upCost(d, 'altar'), ap = DD.ALTAR[d.altarLv - 1].p;
@@ -255,7 +258,7 @@
     const d = G.dungeons[ui.view], e = (q.k === 'd' ? d.demons : q.k === 'u' ? d.units : d.blds).find((x) => x.id === q.id && x.hp > 0); if (!e) return '';
     const hp = `♥ ${Math.ceil(e.hp)}/${Math.ceil(e.mhp)}`;
     if (q.k === 'd') { const bg = e.gim && DD.BOSS_GIM[e.gim]; return `<b>${bg ? bg.name : e.def.name}</b>${hp} · 공격 ${Math.round(e.atk)}${e.def.rng > 30 ? ' · 원거리' : ''}<small>${bg ? bg.desc + ' · 중장갑' : e.def.desc}</small>`; }
-    if (q.k === 'u') { const o = G.dungeons[e.own]; return `<b>${e.hero ? `[${DD.GRADES[e.hero.grade].id}] ` : ''}${e.def.name}</b>${hp} · 처치 ${e.kills}${e.rk ? ` · <span class="gold">${DD.RANKS[e.rk]}</span>` : e.hero || e.def.legend ? '' : ` <small style="display:inline">(${DD.RANK_KILLS[1]}에 승급)</small>`}${e.own !== d.i ? `<small>${o.R.name} 지원군</small>` : e.hero ? `<small>${DD.HERO_ROLES[e.hero.role].label}</small>` : ''}`; }
+    if (q.k === 'u') { const o = G.dungeons[e.own]; return `<b>${e.hero ? `[${DD.GRADES[e.hero.grade].id}] ` : ''}${e.def.name}</b>${hp} · 처치 ${e.kills}${e.rk ? ` · <span class="gold">${DD.RANKS[e.rk]}</span>` : e.hero || e.def.legend ? '' : ` <small style="display:inline">(${DD.rankKills(o.race)[1]}에 승급)</small>`}${e.own !== d.i ? `<small>${o.R.name} 지원군</small>` : e.hero ? `<small>${DD.HERO_ROLES[e.hero.role].label}</small>` : ''}`; }
     if (e.def.kind === 'trap') return `<b>${e.def.name}</b>${e.def.desc}<small>고른 뒤 Del로 걷는다</small>`;
     return `<b>${e.def.name}</b>${hp}<br>${e.def.desc}${e.def.atk ? `<small>공격 ${Math.round(e.def.atk * (1 + 0.4 * ((e.lv || 1) - 1)))} · 사거리 ${Math.round(e.def.rng * (1 + 0.1 * ((e.lv || 1) - 1)))}${e.lv > 1 ? ' · Lv.' + e.lv : ''}</small>` : ''}`;
   }

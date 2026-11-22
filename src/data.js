@@ -20,11 +20,11 @@
   DD.RACES = {
     human: {
       name: '인간족', color: 'b2',
-      trait: '건물 비용 -20% · 체력 +20%',
+      trait: '건물 비용 -20% · 체력 +20% · 탑·방벽·함정 한도 +2',
       units: [
-        U('보병', 1, 40, 0, 150, 12, 14, 1.0, 30, 'u_human_1'),
+        U('보병', 1, 40, 0, 165, 13, 14, 1.0, 30, 'u_human_1'),
         U('궁병', 2, 70, 0, 75, 17, 85, 1.1, 28, 'u_human_2', { req: { b: 'barracks' } }),
-        U('기사', 3, 170, 20, 420, 36, 16, 1.0, 44, 'u_human_3', { req: { b: 'forge' } }),
+        U('기사', 3, 170, 20, 460, 40, 16, 1.0, 44, 'u_human_3', { req: { b: 'forge' } }),
         U('마법사', 2, 90, 5, 70, 14, 80, 1.4, 26, 'u_human_4', { splash: 16, req: { b: 'barracks' } }),
       ],
       blds: [
@@ -38,7 +38,7 @@
     },
     dragon: {
       name: '용족', color: 'r2',
-      trait: '처치마다 공격 +2% (최대 50%)',
+      trait: '처치마다 공격 +2% (최대 50%) · 승급이 두 배 빠름',
       units: [
         U('리자드맨', 1, 55, 0, 180, 15, 16, 1.0, 28, 'u_dragon_1'),
         U('드레이크', 2, 110, 10, 140, 22, 70, 1.3, 26, 'u_dragon_2', { splash: 14, req: { b: 'hatchery' } }),
@@ -56,17 +56,17 @@
     },
     beast: {
       name: '수인족', color: 'w2',
-      trait: '아군 1기당 공격 +1.5% (최대 40%)',
+      trait: '아군 1기당 공격 +1.5% (최대 40%) · 인구 +10',
       units: [
         U('코볼트', 1, 22, 0, 84, 10, 13, 0.8, 42, 'u_beast_1'),
-        U('늑대전사', 2, 60, 0, 170, 23, 14, 0.9, 46, 'u_beast_2', { req: { b: 'den', alive: [0, 5] } }),
-        U('미노타우로스', 3, 170, 25, 640, 40, 18, 1.2, 30, 'u_beast_3', { splash: 12, req: { b: 'arena' } }),
+        U('늑대전사', 2, 60, 0, 195, 24, 14, 0.9, 46, 'u_beast_2', { req: { b: 'den', alive: [0, 5] } }),
+        U('미노타우로스', 3, 170, 25, 720, 42, 18, 1.2, 30, 'u_beast_3', { splash: 12, req: { b: 'arena' } }),
         U('투창꾼', 2, 55, 0, 95, 20, 78, 1.1, 40, 'u_beast_4', { req: { b: 'den' } }),
       ],
       blds: [
         B('den', '사냥굴', 'unlock', 80, 0, 450, 'b_unlock1', '늑대전사 해금 (코볼트 5기)'),
         B('arena', '투기장', 'unlock', 150, 25, 650, 'b_unlock2', '미노타우로스 해금'),
-        B('tower', '투척탑', 'tower', 80, 10, 300, 'b_tower', '빠른 공격', { atk: 10, rng: 85, as: 0.6 }),
+        B('tower', '투척탑', 'tower', 80, 10, 300, 'b_tower', '빠른 공격', { atk: 12, rng: 85, as: 0.6 }),
         B('wall', '가시 울타리', 'wall', 20, 0, 400, 'b_wall', '싼 길 차단 · 약한 반사', { thorn: 3 }),
         B('drum', '전투 북', 'aura', 110, 10, 300, 'b_special', '주변 공격 속도 +25%', { haste: 0.25, rad: 64 }),
       ],
@@ -74,16 +74,16 @@
     },
     spirit: {
       name: '정령족', color: 't2',
-      trait: '자재 +0.15/초 · 하위 정령을 융합',
+      trait: '자재 +0.15/초 · 2기로 조합 · 조합하면 정예',
       units: [
         U('하급정령', 1, 35, 0, 65, 11, 62, 1.0, 30, 'u_spirit_1'),
-        U('중급정령', 2, 50, 0, 190, 28, 76, 1.0, 30, 'u_spirit_2', { req: { b: 'spring', eat: [0, 2] } }),
-        U('상급정령', 3, 120, 30, 520, 66, 92, 1.1, 30, 'u_spirit_3', { splash: 16, req: { b: 'tree', eat: [1, 2] } }),
+        U('중급정령', 2, 70, 0, 190, 28, 76, 1.0, 30, 'u_spirit_2', { req: { b: 'spring' } }),
+        U('상급정령', 3, 180, 35, 520, 66, 92, 1.1, 30, 'u_spirit_3', { splash: 16, req: { b: 'tree' } }),
         U('바위 정령', 2, 60, 0, 360, 16, 15, 1.2, 26, 'u_spirit_4', { req: { b: 'spring' } }),
       ],
       blds: [
-        B('spring', '정령의 샘', 'unlock', 100, 0, 450, 'b_unlock1', '중급정령 해금 (하급정령 2기 융합)'),
-        B('tree', '세계수 묘목', 'unlock', 180, 35, 650, 'b_unlock2', '상급정령 해금 (중급정령 2기 융합)'),
+        B('spring', '정령의 샘', 'unlock', 100, 0, 450, 'b_unlock1', '중급정령 해금'),
+        B('tree', '세계수 묘목', 'unlock', 180, 35, 650, 'b_unlock2', '상급정령 해금'),
         B('tower', '수정탑', 'tower', 100, 15, 280, 'b_tower', '긴 사거리', { atk: 20, rng: 120, as: 1.1 }),
         B('wall', '결계석', 'wall', 35, 5, 550, 'b_wall', '길 차단'),
         B('crystal', '마나 수정', 'eco', 110, 0, 280, 'b_special', '자재 +0.3/초', { mps: 0.3 }),
@@ -92,7 +92,7 @@
     },
     merfolk: {
       name: '어인족', color: 'b1',
-      trait: '유닛 초당 체력 1% 재생',
+      trait: '유닛 초당 체력 1% 재생 · 싸움이 멎으면 5%',
       units: [
         U('갈퀴병', 1, 30, 0, 108, 10, 14, 0.9, 36, 'u_merfolk_1'),
         U('조수 주술사', 2, 80, 5, 95, 10, 72, 1.2, 28, 'u_merfolk_2', { heal: 14, req: { b: 'coral' } }),
@@ -210,7 +210,7 @@
 
   // 건물 종류별 최대 수. 같은 건물을 끝없이 늘릴 수 없다
   DD.BLD_MAX = { unlock: 1, tower: 6, wall: 10, eco: 3, aura: 3, trap: 6 };
-  DD.bldMax = (b) => DD.BLD_MAX[b.kind];
+  DD.bldMax = (b, race) => DD.BLD_MAX[b.kind] + (race === 'human' && (b.kind === 'tower' || b.kind === 'wall' || b.kind === 'trap') ? 2 : 0); // 인간족은 방어 시설을 둘씩 더 세운다
   // 난이도: 악마 체력·공격, 골드, 영혼석 배율
   DD.DIFFS = [
     { name: '쉬움', hp: 0.8, atk: 0.85, gold: 1.1, shard: 0.7 },
@@ -252,7 +252,8 @@
   // 숙련: 악마를 많이 잡은 유닛은 승급한다(영웅 제외). 단계마다 공격·체력 +15%
   DD.RANKS = ['', '정예', '백전노장'];
   DD.RANK_KILLS = [0, 8, 25];
-  DD.rankOf = (u) => (u.hero ? 0 : u.kills >= DD.RANK_KILLS[2] ? 2 : u.kills >= DD.RANK_KILLS[1] ? 1 : 0);
+  DD.rankKills = (race) => (race === 'dragon' ? [0, 4, 13] : DD.RANK_KILLS); // 용족은 절반만 잡아도 승급한다
+  DD.rankOf = (u, race) => { const k = DD.rankKills(race); return u.hero ? 0 : u.kills >= k[2] ? 2 : u.kills >= k[1] ? 1 : 0; };
   // 주공: 입구가 여럿이면 웨이브마다 한 곳으로 악마의 6할이 몰린다. 미리 알려 준다
   DD.gateName = (e) => (e[0] === 0 ? '왼쪽' : e[0] === DD.C.GW - 1 ? '오른쪽' : e[1] === 0 ? '위' : '아래');
   // 영웅 기술: 살아 있는 영웅이 한꺼번에 쓴다
