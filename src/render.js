@@ -138,12 +138,15 @@
     const big = e.k === 'u' && e.def.legend, fly = e.k === 'd' && e.def.fly, lift = fly ? 8 : 0;
     shadow(x, X, Y, e.r > 8 || big ? 22 : fly ? 8 : 12);
     let c;
-    if (big || fly) { // 전설 유닛은 크게, 비행 악마는 띄워서 다른 색으로
+    if (e.elite) { // 우두머리 악마는 크게, 머리 위에 붉은 표식
+      x.save(); x.translate(X, Y + 3); x.scale(1.3, 1.3); c = DD.blit(x, id, animFrame(e, TT, n), 0, 0, e.face < 0, flash && e.hit > 0.06); x.restore(); c = { height: Math.round(c.height * 1.3) };
+      x.fillStyle = P.K; x.fillRect(X - 3, Y - c.height - 6, 7, 4); x.fillStyle = P.r1; x.fillRect(X - 2, Y - c.height - 5, 5, 2); x.fillStyle = P.g1; x.fillRect(X, Y - c.height - 5 - (((TT * 3) | 0) & 1), 1, 2);
+    } else if (big || fly) { // 전설 유닛은 크게, 비행 악마는 띄워서 다른 색으로
       c = DD.blit(x, id, animFrame(e, TT, n), X, Y + 3 - lift, e.face < 0, flash && e.hit > 0.06);
       if (big) { x.fillStyle = P.g1; x.fillRect(X - 1, Y - c.height - 3 - (((TT * 3) | 0) & 1), 3, 2); }
       c = { height: c.height + lift };
     } else c = DD.blit(x, id, animFrame(e, TT, n), X, Y + 3, e.face < 0, flash && e.hit > 0.06);
-    if (e.hp < e.mhp || e.hero) bar(x, X - 6, Y - c.height, 12, e.hp / e.mhp, e.k === 'd' ? 'r2' : e.hero ? 'g1' : 'n2');
+    if (e.hp < e.mhp || e.hero || e.elite) bar(x, X - 6, Y - c.height, 12, e.hp / e.mhp, e.k === 'd' ? 'r2' : e.hero ? 'g1' : 'n2');
   }
   DD.draw = function (ctx, G, d, ui) {
     const TT = G.t + (ui.clock || 0), flash = ui.flash !== false;

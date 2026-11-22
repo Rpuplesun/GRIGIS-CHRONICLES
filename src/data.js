@@ -279,6 +279,24 @@
     noloss: { name: '유닛을 잃지 않고 격퇴' },
   };
   DD.missionGold = (w) => 40 + 10 * w;
+  // 업적: 한 번만 달성되고 영혼석을 준다. x = { G, d, win, save }
+  DD.ACH = [
+    { id: 'win1', name: '첫 승리', desc: '아무 스테이지나 승리한다', sh: 20, test: (x) => x.win },
+    { id: 'flawless', name: '철벽', desc: '심장이 한 번도 맞지 않고 승리한다', sh: 40, test: (x) => x.win && x.d.heart.hp >= x.d.heart.mhp - 0.5 },
+    { id: 'hard', name: '역전의 지휘관', desc: '어려움 이상에서 승리한다', sh: 40, test: (x) => x.win && x.G.diff >= 2 },
+    { id: 'hell', name: '악몽을 넘어', desc: '악몽에서 승리한다', sh: 80, test: (x) => x.win && x.G.diff >= 3 },
+    { id: 'abyss', name: '게이트 너머', desc: '악마성에서 승리한다', sh: 80, test: (x) => x.win && x.G.stage === 5 },
+    { id: 'five', name: '다섯 깃발', desc: '다섯 종족 모두로 승리한다', sh: 100, test: (x) => DD.RACE_IDS.every((r) => (x.save.races[r].rec && Object.keys(x.save.races[r].rec).length) || (x.win && r === x.d.race)) },
+    { id: 'legend', name: '전설의 탄생', desc: '전설 유닛을 조합해 낸다', sh: 30, test: (x) => x.d.nLegend >= 1 },
+    { id: 'merge10', name: '연금술사', desc: '한 판에 조합을 10번 한다', sh: 30, test: (x) => x.d.nMerge >= 10 },
+    { id: 'rank2', name: '백전노장', desc: '유닛 하나를 백전노장까지 키운다', sh: 30, test: (x) => x.d.nRank2 >= 1 },
+    { id: 'lords', name: '군주 사냥꾼', desc: '한 판에 군주 넷을 쓰러뜨린다', sh: 50, test: (x) => x.d.bossKills >= 4 },
+    { id: 'alpha', name: '우두머리 사냥', desc: '한 판에 우두머리 악마 열을 쓰러뜨린다', sh: 30, test: (x) => x.d.eliteKills >= 10 },
+    { id: 'mission5', name: '임무 완수', desc: '한 판에 미션을 5번 성공한다', sh: 40, test: (x) => x.d.nMission >= 5 },
+    { id: 'traps', name: '함정 설계자', desc: '한 판에 함정으로 악마 50을 쓰러뜨린다', sh: 30, test: (x) => x.d.trapKills >= 50 },
+    { id: 'rush', name: '속전속결', desc: '한 판에 웨이브를 10번 앞당긴다', sh: 30, test: (x) => x.d.nCall >= 10 },
+    { id: 'endless30', name: '끝없는 밤', desc: '무한 침공에서 30웨이브를 넘긴다', sh: 100, test: (x) => x.G.endless && x.d.wavesCleared >= 30 },
+  ];
   // 기록: 깬 난이도와 남은 심장으로 별 1~3개
   DD.starsFor = (heartRatio) => (heartRatio >= 0.9 ? 3 : heartRatio >= 0.5 ? 2 : 1);
 })(typeof window !== 'undefined' ? window : globalThis);

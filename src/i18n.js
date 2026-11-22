@@ -6,6 +6,23 @@
 
   // [한국어, 영어, 일본어]
   const D = [
+    ['첫 승리', 'First Victory', '初勝利'], ['아무 스테이지나 승리한다', 'Win any stage', 'いずれかのステージで勝利する'],
+    ['철벽', 'Iron Wall', '鉄壁'], ['심장이 한 번도 맞지 않고 승리한다', 'Win without the Heart ever being hit', '心臓が一度も攻撃されずに勝利する'],
+    ['역전의 지휘관', 'Seasoned Commander', '歴戦の指揮官'], ['어려움 이상에서 승리한다', 'Win on Hard or above', 'むずかしい以上で勝利する'],
+    ['악몽을 넘어', 'Beyond the Nightmare', '悪夢を越えて'], ['악몽에서 승리한다', 'Win on Nightmare', '悪夢で勝利する'],
+    ['게이트 너머', 'Beyond the Gate', 'ゲートの向こう'], ['악마성에서 승리한다', 'Win at the Demon Castle', '悪魔城で勝利する'],
+    ['다섯 깃발', 'Five Banners', '五つの旗'], ['다섯 종족 모두로 승리한다', 'Win with all five races', '五つの種族すべてで勝利する'],
+    ['전설의 탄생', 'A Legend Is Born', '伝説の誕生'], ['전설 유닛을 조합해 낸다', 'Merge a legendary unit', '伝説ユニットを合成する'],
+    ['연금술사', 'Alchemist', '錬金術師'], ['한 판에 조합을 10번 한다', 'Merge 10 times in one game', '一戦で10回合成する'],
+    ['군주 사냥꾼', 'Lord Hunter', '君主狩り'], ['한 판에 군주 넷을 쓰러뜨린다', 'Slay four Lords in one game', '一戦で君主を四体倒す'],
+    ['우두머리 사냥', 'Alpha Hunter', '頭目狩り'], ['한 판에 우두머리 악마 열을 쓰러뜨린다', 'Slay ten alpha demons in one game', '一戦で頭目の悪魔を十体倒す'],
+    ['임무 완수', 'Mission Accomplished', '任務完遂'], ['한 판에 미션을 5번 성공한다', 'Complete 5 missions in one game', '一戦でミッションを5回成功する'],
+    ['함정 설계자', 'Trap Architect', '罠の設計者'], ['한 판에 함정으로 악마 50을 쓰러뜨린다', 'Slay 50 demons with traps in one game', '一戦で罠で悪魔を50体倒す'],
+    ['속전속결', 'Blitz', '速戦即決'], ['한 판에 웨이브를 10번 앞당긴다', 'Call waves early 10 times in one game', '一戦でウェーブを10回前倒しする'],
+    ['끝없는 밤', 'Endless Night', '終わらない夜'], ['무한 침공에서 30웨이브를 넘긴다', 'Survive past wave 30 in Endless Invasion', '無限侵攻で30ウェーブを越える'],
+    ['유닛 하나를 백전노장까지 키운다', 'Raise one unit to Elite rank', 'ユニット一体を歴戦まで育てる'],
+    ['업적 ·', 'Achievement ·', '実績 ·'], ['업적', 'Achievements', '実績'], ['우두머리 ', 'Alpha ', '頭目の'], ['· 쓰러뜨리면 골드 5배', '· drops 5× gold', '· 倒すとゴールド5倍'],
+    ['우두머리 악마가 섞여 온다 · 크고 단단하지만 골드를 다섯 배 흘린다', 'An alpha demon is among them · big and tough, but it drops five times the gold', '頭目の悪魔が混じっている · 大きく頑丈だが、ゴールドを五倍落とす'],
     ['용암 분출', 'Lava Surge', '溶岩噴出'], ['길 위의 악마와 유닛이 초당 체력 2%를 잃는다', 'Demons and units on roads lose 2% HP per second', '道の上の悪魔とユニットが毎秒HP 2%を失う'],
     ['모래폭풍', 'Sandstorm', '砂嵐'], ['원거리 유닛과 탑의 피해 -30%', 'Ranged units and towers deal 30% less damage', '遠距離ユニットと塔のダメージ -30%'],
     ['숲의 숨결', 'Breath of the Forest', '森の息吹'], ['아군 유닛이 초당 체력 2%를 되찾는다', 'Your units regain 2% HP per second', '味方ユニットが毎秒HP 2%回復'],

@@ -7,6 +7,7 @@
   if (!save || !save.races) save = { races: {} };
   DD.RACE_IDS.forEach((r) => (save.races[r] = save.races[r] || { shards: 0, meta: {}, stage: 0 }));
   save.seen = save.seen || {};
+  save.ach = save.ach || {};
   save.opt = Object.assign({ vol: 0.6, bgm: 0.5, flash: true }, save.opt); // vol = 효과음, bgm = 배경음악
   DD.Audio.setVol(save.opt.vol); DD.Music.setVol(save.opt.bgm);
   const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* 무시 */ } };
@@ -50,7 +51,7 @@
           <b>${m.name}</b><small>Lv.${lv}/${DD.META_MAX} · ${fmt(lv)}${max ? '' : ` → <span class="good">${fmt(lv + 1)}</span>`}</small><small class="gold">${max ? '최대' : ic('ui_shard') + ' ' + cost}</small>
         </button>`; }).join('')}</div></section>
       <span></span><span></span>
-      <footer><button class="start" data-m="start:1">출전</button><button data-m="story:1">이야기</button><button data-m="tutorial:1">튜토리얼</button><button data-m="settings:1">설정</button>
+      <footer><button class="start" data-m="start:1">출전</button><button data-m="story:1">이야기</button><button data-m="tutorial:1">튜토리얼</button><button data-m="ach:1">업적 ${DD.ACH.filter((a) => save.ach[a.id]).length}/${DD.ACH.length}</button><button data-m="settings:1">설정</button>
         <details class="help"><summary>조작법</summary><div class="helpbox">
         <p><b>유닛</b> 클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R Y 소환 · T 영웅 · X 영웅 기술 · B V 조합 · 소환소나 제단을 누르면 집결지 지정</p>
         <p><b>건물</b> A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · H J 함정 · 거점 위는 체력 +25% · 고른 건물 U 강화 · Del 철거</p>
@@ -70,6 +71,7 @@
     else if (k === 'start') { save.menu = { race: menu.race, mode: menu.mode, allies: menu.allies, diff: menu.diff }; persist(); return startGame(); }
     else if (k === 'story') return showStory(showMenu);
     else if (k === 'settings') return openSettings();
+    else if (k === 'ach') return showAch();
     else if (k === 'tutorial') return startGame(true);
     drawMenu();
   });
@@ -257,7 +259,7 @@
     const q = pickAt(ui.mouse); if (!q) return '';
     const d = G.dungeons[ui.view], e = (q.k === 'd' ? d.demons : q.k === 'u' ? d.units : d.blds).find((x) => x.id === q.id && x.hp > 0); if (!e) return '';
     const hp = `♥ ${Math.ceil(e.hp)}/${Math.ceil(e.mhp)}`;
-    if (q.k === 'd') { const bg = e.gim && DD.BOSS_GIM[e.gim]; return `<b>${bg ? bg.name : e.def.name}</b>${hp} · 공격 ${Math.round(e.atk)}${e.def.rng > 30 ? ' · 원거리' : ''}<small>${bg ? bg.desc + ' · 중장갑' : e.def.desc}</small>`; }
+    if (q.k === 'd') { const bg = e.gim && DD.BOSS_GIM[e.gim]; return `<b>${e.elite ? '우두머리 ' : ''}${bg ? bg.name : e.def.name}</b>${hp} · 공격 ${Math.round(e.atk)}${e.def.rng > 30 ? ' · 원거리' : ''}<small>${bg ? bg.desc + ' · 중장갑' : e.def.desc}${e.elite ? ' · 쓰러뜨리면 골드 5배' : ''}</small>`; }
     if (q.k === 'u') { const o = G.dungeons[e.own]; return `<b>${e.hero ? `[${DD.GRADES[e.hero.grade].id}] ` : ''}${e.def.name}</b>${hp} · 처치 ${e.kills}${e.rk ? ` · <span class="gold">${DD.RANKS[e.rk]}</span>` : e.hero || e.def.legend ? '' : ` <small style="display:inline">(${DD.rankKills(o.race)[1]}에 승급)</small>`}${e.own !== d.i ? `<small>${o.R.name} 지원군</small>` : e.hero ? `<small>${DD.HERO_ROLES[e.hero.role].label}</small>` : ''}`; }
     if (e.def.kind === 'trap') return `<b>${e.def.name}</b>${e.def.desc}<small>고른 뒤 Del로 걷는다</small>`;
     return `<b>${e.def.name}</b>${hp}<br>${e.def.desc}${e.def.atk ? `<small>공격 ${Math.round(e.def.atk * (1 + 0.4 * ((e.lv || 1) - 1)))} · 사거리 ${Math.round(e.def.rng * (1 + 0.1 * ((e.lv || 1) - 1)))}${e.lv > 1 ? ' · Lv.' + e.lv : ''}</small>` : ''}`;
@@ -390,6 +392,7 @@
   const SCODE = { Digit1: 1, Digit2: 2, Digit3: 4, Numpad1: 1, Numpad2: 2, Numpad3: 4 };
   window.addEventListener('keydown', (ev) => {
     const k = ev.code, ctrl = ev.ctrlKey || ev.metaKey, enter = k === 'Enter' || k === 'NumpadEnter';
+    if (!$('#ach').hidden) { if (k === 'Escape' || enter) $('#ach').hidden = true; return; }
     if (!$('#settings').hidden) { if (k === 'Escape' && !ev.repeat) closeSettings(); return; }
     if (!$('#story').hidden) { if (k === 'Space' || enter) { ev.preventDefault(); $('#next').click(); } else if (k === 'Escape') $('#skip').click(); return; }
     if (!$('#result').hidden) { if (enter && !ev.repeat) { ev.preventDefault(); const b = $('#next2') || $('#again') || $('#back'); if (b) b.click(); } return; }
@@ -449,6 +452,7 @@
       else if (e.t === 'fall') banner(who(e.d) + ' 함락', '악마가 남은 요새로 몰려온다', true);
       else if (e.t === 'support') toast(`${who(e.d)} → ${who(e.to)} 유닛 ${e.n}기 지원`);
       else if (e.t === 'called' && e.bonus) { toast(`웨이브를 앞당겼다 · 보너스 ●${e.bonus}`, 'good'); DD.Audio.play('coin'); }
+      if (e.t === 'wave' && !ui.seenElite && me().queue.some((q) => q.elite)) { ui.seenElite = true; toast('우두머리 악마가 섞여 온다 · 크고 단단하지만 골드를 다섯 배 흘린다', 'info'); }
       if (e.t === 'wave') for (const t of new Set(DD.waveList(e.w))) if (!ui.seenD.has(t)) { ui.seenD.add(t); if (e.w > 1) { toast(`새 악마 · ${DD.DEMONS[t].name} — ${DD.DEMONS[t].desc}`, 'info'); setTimeout(() => DD.Audio.play('alert'), 1300); } } // 웨이브 뿔피리 뒤에
     }
     { // 군주가 내 요새에 있으면 군주 곡, 사라지면 맵 곡을 멈췄던 자리부터
@@ -488,6 +492,7 @@
       recLine = `<p class="stars big">${'★'.repeat(s)}${'☆'.repeat(3 - s)} <small>${G.D.name}${gain > 0 ? ` · 새 기록 +${bonus}` : ''}</small></p>`;
     }
     rs.shards += sh;
+    const achLine = grantAch(d, rs, G.win);
     let unlocked = '';
     const tut = G.tutorial && !G.quit && !save.tutorialDone;
     if (!G.tutorial && !G.quit) { rs.best = rs.best || {}; rs.best[G.stage] = Math.max(rs.best[G.stage] || 0, G.win ? C.WAVES + 1 : d.wavesCleared); }
@@ -503,7 +508,7 @@
       <p>${d.R.name} · ${G.st.name}${G.tutorial ? '' : ' · ' + G.D.name}</p>${recLine}
       <div class="stats"><span><b>${d.wavesCleared}/${C.WAVES}</b>웨이브</span><span><b>${d.kills}</b>처치</span><span><b>${mmss(G.t)}</b>시간</span>
         <span><b>${d.nSum}</b>소환</span><span><b>${d.heroN}</b>영웅</span><span><b>${d.alive ? pct(d.heart.hp / d.heart.mhp) + '%' : '함락'}</b>심장</span></div>
-      <p class="gold">${ic('ui_shard')} 영혼석 +${sh}${sh && !G.tutorial ? ` (보유 ${rs.shards})` : ''}</p>${unlocked}${tipL ? `<p class="tip">팁 · ${tipL}</p>` : ''}
+      <p class="gold">${ic('ui_shard')} 영혼석 +${sh}${sh && !G.tutorial ? ` (보유 ${rs.shards})` : ''}</p>${achLine}${unlocked}${tipL ? `<p class="tip">팁 · ${tipL}</p>` : ''}
       ${nextOk ? '<button id="next2" class="on">다음 스테이지 ▸</button> ' : ''}${tut || G.tutorial ? '' : `<button id="again" class="${nextOk ? '' : 'on'}">다시 도전</button> `}<button id="back">${tut ? '종족 선택' : '돌아가기'}</button>
       <small>Enter · ${nextOk ? '다음 스테이지' : tut || G.tutorial ? '종족 선택' : '다시 도전'}</small></div>`;
     $('#result').hidden = false;
@@ -514,17 +519,29 @@
   function finishEndless() { // 무한 침공이 끝났다: 20웨이브 뒤로 버틴 만큼 영혼석, 스테이지별 최고 기록
     const d = me(), rs = save.races[d.race], extra = Math.max(0, d.wavesCleared - C.WAVES);
     const sh = G.quit ? 0 : DD.shardsFor(G.stage, Math.min(C.WAVES, d.wavesCleared), false, G.diff) + Math.round(extra * 3 * (1 + G.stage * 0.5) * G.D.shard), best = (rs.endless = rs.endless || {}), isBest = extra > 0 && d.wavesCleared > (best[G.stage] || 0);
-    if (isBest) best[G.stage] = d.wavesCleared; rs.shards += sh; (save.lay = save.lay || {})[G.layout + d.ents.length] = Array.from(d.grid); persist();
+    if (isBest) best[G.stage] = d.wavesCleared; rs.shards += sh; const achLine = grantAch(d, rs, false); (save.lay = save.lay || {})[G.layout + d.ents.length] = Array.from(d.grid); persist();
     DD.Audio.stopAmbience(); if (G.quit) DD.Music.stop(); else DD.Music.play('defeat', { fade: 0.4 }); dlg = null; drawDlg(); setGoal('');
     $('#result').innerHTML = `<div><h1 class="gold">무한 침공 종료</h1>
       <p>${d.R.name} · ${G.st.name} · ${G.D.name}</p>
       <div class="stats"><span><b>${d.wavesCleared}</b>웨이브</span><span><b>${d.kills}</b>처치</span><span><b>${mmss(G.t)}</b>시간</span></div>
       ${isBest ? '<p class="good">최고 기록 갱신</p>' : best[G.stage] ? `<p>최고 기록 ${best[G.stage]}웨이브</p>` : ''}
-      <p class="gold">${ic('ui_shard')} 영혼석 +${sh} (보유 ${rs.shards})</p>
+      <p class="gold">${ic('ui_shard')} 영혼석 +${sh} (보유 ${rs.shards})</p>${achLine}
       <button id="again" class="on">다시 도전</button> <button id="back">돌아가기</button><small>Enter · 다시 도전</small></div>`;
     $('#result').hidden = false;
     $('#again').onclick = () => startGame();
     $('#back').onclick = () => { G = null; $('#game').hidden = true; $('#result').hidden = true; showMenu(); };
+  }
+  // 업적: 판이 끝날 때 한꺼번에 판정한다. 새로 이룬 것의 영혼석을 주고 결과 화면에 적는다
+  function grantAch(d, rs, win) {
+    if (G.tutorial || G.quit) return '';
+    const got = DD.ACH.filter((a) => !save.ach[a.id] && a.test({ G, d, win, save })); if (!got.length) return '';
+    got.forEach((a) => { save.ach[a.id] = 1; rs.shards += a.sh; });
+    return got.map((a) => `<p class="ach">${ic('ui_gradeSSR')} 업적 · <b>${a.name}</b> <span class="gold">${ic('ui_shard')} +${a.sh}</span></p>`).join('');
+  }
+  function showAch() { // 메뉴의 업적 목록
+    const n = DD.ACH.filter((a) => save.ach[a.id]).length;
+    $('#ach').innerHTML = `<div class="box"><h2>업적 <span class="gold">${n}/${DD.ACH.length}</span></h2><div class="achlist">${DD.ACH.map((a) => `<div class="${save.ach[a.id] ? 'done' : ''}"><b>${save.ach[a.id] ? '✔ ' : ''}${a.name}</b><small>${a.desc}</small><span class="gold">${ic('ui_shard')} ${a.sh}</span></div>`).join('')}</div><button id="achclose">닫기 · Esc</button></div>`;
+    $('#ach').hidden = false; $('#achclose').onclick = () => { $('#ach').hidden = true; };
   }
   // ───────── 설정(배경음악·효과음 음량, 번쩍임). 메뉴의 설정 버튼, 게임 중 ⚙ 또는 Esc ─────────
   let setWasPaused = false;

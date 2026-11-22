@@ -148,7 +148,7 @@
     const d = {
       i, race: p.race, R, bot: !!p.bot, alive: true, gold: 150 + 30 * (m.sGold || 0) + (p.bonusGold || 0), mat: 0, kills: 0,
       units: [], blds: [], demons: [], shots: [], fx: [], snd: {}, queue: [], occ: {}, bc: {}, ver: 0, walls: 0,
-      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, nSum: 0, nBld: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0, lost: 0, skillT: 0, nMerge: 0, mission: null, pop: C.POP + (p.race === 'beast' ? 10 : 0), boons: [], boonPick: null,
+      up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, nSum: 0, nBld: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0, lost: 0, skillT: 0, nMerge: 0, nLegend: 0, nRank2: 0, bossKills: 0, eliteKills: 0, trapKills: 0, nMission: 0, nCall: 0, mission: null, pop: C.POP + (p.race === 'beast' ? 10 : 0), boons: [], boonPick: null,
       mod: {
         atk: (sm.atk || 1) * (1 + 0.05 * (m.uAtk || 0)), hp: (sm.hp || 1) * (1 + 0.05 * (m.uHp || 0)), spd: sm.spd || 1,
         bhp: (1 + 0.08 * (m.bHp || 0)) * (p.race === 'human' ? 1.2 : 1), gold: 1 + 0.05 * (m.gold || 0), hcd: 1 - 0.04 * (m.hCd || 0),
@@ -286,7 +286,7 @@
       for (const u of d.units) if (wallAt(d, u.hx, u.hy)) { const h = homeSlot(d, u.def.rng > 30, !!u.hero); u.hx = h.x; u.hy = h.y; } // 벽 속이 된 자리는 다시 잡는다
     } else if (c.a === 'callwave') { // 전장이 비었으면 기다리지 않고 다음 웨이브를 부른다. 건너뛴 시간만큼의 기본 수입은 준다
       const skip = DD.canCall(G); if (!skip) return '전장에 악마가 남아 있습니다';
-      const bonus = DD.callBonus(G);
+      const bonus = DD.callBonus(G); d.nCall++;
       G.t += skip;
       for (const x of G.dungeons) if (x.alive) { const inc = DD.income(x); x.gold += inc.g * skip + bonus; x.mat += inc.m * skip; x.heroT -= skip; }
       G.events.push({ t: 'called', d: d.i, bonus });
@@ -323,7 +323,7 @@
       d.units = d.units.filter((u) => !p.us.includes(u));
       const to = p.to || p.opts[c.pick ? 1 : 0]; // 1단계는 두 2단계 유닛 중 고른 쪽으로
       const u = addUnit(G, d, to); u.x = f.x; u.y = f.y; u.hx = f.hx; u.hy = f.hy; u.kills = d.race === 'spirit' ? Math.max(kills, DD.RANK_KILLS[1]) : kills; d.nMerge++; promote(G, d, u); // 정령은 조합하면 정예로 태어난다
-      fx(d, 'hero', u.x, u.y, 0.75, { c: to.legend ? 'g1' : d.R.color }); if (to.legend) snd(d, 'hero');
+      fx(d, 'hero', u.x, u.y, 0.75, { c: to.legend ? 'g1' : d.R.color }); if (to.legend) { snd(d, 'hero'); d.nLegend++; }
       G.events.push({ t: 'merge', d: d.i, name: to.name, legend: !!to.legend });
     } else if (c.a === 'skill') { // 영웅 기술: 살아 있는 내 영웅이 모두 쓴다
       const hs = d.units.filter((u) => u.hero && u.own === d.i && u.hp > 0);
@@ -403,7 +403,7 @@
   }
   function promote(G, d, u) { // 처치 수가 차면 승급: 최대 체력이 늘고(공격은 unitAtk에서) 표식이 붙는다
     const r = DD.rankOf(u, G.dungeons[u.own].race), was = u.rk || 0; if (r <= was) return;
-    const k = (1 + 0.15 * r) / (1 + 0.15 * was); u.mhp *= k; u.hp *= k; u.rk = r;
+    const k = (1 + 0.15 * r) / (1 + 0.15 * was); u.mhp *= k; u.hp *= k; u.rk = r; if (r === 2) G.dungeons[u.own].nRank2++;
     fx(d, 'hero', u.x, u.y, 0.5, { c: 'g1' }); snd(d, 'up');
   }
   function hurt(G, d, src, t, amt) {
@@ -412,7 +412,8 @@
       t.dead = true; d.kills++; if (src && src.k === 'u') { src.kills++; promote(G, d, src); }
       const kg = t.def.gold * (t.gm || 1) * G.D.gold * d.mod.gold * (d.mod.kg || 1) * (1 + 0.2 * Math.min(3, d.bc.hoard || 0)); d.gold += kg;
       if (t.def.spr === 'd_boss' && (G.endless || G.wave < C.WAVES) && !G.tutorial) offerBoon(G, d);
-      d.mat += (t.def.mat || 0) + (G.rnd() < 0.1 ? 1 : 0);
+      d.mat += (t.def.mat || 0) + (G.rnd() < 0.1 ? 1 : 0) + (t.elite ? 5 : 0);
+      if (t.def.spr === 'd_boss') d.bossKills++; if (t.elite) d.eliteKills++; if (src && src.k === 'b' && src.def.kind === 'trap') d.trapKills++;
       fx(d, 'corpse', t.x, t.y, 0.5, { s: t.gim ? 'd_lord_' + t.gim : t.def.spr, face: t.face }); fx(d, 'smoke', t.x, t.y, 0.5); fx(d, 'gold', t.x, t.y - 14, 0.7, { n: Math.round(kg) });
       snd(d, t.def.spr === 'd_boss' ? 'bossdie' : 'die');
     }
@@ -493,9 +494,11 @@
     const n = Math.round(base.length * d.share * (mu.n || 1));
     for (let i = 0; i < n; i++) list.push(base[i % base.length]);
     const easy = G.tutorial ? (w <= 5 ? 0.6 : 0.85) : 1; // 튜토리얼의 첫 다섯 웨이브는 약하다
+    const cand = !G.tutorial && w >= 4 && w % 5 ? list.map((t, i) => i).filter((i) => list[i] === 'brute' || list[i] === 'hound' || list[i] === 'warlock') : [];
+    const ei = cand.length ? cand[Math.floor(G.rnd() * cand.length)] : -1; // 우두머리: 체력 2.5배, 공격 1.25배, 골드 5배
     const ne = d.ents.length, th = G.thrust[w], rest = d.ents.map((e, i) => i).filter((i) => i !== th); // 주공 입구로 6할, 나머지는 고르게
     const entOf = (i) => (ne < 2 || th == null ? 0 : i % 5 < 3 ? th : rest[((i / 5) | 0) % rest.length]);
-    list.forEach((t, i) => d.queue.push({ ent: t === 'boss' ? 0 : entOf(i), at: G.t + (i / list.length) * 25, t, hp: sc.hp * G.st.mul * easy * D.hp * (mu.hp || 1), atk: sc.atk * Math.sqrt(G.st.mul) * D.atk * (mu.atk || 1), spd: mu.spd || 1, gm: mu.gold || 1, gim: t === 'boss' ? DD.BOSS[w] || (w > C.WAVES ? 'all' : null) : null }));
+    list.forEach((t, i) => d.queue.push({ elite: i === ei, ent: t === 'boss' ? 0 : entOf(i), at: G.t + (i / list.length) * 25, t, hp: sc.hp * G.st.mul * easy * D.hp * (mu.hp || 1), atk: sc.atk * Math.sqrt(G.st.mul) * D.atk * (mu.atk || 1), spd: mu.spd || 1, gm: mu.gold || 1, gim: t === 'boss' ? DD.BOSS[w] || (w > C.WAVES ? 'all' : null) : null }));
     d.queue.sort((a, b) => a.at - b.at);
   }
 
@@ -576,17 +579,17 @@
     if (ms) { // 미션 판정: 웨이브를 다 잡으면 성공, 조건을 어기거나 다음 웨이브가 오면 실패
       const el = G.t - ms.t0, clear = el > 1 && !d.demons.length && !d.queue.length;
       const fail = G.wave !== ms.w || (ms.k === 'fast' && el > DD.MISSION.fast.t) || (ms.k === 'nodmg' && d.heart.hp < ms.hp0 - 0.5) || (ms.k === 'noloss' && d.lost > ms.lost0);
-      if (fail || clear) { d.mission = null; if (!fail) d.gold += ms.gold; G.events.push({ t: 'mission', d: d.i, ok: !fail, k: ms.k, gold: ms.gold }); }
+      if (fail || clear) { d.mission = null; if (!fail) { d.gold += ms.gold; d.nMission++; } G.events.push({ t: 'mission', d: d.i, ok: !fail, k: ms.k, gold: ms.gold }); }
     }
     if (d.heroT > 0) d.heroT -= DT;
     if (d.skillT > 0) d.skillT -= DT;
     if (d.alarmT > 0) d.alarmT -= DT;
     if (!d.demons.length && !d.queue.length) for (const b of d.blds) if (b.hp < b.mhp) b.hp = Math.min(b.mhp, b.hp + b.mhp * 0.03 * DT); // 전장이 비면 건물을 고친다
     while (d.queue.length && d.queue[0].at <= G.t) {
-      const q = d.queue.shift(), def = DD.DEMONS[q.t], mhp = def.hp * q.hp;
+      const q = d.queue.shift(), def = DD.DEMONS[q.t], mhp = def.hp * q.hp * (q.elite ? 2.5 : 1);
       const en = d.ents[q.ent || 0] || d.ents[0], jx = (G.rnd() - 0.5) * 12, jo = G.rnd() * 6; // 입구가 난 벽 쪽 끝에서 나온다
       const sp = en[0] === 0 ? [C.OX + 6 + jo, tcy(en[1]) + jx] : en[0] === GW - 1 ? [C.OX + GW * T - 12 + jo, tcy(en[1]) + jx] : en[1] === 0 ? [tcx(en[0]) + jx, C.OY + 6 + jo] : [tcx(en[0]) + jx, C.OY + GH * T - 12 + jo];
-      d.demons.push({ id: G.nid++, k: 'd', def, ent: q.ent || 0, x: sp[0], y: sp[1], hp: mhp, mhp, atk: def.atk * q.atk, spd: q.spd || 1, gm: q.gm || 1, gim: q.gim || null, sc: [q.hp, q.atk], gt: 6, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: q.t === 'boss' ? 12 : 7 });
+      d.demons.push({ id: G.nid++, k: 'd', def, ent: q.ent || 0, x: sp[0], y: sp[1], hp: mhp, mhp, atk: def.atk * q.atk * (q.elite ? 1.25 : 1), spd: q.spd || 1, gm: (q.gm || 1) * (q.elite ? 5 : 1), elite: !!q.elite, gim: q.gim || null, sc: [q.hp, q.atk], gt: 6, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: q.t === 'boss' ? 12 : 7 });
     }
     const drums = d.blds.filter((b) => b.def.haste), pools = d.blds.filter((b) => b.def.regen);
     // 유닛
