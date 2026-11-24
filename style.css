@@ -223,3 +223,5 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 .achlist>div.done{opacity:1;box-shadow:inset 0 0 0 3px var(--gold)}.achlist b{font-size:28px;color:var(--tx)}.achlist .done b{color:var(--gold)}
 .achlist small{grid-column:1/3;font-size:22px;color:var(--dim);line-height:1.25}.achlist span{grid-row:1;grid-column:2;font-size:24px}
 #result .ach{margin:6px 0;font-size:28px}#result .ach b{color:var(--gold)}
+.diffnote{display:flex;align-items:center;gap:14px;white-space:nowrap}.diffnote .dn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}.diffnote .endl{float:none;margin:0;flex:none}
+#info button .gold{color:var(--gold)}

@@ -6,6 +6,18 @@
 
   // [한국어, 영어, 일본어]
   const D = [
+    ['날랜', 'Swift', '俊敏'], ['멀리 닿는', 'Far-reaching', '遠射'], ['굳센', 'Stalwart', '堅牢'], ['터지는', 'Bursting', '炸裂'], ['아무는', 'Mending', '治癒'],
+    ['공격 속도 +20%', '+20% attack speed', '攻撃速度 +20%'], ['사거리 +25%', '+25% range', '射程 +25%'], ['최대 체력 +30%', '+30% max HP', '最大HP +30%'], ['공격이 주변으로 퍼진다', 'Attacks splash nearby enemies', '攻撃が周囲に広がる'], ['초당 체력 1.5% 재생', 'Regenerates 1.5% HP per second', '毎秒HP 1.5%再生'],
+    ['서로 다른 유닛 둘을 골라야 합니다', 'Select two different units', '異なるユニットを二体選んでください'], ['각인 자리가 없습니다', 'No imprint slot left', '刻印の枠がありません'], ['이미 가진 각인입니다', 'It already has that imprint', 'すでに持っている刻印です'],
+    ['· 각인 ', '· Imprints ', '· 刻印 '], ['각인 ·', 'Imprint ·', '刻印 ·'], ['승급 ·', 'Promoted ·', '昇格 ·'], ['승급', 'Promote', '昇格'], ['· 방어 ', '· Armor ', '· 防御 '],
+    ['유닛을 골라 두면 그 종류를 올린다 · 각인과 처치 수는 물려받는다', 'Select units to promote that type · imprints and kills carry over', 'ユニットを選ぶとその種類を昇格 · 刻印と撃破数は引き継ぐ'],
+    ['서로 다른 유닛 둘을 고르고 C를 누르면 각인', 'Select two different units and press C to imprint', '異なるユニット二体を選んでCで刻印'],
+    ['길과 벽 타일은 진격을 한 번 넘길 때마다 더 주어집니다. 벽은 악마들의 진격도, 화살도 막을 수 있습니다. 잘 활용해보죠.', 'You are given more road and wall tiles with every wave you survive. A wall stops demons and arrows alike. Use them well.', '道と壁のマスは、侵攻を一度しのぐたびに追加されます。壁は悪魔の進軍も矢も防げます。うまく使いましょう。'],
+    ['서로 다른 병사 둘을 고르고 C를 누르면, 하나가 다른 하나에게 제 장기를 새기고 떠납니다. 각인이라 부릅니다.', 'Select two different soldiers and press C: one leaves, carving its talent into the other. We call it an imprint.', '異なる兵士を二体選んでCを押すと、一方がもう一方に自分の技を刻んで去ります。刻印と呼びます。'],
+    ['악마의 갑옷은 진격을 거듭할수록 두꺼워집니다. 보병만으로는 뒤로 갈수록 버겁습니다.', 'The demons grow thicker armor with every wave. Footmen alone will struggle later on.', '悪魔の鎧は侵攻を重ねるほど厚くなります。歩兵だけでは後半が苦しくなります。'],
+    ['악마의 방어력은 웨이브마다 오릅니다. 한 방이 약한 유닛만으로는 뒤로 갈수록 피해가 깎입니다.', 'Demon armor rises every wave. Units with weak hits lose more and more of their damage.', '悪魔の防御力はウェーブごとに上がります。一撃の弱いユニットは後半ほどダメージが削られます。'],
+    ['서로 다른 유닛 둘을 고르고 C를 누르면 각인됩니다. 궁병을 기사에게 새기면 기사의 사거리가 늡니다.', 'Select two different units and press C to imprint. Imprint an archer onto a knight and the knight reaches farther.', '異なるユニット二体を選んでCを押すと刻印されます。弓兵を騎士に刻むと騎士の射程が伸びます。'],
+    ['길 타일은 웨이브마다 6칸씩 늘어납니다. 받는 대로 길을 구부려 탑과 함정 앞을 오래 지나게 하세요.', 'You gain 6 road tiles every wave. Bend the road as you get them so demons spend longer in front of towers and traps.', '道マスはウェーブごとに6マス増えます。もらうたびに道を曲げ、塔と罠の前を長く歩かせましょう。'],
     ['첫 승리', 'First Victory', '初勝利'], ['아무 스테이지나 승리한다', 'Win any stage', 'いずれかのステージで勝利する'],
     ['철벽', 'Iron Wall', '鉄壁'], ['심장이 한 번도 맞지 않고 승리한다', 'Win without the Heart ever being hit', '心臓が一度も攻撃されずに勝利する'],
     ['역전의 지휘관', 'Seasoned Commander', '歴戦の指揮官'], ['어려움 이상에서 승리한다', 'Win on Hard or above', 'むずかしい以上で勝利する'],
@@ -35,9 +47,9 @@
     ['더 강화할 수 없습니다', 'It cannot be upgraded further', 'これ以上強化できません'], ['최대 강화', 'Max level', '最大強化'], ['강화 Lv.', 'Upgrade Lv.', '強化 Lv.'],
     ['무한 침공 종료', 'Endless Invasion Over', '無限侵攻 終了'], ['무한 침공', 'Endless Invasion', '無限侵攻'],
     ['쓰러질 때까지 버틴다', 'Hold until you fall', '倒れるまで耐えろ'], ['최고 기록 갱신', 'New best record', '最高記録更新'], ['무한', 'endless', '無限'],
-    ['같은 병사 셋을 합치면 한 단계 위의 병사가 됩니다.', 'Merge three of the same soldier and you get one of the next tier.', '同じ兵士を三体合わせると、一段上の兵士になります。'],
+    ['같은 병사 셋을 모으면 한 단계 위의 병사로 승급시킬 수 있습니다. 골드가 조금 듭니다.', 'Gather three of the same soldier and you can promote them into one of the next tier. It costs a little gold.', '同じ兵士を三体集めると、一段上の兵士に昇格できます。少しゴールドがかかります。'],
     ['보병 셋은 궁병이나 마법사 중 고르신 쪽이 됩니다. 인구는 줄고 전력은 오르죠.', 'Three footmen become an archer or a mage, your choice. Fewer mouths, more strength.', '歩兵三体は弓兵か魔法使い、お選びの方になります。人口は減り、戦力は上がります。'],
-    ['보병 3기 조합 · B 또는 V', 'Merge 3 footmen · B or V', '歩兵3体を合成 · B または V'],
+    ['보병 3기 승급 · B 또는 V', 'Promote 3 footmen · B or V', '歩兵3体を昇格 · B または V'],
     ['영웅은 저마다 기술을 하나씩 갖고 있습니다.', 'Every hero has a skill of their own.', '英雄はそれぞれ技を一つ持っています。'],
     ['악마가 몰렸을 때 써보죠. 한 번 쓰면 잠시 기다려야 합니다.', 'Use it when the demons bunch up. After that it needs a moment to recover.', '悪魔が群がった時に使いましょう。一度使うとしばらく待つ必要があります。'],
     ['영웅 기술 사용 · X', 'Use hero skills · X', '英雄スキルを使う · X'],
@@ -235,7 +247,7 @@
     ['거점(보라색 단) 위 건물은 체력이 25% 더 높습니다. 해금 건물은 거점에 세우세요.', 'Buildings on a platform (the purple dais) have 25% more HP. Put your unlock buildings there.', '拠点(紫の台)の上の建物は耐久が25%高くなります。解放用の建物は拠点に建てましょう。'],
     ['탑은 심장에 가장 가까이 온 악마부터 쏩니다. 심장 가까운 길목에 탑을 모아 두세요.', 'Towers shoot the demon closest to the Heart first. Cluster them near the last stretch of road.', '塔は心臓に最も近い悪魔から撃ちます。心臓に近い道に塔を集めましょう。'],
     ['방벽(F)은 길 위에 세워 악마를 붙잡아 둡니다. 탑의 사거리 안에 세우면 효과가 큽니다.', 'Barricades (F) go on the road and hold demons in place. They work best inside tower range.', '防壁(F)は道の上に建てて悪魔を足止めします。塔の射程内に置くと効果的です。'],
-    ['인구가 차면 같은 유닛 셋을 조합(B·V)해 상위 유닛으로 올리세요.', 'When you hit the population cap, merge three identical units (B·V) into a stronger one.', '人口が上限に達したら、同じユニット三体を合成(B·V)して上位ユニットにしましょう。'],
+    ['인구가 차면 같은 유닛 셋을 승급(B·V)시켜 상위 유닛으로 올리세요.', 'When you hit the population cap, merge three identical units (B·V) into a stronger one.', '人口が上限に達したら、同じユニット三体を合成(B·V)して上位ユニットにしましょう。'],
     ['전장이 비면 N으로 다음 웨이브를 앞당길 수 있습니다. 앞당긴 만큼 보너스 골드가 들어옵니다.', 'When the field is clear, press N to call the next wave early. The earlier you call, the bigger the gold bonus.', '戦場が空になったら、Nで次のウェーブを前倒しできます。早めた分だけボーナスゴールドが入ります。'],
     ['영구 강화는 종족마다 따로 쌓입니다. 영혼석을 모아 체력·공격부터 올리세요.', 'Permanent upgrades are kept per race. Save soul shards and raise HP and ATK first.', '永久強化は種族ごとに別々です。魂石を集めて、まずHPと攻撃を上げましょう。'],
     ['다섯 번째 웨이브마다 악마 군주가 옵니다. 그 전에 제단을 강화하고 영웅을 불러 두세요.', 'A Demon Lord comes every fifth wave. Upgrade the altar and summon a hero before then.', '5ウェーブごとにデーモンロードが来ます。その前に祭壇を強化し、英雄を呼んでおきましょう。'],
@@ -262,7 +274,7 @@
     ['멀티 (AI 동맹)', 'Allied (AI)', 'マルチ (AI同盟)'], ['솔로', 'Solo', 'ソロ'], ['· 스테이지', '· Stage', '· ステージ'], ['스테이지', 'Stages', 'ステージ'],
     ['정식 버전에서', 'In the full game', '製品版で'], ['잠김', 'Locked', 'ロック'], ['· 악마 ×', '· Demons ×', '· 悪魔 ×'], ['✔ 클리어', '✔ Cleared', '✔ クリア'], ['최고 웨이브', 'Best wave', '最高ウェーブ'],
     ['영구 강화', 'Permanent Upgrades', '永久強化'], ['출전', 'To Battle', '出撃'], ['이야기', 'Story', '物語'], ['튜토리얼', 'Tutorial', 'チュートリアル'], ['⚙ 설정', '⚙ Settings', '⚙ 設定'], ['설정', 'Settings', '設定'], ['조작법', 'Controls', '操作方法'],
-    ['클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R Y 소환 · T 영웅 · X 영웅 기술 · B V 조합 · 소환소나 제단을 누르면 집결지 지정', 'Click or drag to select (double-click: same type, Ctrl+A: all) → click the ground to post them · Q W R Y summon · T hero · X hero skills · B V merge · click the Summoning Circle or Altar to set a rally point', 'クリック·ドラッグで選択(ダブルクリックで同種、Ctrl+Aで全員) → 地面クリックで配置 · Q W R Y 召喚 · T 英雄 · X 英雄スキル · B V 合成 · 召喚陣か祭壇を押すと集合地点を指定'],
+    ['클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R Y 소환 · T 영웅 · X 영웅 기술 · B V 승급 · C 각인 · 소환소나 제단을 누르면 집결지 지정', 'Click or drag to select (double-click: same type, Ctrl+A: all) → click the ground to post them · Q W R Y summon · T hero · X hero skills · B V promote · C imprint · click the Summoning Circle or Altar to set a rally point', 'クリック·ドラッグで選択(ダブルクリックで同種、Ctrl+Aで全員) → 地面クリックで配置 · Q W R Y 召喚 · T 英雄 · X 英雄スキル · B V 昇格 · C 刻印 · 召喚陣か祭壇を押すと集合地点を指定'],
     ['A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · H J 함정 · 거점 위는 체력 +25% · 고른 건물 U 강화 · Del 철거', 'A S D F G → click a tile (Shift: keep building) · buildings on floor, barricades on roads · H J traps · +25% HP on platforms · U upgrades and Del demolishes the selected building', 'A S D F G → マスをクリック(Shiftで連続) · 建物は床、防壁は道の上 · 拠点の上は耐久+25% · 選んだ建物はDelで撤去'],
     ['E (Z 길, X 벽, C 지우기, 우클릭 지우기, Ctrl+Z 되돌리기) · 길 최대', 'E (Z road, X wall, C erase, right-click erase, Ctrl+Z undo) · up to', 'E (Z 道, X 壁, C 消去, 右クリックで消去, Ctrl+Z 元に戻す) · 道は最大'],
     [', 벽 최대', ' road tiles,', '、壁は最大'], ['· 입구↔심장 연결 필수', 'wall tiles · the entrance must reach the Heart', '· 入口↔心臓の接続が必須'],
@@ -284,7 +296,7 @@
     ['길 깔기', 'Road', '道を敷く'], ['악마가 걷는 칸을 만든다', 'Lays tiles the demons walk on', '悪魔が歩くマスを作る'],
     ['벽 쌓기', 'Wall', '壁を積む'], ['통과와 사격을 막는 칸', 'Blocks movement and shots', '通行と射撃を防ぐマス'],
     ['지우기', 'Erase', '消去'], ['바닥으로 되돌린다 · 우클릭으로도 지운다', 'Turns a tile back into floor · right-click also erases', '床に戻す · 右クリックでも消せる'],
-    ['기본 길', 'Reset', '基本の道'], ['ㄹ 모양으로 되돌린다', 'Restores the default winding road', '基本のジグザグ道に戻す'],
+    ['기본 길', 'Reset', '基本の道'], ['곧은 길로 되돌린다', 'Restores the straight default road', 'まっすぐな基本の道に戻す'],
     ['되돌리기', 'Undo', '元に戻す'], ['마지막으로 칠한 것을 되돌린다 · Ctrl+Z', 'Undoes the last stroke · Ctrl+Z', '最後に塗ったものを戻す · Ctrl+Z'],
     ['취소', 'Cancel', 'キャンセル'], ['고친 것을 버리고 나간다', 'Discards your changes and exits', '変更を捨てて戻る'], ['✔ E로 적용', '✔ Press E to apply', '✔ Eで適用'],
     // ── 패널·정보 줄 ──
@@ -317,6 +329,7 @@
 
   // 숫자·이름이 끼는 문장. 사전보다 먼저 적용한다. [정규식, 영어, 일본어]
   const R = [
+    [/같은 유닛 (\d+)기를 한 단계 위 유닛 하나로 올린다/, 'Promotes $1 identical units into one of the next tier', '同じユニット$1体を一段上のユニット一体に昇格する'],
     [/최고 기록 (\d+)웨이브/, 'Best: wave $1', '最高記録 ウェーブ$1'],
     [/주공 · 위 입구/, 'Main thrust · top gate', '主攻 · 上の入口'], [/주공 · (왼쪽|오른쪽|아래) 입구/, 'Main thrust · $1 gate', '主攻 · $1の入口'], [/주공 위/, 'Thrust top', '主攻 上'],
     [/ · 입구 (\d+)곳/, ' · $1 gates', ' · 入口$1か所'], [/입구 (\d+)/, '$1 gates', '入口$1'],

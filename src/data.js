@@ -156,6 +156,10 @@
     warlock: { name: '흑마술사', hp: 72, atk: 14, rng: 72, as: 1.4, spd: 22, gold: 13, mat: 3, spr: 'd_warlock', desc: '원거리 · 길가 건물을 부순다 · 벽으로 시야를 막자' },
     boss: { name: '악마 군주', hp: 1500, atk: 40, rng: 20, as: 1.4, spd: 15, gold: 200, mat: 30, splash: 16, heavy: true, spr: 'd_boss', desc: '중장갑 · 광역 공격 · 건물도 부순다 · 다섯 웨이브마다' },
   };
+  // 처치 골드와 방어력(한 대 맞을 때마다 깎는 피해). 방어력은 웨이브가 갈수록 오른다 → 한 방이 약한 유닛은 뒤로 갈수록 힘을 못 쓴다
+  { const GOLD = { imp: 5, hound: 6, brute: 13, warlock: 11, bat: 7 }, ARM = { imp: 1, hound: 1, bat: 1, warlock: 2, brute: 4, boss: 6 };
+    for (const k in GOLD) DD.DEMONS[k].gold = GOLD[k]; for (const k in ARM) DD.DEMONS[k].arm = ARM[k]; }
+  DD.armAt = (t, w) => DD.DEMONS[t].arm * (0.5 + 0.1 * w);
   // 웨이브 w(1~20)의 구성
   DD.waveList = function (w) {
     const l = [];
@@ -205,7 +209,7 @@
   ];
   DD.META_MAX = 10;
   DD.metaCost = (lv) => 10 + lv * 10;
-  DD.CALL_BONUS = 1; // 웨이브를 일찍 부르면 건너뛴 1초마다 주는 추가 골드
+  DD.CALL_BONUS = 0.5; // 웨이브를 일찍 부르면 건너뛴 1초마다 주는 추가 골드
   DD.shardsFor = (stage, wavesCleared, win, diff) => Math.round((wavesCleared * 2 + (win ? 30 : 0)) * (1 + stage * 0.5) * DD.DIFFS[diff == null ? 1 : diff].shard);
 
   // 건물 종류별 최대 수. 같은 건물을 끝없이 늘릴 수 없다
@@ -249,6 +253,16 @@
     return DD.layoutOf(stage) === 'center' ? (s < 4 ? 2 : s < 6 ? 3 : 4) : s < 2 ? 1 : s < 4 ? 2 : 3;
   };
   DD.entsFor = (n, lay) => { const C = DD.C, mx = C.ENT_T[0], L = [0, C.GH >> 1], R = [C.GW - 1, C.GH >> 1]; return ((lay || C.LAYOUT) === 'center' ? [C.ENT_T, [mx, 0], L, R] : [C.ENT_T, L, R]).slice(0, n); };
+  // 각인: 서로 다른 유닛 둘을 합치면 하나가 사라지며 제 장기를 남긴다. 유닛마다 둘(전설은 셋)까지
+  DD.SIGS = {
+    swift: { name: '날랜', desc: '공격 속도 +20%', col: 'g1' }, reach: { name: '멀리 닿는', desc: '사거리 +25%', col: 'b2' },
+    guard: { name: '굳센', desc: '최대 체력 +30%', col: 's1' }, burst: { name: '터지는', desc: '공격이 주변으로 퍼진다', col: 'r1' },
+    mend: { name: '아무는', desc: '초당 체력 1.5% 재생', col: 'n1' },
+  };
+  DD.sigOf = (def) => (def.heal ? 'mend' : def.splash ? 'burst' : def.rng > 30 ? 'reach' : def.tier >= 2 ? 'guard' : 'swift');
+  DD.sigCap = (def) => (def.legend ? 3 : 2);
+  // 승급 값: 골드는 그 유닛 값의 절반, 자재는 그 유닛이 원래 드는 만큼. 전설은 따로
+  DD.mergeCost = (to) => (to.legend ? { g: 150, m: 60 } : { g: Math.round((to.g * 0.5) / 5) * 5, m: to.m });
   // 숙련: 악마를 많이 잡은 유닛은 승급한다(영웅 제외). 단계마다 공격·체력 +15%
   DD.RANKS = ['', '정예', '백전노장'];
   DD.RANK_KILLS = [0, 8, 25];
@@ -278,7 +292,7 @@
     nodmg: { name: '심장이 맞기 전에 격퇴' },
     noloss: { name: '유닛을 잃지 않고 격퇴' },
   };
-  DD.missionGold = (w) => 40 + 10 * w;
+  DD.missionGold = (w) => 25 + 8 * w;
   // 업적: 한 번만 달성되고 영혼석을 준다. x = { G, d, win, save }
   DD.ACH = [
     { id: 'win1', name: '첫 승리', desc: '아무 스테이지나 승리한다', sh: 20, test: (x) => x.win },

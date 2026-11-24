@@ -200,6 +200,7 @@
         }
         spr(ctx, e, e.gim && DD.ATLAS.frames['d_lord_' + e.gim] ? 'd_lord_' + e.gim : e.def.spr, TT, flash); // 군주는 기믹마다 모습이 다르다
         if (e.rk) { ctx.fillStyle = P.K; ctx.fillRect(x0 - 9, y0 - 1 - e.rk * 3, 5, e.rk * 3 + 1); ctx.fillStyle = P.g1; for (let i = 0; i < e.rk; i++) ctx.fillRect(x0 - 8, y0 - 3 - i * 3, 3, 2); } // 숙련 표식
+        if (e.sig) e.sig.forEach((sg, i) => { ctx.fillStyle = P.K; ctx.fillRect(x0 + 5, y0 - 2 - i * 4, 4, 4); ctx.fillStyle = P[DD.SIGS[sg].col]; ctx.fillRect(x0 + 6, y0 - 1 - i * 4, 2, 2); }); // 각인 표식
         if (e.stun > 0) { ctx.fillStyle = P.g1; const o = ((TT * 8) | 0) % 3; ctx.fillRect(x0 - 5 + o * 4, y0 - 20, 2, 2); ctx.fillRect(x0 + 3 - o * 4, y0 - 22, 2, 2); }
         if (e.fast) { ctx.fillStyle = P.g1; ctx.fillRect(x0 - 7, y0 - 16 - (((TT * 6) | 0) % 2), 1, 2); }
       }

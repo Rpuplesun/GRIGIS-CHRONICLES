@@ -35,7 +35,20 @@
   const NB = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
   // ── 던전 격자: 0 바닥(건물 자리), 1 길(악마가 걷는 칸), 2 벽(통과·사격 불가) ──
+  // 기본 길: 입구에서 심장까지 곧게. 길을 늘이는 것은 사령관의 몫이다
   DD.defaultGrid = function (nEnt) {
+    const gr = new Uint8Array(GW * GH), mx = C.ENT_T[0], hy = C.HEART_T[1], my = GH >> 1;
+    const row = (y, a, b) => { for (let x = a; x <= b; x++) gr[key(x, y)] = 1; }, col = (x, a, b) => { for (let y = a; y <= b; y++) gr[key(x, y)] = 1; };
+    col(mx, hy + 2, GH - 1);
+    if (C.LAYOUT === 'center') {
+      if (nEnt >= 2) col(mx, 0, hy - 2);
+      if (nEnt >= 3) { row(my, 0, 6); col(6, my, my + 2); row(my + 2, 6, mx); }
+      if (nEnt >= 4) { row(my, GW - 7, GW - 1); col(GW - 7, my, my + 2); row(my + 2, mx, GW - 7); }
+    } else { if (nEnt >= 2) row(my, 0, mx); if (nEnt >= 3) row(my, mx, GW - 1); }
+    return gr;
+  };
+  // AI 동맹이 쓰는 미리 짜 둔 길
+  DD.botGrid = function (nEnt) {
     const gr = new Uint8Array(GW * GH);
     if (C.LAYOUT === 'center') { // 심장이 가운데: 아래 입구는 오른쪽으로, 위 입구는 왼쪽으로 한 번 돌아 들어온다
       const mx = C.ENT_T[0], hy = C.HEART_T[1], row = (y, a, b) => { for (let x = a; x <= b; x++) gr[key(x, y)] = 1; }, col = (x, a, b) => { for (let y = a; y <= b; y++) gr[key(x, y)] = 1; };
@@ -64,14 +77,15 @@
   DD.gridCount = (gr) => { let r = 0, w = 0; for (const v of gr) { if (v === 1) r++; else if (v === 2) w++; } return { road: r, wall: w }; };
   // 입구 바깥 칸인가(아래 입구의 아래쪽, 좌우 입구의 바깥쪽). 악마가 들어오는 통로로 그리고 걷는다
   DD.entOutside = (ents, cx, cy) => ents.some((e) => (e[0] === 0 ? cx < 0 && cy === e[1] : e[0] === GW - 1 ? cx >= GW && cy === e[1] : e[1] === 0 ? cx === e[0] && cy < 0 : cx === e[0] && cy >= GH));
-  DD.gridCheck = function (gr, ents) { // 규칙 위반 사유 또는 null
+  DD.gridCheck = function (gr, ents, caps) { // 규칙 위반 사유 또는 null. caps: { roadCap, wallCap }
+    const rc = caps && caps.roadCap ? caps.roadCap : C.ROAD_MAX, wc = caps && caps.wallCap != null ? caps.wallCap : C.WALL_MAX;
     ents = ents || [C.ENT_T];
     if (gr.length !== GW * GH) return '격자 크기가 다릅니다';
     for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) if (DD.isFixed(cx, cy) && gr[key(cx, cy)]) return '바꿀 수 없는 칸';
     for (const e of ents) if (gr[key(e[0], e[1])] !== 1) return '입구는 길이어야 한다';
     const n = DD.gridCount(gr);
-    if (n.road > C.ROAD_MAX) return `길 타일 한도 초과 (${C.ROAD_MAX})`;
-    if (n.wall > C.WALL_MAX) return `벽 타일 한도 초과 (${C.WALL_MAX})`;
+    if (n.road > rc) return `길 타일 한도 초과 (${rc})`;
+    if (n.wall > wc) return `벽 타일 한도 초과 (${wc})`;
     const fl = flow(gr); for (const e of ents) if (fl[key(e[0], e[1])] < 0) return '입구와 심장은 이어져 있어야 합니다.';
     return null;
   };
@@ -88,7 +102,7 @@
   DD.gridPath = (gr, ents) => { const dist = flow(gr), paths = (ents || [C.ENT_T]).map((e) => pathOf(dist, e)); return { dist, path: paths[0], paths }; }; // 편집 초안 미리보기용
   // 진행 중인 요새에 격자 전체를 적용할 수 있는가. 사유 또는 null
   DD.gridErr = function (d, gr) {
-    const e0 = DD.gridCheck(gr, d.ents); if (e0) return e0;
+    const e0 = DD.gridCheck(gr, d.ents, d); if (e0) return e0;
     for (const b of d.blds) if (DD.bldTiles(b.def, b.cx, b.cy).some(([x, y]) => gr[key(x, y)] !== (b.def.kind === 'wall' || b.def.kind === 'trap' ? 1 : 0))) return '건물 아래 칸은 바꿀 수 없습니다';
     const nd = flow(gr);
     for (const e of d.demons) { const ex = tx(e.x), ey = ty(e.y); if (inG(ex, ey) && nd[key(ex, ey)] < 0) return '악마가 서 있는 길도 심장과 이어져 있어야 합니다'; }
@@ -143,10 +157,12 @@
     return G;
   };
 
+  // 길·벽 타일 한도: 곧은 길 + 12칸에서 시작해 웨이브마다 길 6칸, 벽 2칸씩 는다(AI 동맹은 처음부터 다 쓴다)
+  function setCaps(G, d) { d.roadCap = d.bot ? C.ROAD_MAX : Math.min(C.ROAD_MAX, d.roadCap0 + 6 * G.wave); d.wallCap = d.bot ? C.WALL_MAX : Math.min(C.WALL_MAX, 6 + 2 * G.wave); }
   function mkDungeon(G, i, p) {
     const R = DD.RACES[p.race], m = p.meta || {}, sm = G.st.mods[p.race] || {};
     const d = {
-      i, race: p.race, R, bot: !!p.bot, alive: true, gold: 150 + 30 * (m.sGold || 0) + (p.bonusGold || 0), mat: 0, kills: 0,
+      i, race: p.race, R, bot: !!p.bot, alive: true, gold: 110 + 30 * (m.sGold || 0) + (p.bonusGold || 0), mat: 0, kills: 0,
       units: [], blds: [], demons: [], shots: [], fx: [], snd: {}, queue: [], occ: {}, bc: {}, ver: 0, walls: 0,
       up: { atk: 0, hp: 0, bld: 0 }, rallyU: null, rallyH: null, altarLv: 1, heroN: 0, nSum: 0, nBld: 0, share: 1, slot: 0, botT: 0, wavesCleared: 0, lost: 0, skillT: 0, nMerge: 0, nLegend: 0, nRank2: 0, bossKills: 0, eliteKills: 0, trapKills: 0, nMission: 0, nCall: 0, mission: null, pop: C.POP + (p.race === 'beast' ? 10 : 0), boons: [], boonPick: null,
       mod: {
@@ -159,8 +175,9 @@
     const hh = Math.round(1000 * (1 + 0.08 * (m.bHp || 0)));
     d.heart = { k: 'h', x: C.HEART.x, y: C.HEART.y, hp: hh, mhp: hh, r: 38, hit: 0 };
     d.ents = DD.entsFor(G.nEnt, G.layout);
-    let gr = DD.defaultGrid(G.nEnt);
-    if (p.layout) { const u = Uint8Array.from(p.layout); if (!DD.gridCheck(u, d.ents)) gr = u; }
+    const straight = DD.defaultGrid(G.nEnt); d.roadCap0 = DD.gridCount(straight).road + 12; setCaps(G, d);
+    let gr = p.bot ? DD.botGrid(G.nEnt) : straight;
+    if (p.layout) { const u = Uint8Array.from(p.layout); if (!DD.gridCheck(u, d.ents, d)) gr = u; }
     applyGrid(d, gr); d.walls = DD.gridCount(gr).wall;
     return d;
   }
@@ -200,6 +217,21 @@
   DD.bldUpCost = (d, b) => { if (!['tower', 'wall', 'trap'].includes(b.def.kind) || (b.lv || 1) >= DD.BLD_LV_MAX) return null; const c = DD.bldCost(d, b.def), k = 0.8 * (b.lv || 1); return { g: Math.round(c.g * k), m: Math.round(c.m * k) }; };
   const lvMul = (b) => 1 + 0.4 * ((b.lv || 1) - 1);
   // 조합 계획: 고른 유닛이 있으면 그 종류에서, 없으면 가장 낮은 등급부터 찾는다. {def, us, to} 또는 null
+  const has = (u, s) => !!u.sig && u.sig.includes(s);
+  const rngOf = (u) => (has(u, 'reach') ? u.def.rng * 1.25 + 4 : u.def.rng);
+  function giveSig(u, s) { (u.sig = u.sig || []).push(s); if (s === 'guard') { u.mhp *= 1.3; u.hp *= 1.3; } }
+  // 승급에 필요한 건물이 없으면 그 사유, 있으면 null
+  DD.mergeBlock = function (d, to) { const id = to.legend ? (d.R.units.find((x) => x.tier === 3).req || {}).b : to.req && to.req.b; return id && !d.bc[id] ? d.R.blds.find((b) => b.id === id).name + ' 필요' : null; };
+  // 각인 계획: 고른 유닛 가운데 가장 높은 단계(같으면 처치가 많은 쪽)가 받고, 종류가 다른 가장 낮은 유닛이 사라진다
+  DD.imprintPlan = function (d, ids) {
+    const us = d.units.filter((u) => ids && ids.includes(u.id) && u.own === d.i && !u.hero && u.hp > 0);
+    if (us.length < 2) return { err: '서로 다른 유닛 둘을 골라야 합니다' };
+    us.sort((a, b) => b.def.tier - a.def.tier || b.kills - a.kills);
+    const base = us[0], cap = DD.sigCap(base.def); if ((base.sig || []).length >= cap) return { err: '각인 자리가 없습니다' };
+    const mat = us.slice(1).reverse().find((u) => u.def !== base.def && !u.def.legend && !has(base, DD.sigOf(u.def)));
+    if (!mat) return { err: us.some((u) => u.def !== base.def) ? '이미 가진 각인입니다' : '서로 다른 유닛 둘을 골라야 합니다' };
+    return { base, mat, sig: DD.sigOf(mat.def) };
+  };
   DD.mergePlan = function (d, ids) {
     const need = DD.mergeNeed(d.race), own = d.units.filter((u) => u.own === d.i && !u.hero && !u.def.legend && u.hp > 0);
     const sel = ids && ids.length ? new Set(own.filter((u) => ids.includes(u.id)).map((u) => u.def)) : null;
@@ -208,12 +240,12 @@
       const us = own.filter((u) => u.def === def); if (us.length < need) continue;
       us.sort((a, b) => (ids && ids.includes(b.id) ? 1 : 0) - (ids && ids.includes(a.id) ? 1 : 0) || a.hp - b.hp);
       const up = d.R.units.filter((x) => x.tier === def.tier + 1); // 1단계는 두 2단계 유닛 중 고른다(opts)
-      return { def, us: us.slice(0, need), to: def.tier >= 3 ? d.R.legend : up.length === 1 ? up[0] : null, opts: up };
+      return { def, us: us.slice(0, need), to: def.tier >= 3 ? d.R.legend : up.length === 1 ? up[0] : null, opts: def.tier >= 3 ? [d.R.legend] : up };
     }
     return null;
   };
   // 기본 수입(초당). 골드 수급 강화는 처치 골드와 기본 수입 모두에 붙는다
-  DD.income = (d) => ({ g: (1.6 + 1.2 * (d.bc.market || 0)) * d.mod.gold, m: (d.race === 'spirit' ? 0.15 : 0) + 0.3 * (d.bc.crystal || 0) });
+  DD.income = (d) => ({ g: (1.2 + 1.2 * (d.bc.market || 0)) * d.mod.gold, m: (d.race === 'spirit' ? 0.15 : 0) + 0.3 * (d.bc.crystal || 0) });
   DD.callBonus = (G) => Math.floor(DD.canCall(G) * DD.CALL_BONUS);
   const pay = (d, c) => { if (d.gold < c.g || d.mat < c.m) return false; d.gold -= c.g; d.mat -= c.m; return true; };
 
@@ -273,7 +305,7 @@
       if (d.grid[key(cx, cy)] === t) return null;
       if (d.occ[key(cx, cy)]) return '건물이 있는 칸';
       const ng = Uint8Array.from(d.grid); ng[key(cx, cy)] = t;
-      const e0 = DD.gridCheck(ng, d.ents); if (e0) return e0;
+      const e0 = DD.gridCheck(ng, d.ents, d); if (e0) return e0;
       const nd = flow(ng);
       for (const e of d.demons) { const ex = tx(e.x), ey = ty(e.y); if (inG(ex, ey) && nd[key(ex, ey)] < 0) return '악마가 서 있는 길'; }
       if (t === 2 && d.units.some((u) => tx(u.x) === cx && ty(u.y) === cy)) return '유닛이 서 있는 칸';
@@ -319,12 +351,20 @@
       });
     } else if (c.a === 'merge') { // 조합: 같은 유닛 셋을 한 단계 위 유닛 하나로
       const p = DD.mergePlan(d, c.ids); if (!p) return `같은 유닛 ${DD.mergeNeed(d.race)}기가 필요합니다`;
+      const to = p.to || p.opts[c.pick ? 1 : 0]; // 1단계는 두 2단계 유닛 중 고른 쪽으로
+      const blk = DD.mergeBlock(d, to); if (blk) return blk;
+      if (!pay(d, DD.mergeCost(to))) return '자원 부족';
       const f = p.us[0], kills = p.us.reduce((s, u) => s + u.kills, 0);
       d.units = d.units.filter((u) => !p.us.includes(u));
-      const to = p.to || p.opts[c.pick ? 1 : 0]; // 1단계는 두 2단계 유닛 중 고른 쪽으로
-      const u = addUnit(G, d, to); u.x = f.x; u.y = f.y; u.hx = f.hx; u.hy = f.hy; u.kills = d.race === 'spirit' ? Math.max(kills, DD.RANK_KILLS[1]) : kills; d.nMerge++; promote(G, d, u); // 정령은 조합하면 정예로 태어난다
+      const u = addUnit(G, d, to); u.x = f.x; u.y = f.y; u.hx = f.hx; u.hy = f.hy; u.kills = d.race === 'spirit' ? Math.max(kills, DD.RANK_KILLS[1]) : kills; d.nMerge++; promote(G, d, u);
+      [...new Set(p.us.flatMap((x) => x.sig || []))].slice(0, DD.sigCap(to)).forEach((sg) => giveSig(u, sg)); // 각인은 물려받는다 // 정령은 조합하면 정예로 태어난다
       fx(d, 'hero', u.x, u.y, 0.75, { c: to.legend ? 'g1' : d.R.color }); if (to.legend) { snd(d, 'hero'); d.nLegend++; }
       G.events.push({ t: 'merge', d: d.i, name: to.name, legend: !!to.legend });
+    } else if (c.a === 'imprint') { // 각인: 서로 다른 유닛 둘 → 하나가 사라지며 제 장기를 새긴다
+      const p = DD.imprintPlan(d, c.ids); if (p.err) return p.err;
+      d.units = d.units.filter((u) => u !== p.mat); p.base.kills += p.mat.kills; giveSig(p.base, p.sig); promote(G, d, p.base); d.nImprint = (d.nImprint || 0) + 1;
+      fx(d, 'hero', p.base.x, p.base.y, 0.6, { c: DD.SIGS[p.sig].col }); fx(d, 'dust', p.mat.x, p.mat.y, 0.42, { c: 's' }); snd(d, 'up');
+      G.events.push({ t: 'imprint', d: d.i, name: p.base.def.name, sig: p.sig });
     } else if (c.a === 'skill') { // 영웅 기술: 살아 있는 내 영웅이 모두 쓴다
       const hs = d.units.filter((u) => u.hero && u.own === d.i && u.hp > 0);
       if (!hs.length) return '영웅이 없습니다'; if (d.skillT > 0) return '기술을 아직 쓸 수 없습니다';
@@ -377,6 +417,7 @@
     const o = G.dungeons[u.own];
     let a = u.def.atk * o.mod.atk * (1 + 0.1 * o.up.atk) * (1 + 0.15 * (u.rk || 0));
     if (o.bc.forge && o.race === 'human') a *= 1.15;
+    if (u.def.splash && has(u, 'burst')) a *= 1.25;
     if (o.race === 'dragon') a *= 1 + Math.min(0.5, 0.02 * u.kills);
     if (o.race === 'beast') a *= 1 + Math.min(0.4, 0.015 * d.units.length);
     return a;
@@ -407,6 +448,7 @@
     fx(d, 'hero', u.x, u.y, 0.5, { c: 'g1' }); snd(d, 'up');
   }
   function hurt(G, d, src, t, amt) {
+    if (t.k === 'd' && t.arm && src) amt = Math.max(amt * 0.25, amt - t.arm); // 방어력: 한 대마다 깎되 4분의 1은 들어간다
     t.hp -= amt; t.hit = 0.12; if (t.k === 'h') d.alarmT = 3; // 심장이 맞으면 근처 병력이 달려온다
     if (t.k === 'd' && t.hp <= 0 && !t.dead) {
       t.dead = true; d.kills++; if (src && src.k === 'u') { src.kills++; promote(G, d, src); }
@@ -498,7 +540,7 @@
     const ei = cand.length ? cand[Math.floor(G.rnd() * cand.length)] : -1; // 우두머리: 체력 2.5배, 공격 1.25배, 골드 5배
     const ne = d.ents.length, th = G.thrust[w], rest = d.ents.map((e, i) => i).filter((i) => i !== th); // 주공 입구로 6할, 나머지는 고르게
     const entOf = (i) => (ne < 2 || th == null ? 0 : i % 5 < 3 ? th : rest[((i / 5) | 0) % rest.length]);
-    list.forEach((t, i) => d.queue.push({ elite: i === ei, ent: t === 'boss' ? 0 : entOf(i), at: G.t + (i / list.length) * 25, t, hp: sc.hp * G.st.mul * easy * D.hp * (mu.hp || 1), atk: sc.atk * Math.sqrt(G.st.mul) * D.atk * (mu.atk || 1), spd: mu.spd || 1, gm: mu.gold || 1, gim: t === 'boss' ? DD.BOSS[w] || (w > C.WAVES ? 'all' : null) : null }));
+    list.forEach((t, i) => d.queue.push({ arm: DD.armAt(t, w), elite: i === ei, ent: t === 'boss' ? 0 : entOf(i), at: G.t + (i / list.length) * 25, t, hp: sc.hp * G.st.mul * easy * D.hp * (mu.hp || 1), atk: sc.atk * Math.sqrt(G.st.mul) * D.atk * (mu.atk || 1), spd: mu.spd || 1, gm: mu.gold || 1, gim: t === 'boss' ? DD.BOSS[w] || (w > C.WAVES ? 'all' : null) : null }));
     d.queue.sort((a, b) => a.at - b.at);
   }
 
@@ -589,20 +631,20 @@
       const q = d.queue.shift(), def = DD.DEMONS[q.t], mhp = def.hp * q.hp * (q.elite ? 2.5 : 1);
       const en = d.ents[q.ent || 0] || d.ents[0], jx = (G.rnd() - 0.5) * 12, jo = G.rnd() * 6; // 입구가 난 벽 쪽 끝에서 나온다
       const sp = en[0] === 0 ? [C.OX + 6 + jo, tcy(en[1]) + jx] : en[0] === GW - 1 ? [C.OX + GW * T - 12 + jo, tcy(en[1]) + jx] : en[1] === 0 ? [tcx(en[0]) + jx, C.OY + 6 + jo] : [tcx(en[0]) + jx, C.OY + GH * T - 12 + jo];
-      d.demons.push({ id: G.nid++, k: 'd', def, ent: q.ent || 0, x: sp[0], y: sp[1], hp: mhp, mhp, atk: def.atk * q.atk * (q.elite ? 1.25 : 1), spd: q.spd || 1, gm: (q.gm || 1) * (q.elite ? 5 : 1), elite: !!q.elite, gim: q.gim || null, sc: [q.hp, q.atk], gt: 6, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: q.t === 'boss' ? 12 : 7 });
+      d.demons.push({ id: G.nid++, k: 'd', def, ent: q.ent || 0, x: sp[0], y: sp[1], hp: mhp, mhp, atk: def.atk * q.atk * (q.elite ? 1.25 : 1), spd: q.spd || 1, gm: (q.gm || 1) * (q.elite ? 5 : 1), elite: !!q.elite, arm: (q.arm || 0) * (q.elite ? 1.5 : 1), gim: q.gim || null, sc: [q.hp, q.atk], gt: 6, cd: 0, rt: G.rnd() * 0.3, tg: null, face: 1, hit: 0, r: q.t === 'boss' ? 12 : 7 });
     }
     const drums = d.blds.filter((b) => b.def.haste), pools = d.blds.filter((b) => b.def.regen);
     // 유닛
     for (const u of d.units) {
       if (u.hit > 0) u.hit -= DT; u.cd -= DT; u.rt -= DT;
       const o = G.dungeons[u.own];
-      let reg = u.mhp * ((o.race === 'merfolk' ? (d.demons.length || d.queue.length ? 0.01 : 0.05) : 0) + (o.mod.regen || 0) + (G.hz === 'forest' ? 0.02 : 0));
+      let reg = u.mhp * ((o.race === 'merfolk' ? (d.demons.length || d.queue.length ? 0.01 : 0.05) : 0) + (o.mod.regen || 0) + (G.hz === 'forest' ? 0.02 : 0) + (has(u, 'mend') ? 0.015 : 0));
       if (G.hz === 'fire' && o.race !== G.st.home && roadAt(d, u.x, u.y)) u.hp = Math.max(1, u.hp - u.mhp * 0.02 * DT); // 용암 분출
       for (const p of pools) if (d2(u, p) < p.def.rad * p.def.rad) reg += p.def.regen;
       if (reg && u.hp < u.mhp) u.hp = Math.min(u.mhp, u.hp + reg * DT);
       if (u.rush > 0) u.rush -= DT;
       if (u.stun > 0) { u.stun -= DT; u.mv = false; continue; } // 군주의 포효에 기절
-      const home = { x: u.hx, y: u.hy }, heal = u.def.heal, ranged = u.def.rng > 30;
+      const home = { x: u.hx, y: u.hy }, heal = u.def.heal, ranged = u.def.rng > 30, ur = rngOf(u);
       if (u.rt <= 0) {
         u.rt = 0.3; u.tg = null; u.fast = drums.some((b) => d2(u, b) < b.def.rad * b.def.rad);
         if (heal) {
@@ -610,7 +652,7 @@
           for (const a of d.units) if (a !== u && a.hp > 0 && a.hp / a.mhp < br && d2(a, home) < 120 * 120) { br = a.hp / a.mhp; u.tg = a; }
         }
         if (!u.tg) {
-          let bd = Math.max(u.def.rng + 12, 64) ** 2;
+          let bd = Math.max(ur + 12, 64) ** 2;
           for (const e of d.demons) { if (e.hp <= 0 || (e.def.fly && !ranged)) continue; const q = d2(u, e); if (q < bd && d2(e, home) < 110 * 110 && (!ranged || e.def.fly || los(d, u, e))) { bd = q; u.tg = e; } }
         }
         if (!u.tg && !heal && d.alarmT > 0 && d2(u, d.heart) < 240 * 240) { // 심장 구원: 심장을 치는 악마에게 달려간다
@@ -620,13 +662,13 @@
       }
       const t = u.tg;
       if (t && t.hp > 0) {
-        const reach = u.def.rng + t.r, ally = t.k === 'u';
+        const reach = ur + t.r, ally = t.k === 'u';
         if (d2(u, t) <= reach * reach) {
           u.mv = false; u.face = t.x >= u.x ? 1 : -1;
           if (u.cd <= 0) {
-            u.cd = u.def.as / ((u.fast ? 1.25 : 1) * (u.rush > 0 ? 1.6 : 1)); u.atkT = 0.3;
+            u.cd = u.def.as / ((u.fast ? 1.25 : 1) * (u.rush > 0 ? 1.6 : 1) * (has(u, 'swift') ? 1.2 : 1)); u.atkT = 0.3;
             if (ally) { t.hp = Math.min(t.mhp, t.hp + heal * o.mod.atk * (1 + 0.1 * o.up.atk)); shoot(d, u, t, 'heal', 'n1'); fx(d, 'heal', t.x, t.y - 12, 0.4, { c: 'n1' }); snd(d, 'heal'); }
-            else strike(G, d, u, t, unitAtk(G, d, u), u.def.splash, o.R.color);
+            else strike(G, d, u, t, unitAtk(G, d, u), u.def.splash || (has(u, 'burst') ? 12 : 0), o.R.color);
           }
         } else moveUnit(d, u, t.x, t.y, u.def.spd * o.mod.spd * (u.rush > 0 ? 1.6 : 1) * (G.hz === 'water' && o.race !== G.st.home ? 0.65 : 1));
       } else moveUnit(d, u, u.hx, u.hy, u.def.spd * o.mod.spd * (u.rush > 0 ? 1.6 : 1) * (G.hz === 'water' && o.race !== G.st.home ? 0.65 : 1));
@@ -703,7 +745,7 @@
     if ((G.endless || G.wave < C.WAVES) && G.t >= C.FIRST_WAVE + G.wave * C.WAVE_T) {
       G.wave++;
       if (G.nEnt > 1 && G.thrust[G.wave + 1] == null) G.thrust[G.wave + 1] = Math.floor(G.rnd() * G.nEnt);
-      G.dungeons.forEach((d) => { if (d.alive) { d.wavesCleared = G.wave - 1; spawnWave(G, d, G.wave); } });
+      G.dungeons.forEach((d) => { setCaps(G, d); if (d.alive) { d.wavesCleared = G.wave - 1; spawnWave(G, d, G.wave); } });
       for (const d of G.dungeons) if (d.alive && !d.bot && !G.tutorial && G.wave >= 2 && G.wave % 5 && G.rnd() < 0.5) {
         const ks = Object.keys(DD.MISSION), k = ks[Math.floor(G.rnd() * ks.length)];
         d.mission = { k, w: G.wave, t0: G.t, hp0: d.heart.hp, lost0: d.lost, gold: DD.missionGold(G.wave) }; G.events.push({ t: 'missionNew', d: d.i, k });
@@ -754,7 +796,7 @@
       const c = DD.upCost(d, k);
       if (c && own.length >= 8 + d.up[k] * 2 && can({ g: c.g + 60, m: c.m })) { G.cmd(d.i, { a: 'up', k }); return; }
     }
-    if (own.length >= d.pop && DD.mergePlan(d)) { G.cmd(d.i, { a: 'merge', pick: G.rnd() < 0.5 ? 1 : 0 }); return; } // 인구가 차면 조합으로 질을 올린다
+    if (own.length >= d.pop && DD.mergePlan(d) && !G.cmd(d.i, { a: 'merge', pick: G.rnd() < 0.5 ? 1 : 0 })) return; // 인구가 차면 조합으로 질을 올린다
     for (let ui = 2; ui >= 0; ui--) {
       const u = R.units[ui === 1 && G.rnd() < 0.5 && !DD.reqFail(d, R.units[3]) ? 3 : ui];
       if (DD.reqFail(d, u)) continue;
