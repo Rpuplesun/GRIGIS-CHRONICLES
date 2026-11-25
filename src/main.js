@@ -1,22 +1,31 @@
 // 화면(UI)·입력·저장. 게임 규칙은 sim.js, 수치는 data.js.
 (function () {
   const DD = window.DD, C = DD.C, $ = (s) => document.querySelector(s);
-  const SAVE_KEY = 'dungeon_dep_save_v1';
+  const SAVE_KEY = 'dungeon_dep_save_v1', RUN_KEY = 'dungeon_dep_run_v1';
   let save;
   try { save = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { /* 저장 불가 환경 */ }
   if (!save || !save.races) save = { races: {} };
   DD.RACE_IDS.forEach((r) => (save.races[r] = save.races[r] || { shards: 0, meta: {}, stage: 0 }));
   save.seen = save.seen || {};
   save.ach = save.ach || {};
-  save.opt = Object.assign({ vol: 0.6, bgm: 0.5, flash: true }, save.opt); // vol = 효과음, bgm = 배경음악
+  save.codex = save.codex || { demons: {}, bosses: {}, heroes: {}, legends: {} };
+  save.history = Array.isArray(save.history) ? save.history : [];
+  save.opt = Object.assign({ vol: 0.6, bgm: 0.5, flash: true, sharp: true }, save.opt); // vol = 효과음, bgm = 배경음악
   DD.Audio.setVol(save.opt.vol); DD.Music.setVol(save.opt.bgm);
   const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* 무시 */ } };
+  const loadRunSnap = () => { try { const s = JSON.parse(localStorage.getItem(RUN_KEY)); return s && s.v === 1 && Array.isArray(s.dungeons) && s.dungeons.length ? s : null; } catch (e) { return null; } };
+  const saveRunSnap = () => { if (!G || G.tutorial || G.over) return; try { const s = DD.saveSnapshot(G); if (s) localStorage.setItem(RUN_KEY, JSON.stringify(s)); } catch (e) { /* 저장 불가 환경 */ } };
+  const clearRunSnap = () => { try { localStorage.removeItem(RUN_KEY); } catch (e) { /* 무시 */ } };
+  window.addEventListener('beforeunload', saveRunSnap);
   const icon = (id, m) => { const f = DD.frames(id)[0]; return `<img class="px" src="${DD.icon(id)}" style="width:${f[2] * m}px;height:${f[3] * m}px">`; };
   const ic = (id) => `<img class="px ic" src="${DD.icon(id)}" alt="">`; // UI 시트의 아이콘(글자 높이에 맞춘다)
   const pct = (v) => Math.round(v * 100);
 
   // ───────── 메뉴 ─────────
-  const menu = Object.assign({ race: 'human', mode: 'solo', allies: 3, diff: 1 }, save.menu); menu.endless = false;
+  const menu = Object.assign({ race: 'human', mode: 'solo', allies: 3, diff: 1, ally: null, doctrines: {}, oaths: [] }, save.menu); menu.endless = false;
+  menu.doctrines = menu.doctrines || {};
+  menu.oaths = (menu.oaths || []).filter((id) => DD.OATHS.some((o) => o.id === id)).slice(0, 3);
+  if (menu.ally === menu.race) menu.ally = null;
   if (!DD.DIFFS[menu.diff]) menu.diff = 1; // 마지막으로 고른 종족·방식을 기억한다
   if (!DD.RACES[menu.race]) menu.race = 'human';
   const topStage = (race) => (DD.DEMO ? 0 : Math.min(5, save.races[race].stage)); // 열린 스테이지 중 가장 뒤
@@ -31,6 +40,8 @@
     const rs = save.races[menu.race], R = DD.RACES[menu.race], best = rs.best || {}, rec = rs.rec || {}, endl = rs.endless || {}, DF = DD.DIFFS[menu.diff];
     const xm = (v) => '×' + v, cleared = !!rec[menu.stage]; if (!cleared) menu.endless = false; // 무한 침공은 깬 스테이지에서만
     if (menu.stage > rs.stage) menu.stage = rs.stage;
+    const rSnap = loadRunSnap(), rD = rSnap && rSnap.dungeons[rSnap.human || 0];
+    const resumeBtn = rD && DD.RACES[rD.race] ? `<button class="on resume" data-m="resume:1">이어하기 · ${DD.RACES[rD.race].name} W${rSnap.wave || 0}</button>` : '';
     $('#menu').innerHTML = `
       <header><h1>${DD.TITLE.name}</h1><p class="sub">${DD.TITLE.sub}${DD.DEMO ? ' · 데모' : ''}${save.bonusGold ? ` · <span class="gold">전쟁 자금 ●${save.bonusGold} (다음 출전에 지급)</span>` : ''}</p></header>
       <section class="races"><h2>종족 <span class="row">
@@ -39,22 +50,30 @@
         <div class="cards">${DD.RACE_IDS.map((id) => { const r = DD.RACES[id]; return `
         <button class="card ${menu.race === id ? 'on' : ''}" data-m="race:${id}">
           <div class="icons">${r.units.map((u) => icon(u.spr, 3)).join('')}</div>
-          <b>${r.name}</b><small>${r.trait}</small><small class="gold">${ic('ui_shard')} ${save.races[id].shards} · 스테이지 ${save.races[id].stage + 1}</small>
-        </button>`; }).join('')}</div></section>
-      <section><h2>스테이지 <span class="row"><span class="lbl">난이도</span>${DD.DIFFS.map((x, i) => `<button class="${menu.diff === i ? 'on' : ''}" data-m="diff:${i}">${x.name}</button>`).join('')}</span></h2>
-        <p class="diffnote"><span class="dn">악마 체력 ${xm(DF.hp)} · 공격 ${xm(DF.atk)} · 골드 ${xm(DF.gold)} · <span class="gold">영혼석 ${xm(DF.shard)}</span></span> <button class="endl ${menu.endless ? 'on' : ''}" ${cleared && !DD.DEMO ? '' : 'disabled'} data-m="endless:1" title="">∞ 무한 침공${cleared ? '' : ' · 클리어 후'}</button></p><div class="cards c3">${DD.stageOrder(menu.race).map((id, i) => { const st = DD.stageOf(menu.race, i), lock = i > rs.stage, demo = DD.DEMO && i > 0; return `
+          <b class="rname"><img class="px crest" src="art/crest_${id}.png" alt="">${r.name}</b><small>${r.trait}</small><small class="gold">${ic('ui_shard')} ${save.races[id].shards} · 스테이지 ${save.races[id].stage + 1}</small>
+        </button>`; }).join('')}</div>
+        ${(() => {
+          const docs = DD.DOCTRINES[menu.race], di = menu.doctrines[menu.race] || 0;
+          const allyRow = menu.mode === 'solo' ? `<div class="grp2"><span class="lbl">동맹 원정</span><button class="${!menu.ally ? 'on' : ''}" data-m="ally:">없음</button>${DD.RACE_IDS.filter((id) => id !== menu.race).map((id) => `<button class="${menu.ally === id ? 'on' : ''}" data-m="ally:${id}">${DD.RACES[id].name}</button>`).join('')}${menu.ally ? `<small>${DD.ALLY_PERK[menu.ally]}</small>` : '<small>지원 부대 선택</small>'}</div>` : '';
+          return `<div class="subpick"><div class="grp2"><span class="lbl">교리</span>${docs.map((dc, i) => `<button class="${di === i ? 'on' : ''}" data-m="doc:${i}">${dc.name}</button>`).join('')}<small>${docs[di].desc}</small></div>${allyRow}</div>`;
+        })()}</section>
+      ${(() => {
+        const stId = DD.stageOrder(menu.race)[menu.stage], noHaz = !DD.HAZ[stId], effOaths = menu.oaths.filter((id) => id !== 'wildhaz' || !noHaz);
+        return `<section><h2>스테이지 <span class="row"><span class="lbl">난이도</span>${DD.DIFFS.map((x, i) => `<button class="${menu.diff === i ? 'on' : ''}" data-m="diff:${i}">${x.name}</button>`).join('')}</span></h2>
+        <p class="diffnote"><span class="dn">악마 체력 ${xm(DF.hp)} · 공격 ${xm(DF.atk)} · 골드 ${xm(DF.gold)} · <span class="gold">영혼석 ${xm(DF.shard)}${effOaths.length ? ` ×${DD.oathShardMul(effOaths).toFixed(2)}` : ''}</span></span> <button class="endl ${menu.endless ? 'on' : ''}" ${cleared && !DD.DEMO ? '' : 'disabled'} data-m="endless:1" title="">∞ 무한 침공${cleared ? '' : ' · 클리어 후'}</button></p>
+        <div class="oathrow"><span class="lbl">시련의 맹약</span>${DD.OATHS.map((o) => { const dis = o.id === 'wildhaz' && noHaz; return `<button class="${!dis && menu.oaths.includes(o.id) ? 'on' : ''}" ${dis ? 'disabled' : ''} data-m="oath:${o.id}" title="${dis ? '이 스테이지에는 지형 현상이 없다' : `${o.desc} (영혼석 +${Math.round(o.sh * 100)}%)`}"><img class="px ic" src="art/oath_${o.id}.png" alt="">${o.name}</button>`; }).join('')}<small>${effOaths.length ? effOaths.map((id) => DD.OATHS.find((o) => o.id === id).desc).join(' · ') : '최대 3개 선택 · 난이도와 영혼석 보상 상승'}</small></div>`; })()}<div class="cards c3">${DD.stageOrder(menu.race).map((id, i) => { const st = DD.stageOf(menu.race, i), lock = i > rs.stage, demo = DD.DEMO && i > 0, ec = DD.entCount(i, menu.diff, false, menu.oaths.includes('extraent')); return `
         <button class="card ${menu.stage === i ? 'on' : ''}" ${lock || demo ? 'disabled' : ''} data-m="stage:${i}">
-          <b>${i + 1}. ${st.name}</b><small>${demo ? '정식 버전에서' : lock ? '잠김' : st.desc} · 악마 ×${st.mul}</small><small>${[st.mods[menu.race] || !(DD.entCount(i, menu.diff) > 1) ? modText(st, menu.race) : '', DD.entCount(i, menu.diff) > 1 ? `입구 ${DD.entCount(i, menu.diff)}` : '', DD.layoutOf(i) === 'center' ? '심장 중앙' : ''].filter(Boolean).join(' · ')}</small>${rec[i] ? `<small class="rec"><span class="stars">${'★'.repeat(rec[i].s)}${'☆'.repeat(3 - rec[i].s)}</span> ${DD.DIFFS[rec[i].d].name}${endl[i] ? ` · ∞ ${endl[i]}` : ''}</small>` : best[i] ? `<small class="rec">${best[i] > C.WAVES ? '✔ 클리어' : `최고 웨이브 ${best[i]}/${C.WAVES}`}</small>` : ''}
+          <b>${i + 1}. ${st.name}</b><small>${demo ? '정식 버전에서' : lock ? '잠김' : st.desc} · 악마 ×${st.mul}</small><small>${[st.mods[menu.race] || !(ec > 1) ? modText(st, menu.race) : '', ec > 1 ? `입구 ${ec}` : '', DD.layoutOf(i) === 'center' ? '심장 중앙' : ''].filter(Boolean).join(' · ')}</small>${rec[i] ? `<small class="rec"><span class="stars">${'★'.repeat(rec[i].s)}${'☆'.repeat(3 - rec[i].s)}</span> ${DD.DIFFS[rec[i].d].name}${endl[i] ? ` · ∞ ${endl[i]}` : ''}</small>` : best[i] ? `<small class="rec">${best[i] > C.WAVES ? '✔ 클리어' : `최고 웨이브 ${best[i]}/${C.WAVES}`}</small>` : ''}
         </button>`; }).join('')}</div></section>
       <section><h2>영구 강화 <span class="gold">${ic('ui_shard')} ${rs.shards}</span></h2><div class="cards c3">${DD.META.map((m) => { const fmt = fmtMeta(m), lv = rs.meta[m.k] || 0, cost = DD.metaCost(lv), max = lv >= DD.META_MAX; return `
         <button class="card" ${max || rs.shards < cost ? 'disabled' : ''} data-m="meta:${m.k}">
           <b>${m.name}</b><small>Lv.${lv}/${DD.META_MAX} · ${fmt(lv)}${max ? '' : ` → <span class="good">${fmt(lv + 1)}</span>`}</small><small class="gold">${max ? '최대' : ic('ui_shard') + ' ' + cost}</small>
         </button>`; }).join('')}</div></section>
       <span></span><span></span>
-      <footer><button class="start" data-m="start:1">출전</button><button data-m="story:1">이야기</button><button data-m="tutorial:1">튜토리얼</button><button data-m="ach:1">업적 ${DD.ACH.filter((a) => save.ach[a.id]).length}/${DD.ACH.length}</button><button data-m="settings:1">설정</button>
+      <footer><button class="start" data-m="start:1">출전</button>${resumeBtn}<button data-m="story:1">이야기</button><button data-m="tutorial:1">튜토리얼</button><button data-m="codex:1">연대기</button><button data-m="ach:1">업적 ${DD.ACH.filter((a) => save.ach[a.id]).length}/${DD.ACH.length}</button><button data-m="settings:1">설정</button>
         <details class="help"><summary>조작법</summary><div class="helpbox">
-        <p><b>유닛</b> 클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Q W R Y 소환 · T 영웅 · X 영웅 기술 · B V 승급 · C 각인 · 소환소나 제단을 누르면 집결지 지정</p>
-        <p><b>건물</b> A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · H J 함정 · 거점 위는 체력 +25% · 고른 건물 U 강화 · Del 철거</p>
+        <p><b>유닛</b> 클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Shift+F1~F3 부대 지정(F1~F3 선택) · Z 위치 고수 · Q W R Y 소환 · T 영웅 · X 영웅 기술 · B V 승급 · C 각인 · K 동맹 원군 · Shift+2~5 멀티 긴급 파병 · 소환소나 제단을 누르면 집결지 지정</p>
+        <p><b>건물</b> A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · H J L 함정 · 거점 위는 체력 +25% · 고른 탑 표적 전환 · U 강화 (Lv.2 탑 U→1/2 특화) · P 심장 공명 · Del 철거</p>
         <p><b>길 편집</b> E (Z 길, X 벽, C 지우기, 우클릭 지우기, Ctrl+Z 되돌리기) · 길 최대 ${C.ROAD_MAX}, 벽 최대 ${C.WALL_MAX} · 입구↔심장 연결 필수</p>
         <p><b>기타</b> 1 2 3 속도 · Space 일시정지 · N 다음 웨이브(보너스 골드) · Tab 지도 · Esc 취소 · 한글 입력 상태에서도 단축키가 듣는다</p></div></details></footer>`;
     fitMenu(); setTimeout(fitMenu, 0); // 번역이 끝난 뒤의 길이로 한 번 더 맞춘다
@@ -64,13 +83,18 @@
     DD.Audio.play('click'); b.blur();
     const [k, v] = b.dataset.m.split(':');
     if (k === 'mode') menu.mode = v;
-    else if (k === 'race') { menu.race = v; menu.stage = topStage(v); }
+    else if (k === 'race') { menu.race = v; menu.stage = topStage(v); if (menu.ally === v) menu.ally = null; }
+    else if (k === 'doc') menu.doctrines[menu.race] = +v;
+    else if (k === 'ally') menu.ally = v || null;
+    else if (k === 'oath') { const i = menu.oaths.indexOf(v); if (i >= 0) menu.oaths.splice(i, 1); else if (menu.oaths.length < 3) menu.oaths.push(v); }
     else if (k === 'allies' || k === 'stage' || k === 'diff') menu[k] = +v;
     else if (k === 'endless') menu.endless = !menu.endless;
     else if (k === 'meta') { const rs = save.races[menu.race], lv = rs.meta[v] || 0, c = DD.metaCost(lv); if (rs.shards >= c) { rs.shards -= c; rs.meta[v] = lv + 1; persist(); } }
-    else if (k === 'start') { save.menu = { race: menu.race, mode: menu.mode, allies: menu.allies, diff: menu.diff }; persist(); return startGame(); }
+    else if (k === 'start') { save.menu = { race: menu.race, mode: menu.mode, allies: menu.allies, diff: menu.diff, ally: menu.ally, doctrines: menu.doctrines, oaths: menu.oaths }; persist(); return startGame(); }
+    else if (k === 'resume') return resumeGame();
     else if (k === 'story') return showStory(showMenu);
     else if (k === 'settings') return openSettings();
+    else if (k === 'codex') return showCodex('races');
     else if (k === 'ach') return showAch();
     else if (k === 'tutorial') return startGame(true);
     drawMenu();
@@ -81,20 +105,38 @@
   const cv = $('#cv'), ctx = cv.getContext('2d');
   const me = () => G.dungeons[G.human];
 
-  function startGame(tutorial) {
-    const race = tutorial ? 'human' : menu.race, others = DD.RACE_IDS.filter((r) => r !== race);
-    const players = [{ race, meta: save.races[race].meta, layout: tutorial ? null : (save.lay || {})[DD.layoutOf(menu.stage) + DD.entCount(menu.stage, menu.diff)], bonusGold: tutorial ? 0 : save.bonusGold || 0 }];
-    if (!tutorial && menu.mode === 'multi') for (let i = 0; i < menu.allies - 1; i++) players.push({ race: others[i], bot: true });
-    if (!tutorial && save.bonusGold) { save.bonusGold = 0; persist(); }
-    G = DD.newGame({ players, stage: tutorial ? 0 : menu.stage, diff: menu.diff, endless: !tutorial && menu.endless, tutorial: !!tutorial, seed: (Date.now() & 0xffff) + 1 });
-    ui = { sel: new Set(), selB: null, ghost: null, box: null, view: 0, build: -1, veil: 16, flash: save.opt.flash, edit: false, tool: 1, hover: null, rally: null, insp: null, seenD: new Set(), heroReady: false, busy: false };
+  function bootGame(isResume) {
+    ui = { sel: new Set(), selB: null, specPick: null, ghost: null, box: null, view: G.human || 0, build: -1, veil: 16, flash: save.opt.flash, edit: false, tool: 1, hover: null, rally: null, insp: null, seenD: new Set(), heroReady: false, busy: false, hitstop: 0, showDps: false, groups: [[], [], []] };
     DD.Audio.ambience(G.st.id); DD.Audio.preload(); DD.Music.play(G.st.id); DD.Music.preload(['boss', 'victory', 'defeat']); ui.music = G.st.id;
     speed = 1; paused = false; acc = 0; lastHtml = {}; dlg = null; drawDlg(); setGoal('');
     for (const id of ['#title', '#story', '#menu', '#result']) $(id).hidden = true;
     $('#game').hidden = false; $('#feed').innerHTML = ''; $('#herocard').innerHTML = ''; $('#banner').innerHTML = '';
-    buildScript();
+    if (isResume) {
+      script = { steps: [], i: 0, goal: null, el: 0 };
+      toast('저장된 전투를 이어갑니다', 'good');
+    } else {
+      buildScript();
+      if (!script.steps.length || script.steps[0].when) banner(G.st.name, `${C.FIRST_WAVE}초 뒤 첫 침공` + (G.nEnt > 1 ? ` · 입구 ${G.nEnt}곳` : '') + (G.layout === 'center' ? ' · 심장이 한가운데' : '') + (G.endless ? ' · 무한 침공' : ''));
+    }
     resize(); last = performance.now(); requestAnimationFrame(loop);
-    if (!script.steps.length || script.steps[0].when) banner(G.st.name, `${C.FIRST_WAVE}초 뒤 첫 침공` + (G.nEnt > 1 ? ` · 입구 ${G.nEnt}곳` : '') + (G.layout === 'center' ? ' · 심장이 한가운데' : '') + (G.endless ? ' · 무한 침공' : ''));
+  }
+  function startGame(tutorial) {
+    const race = tutorial ? 'human' : menu.race, others = DD.RACE_IDS.filter((r) => r !== race);
+    const effOaths = tutorial ? [] : menu.oaths.filter((id) => id !== 'wildhaz' || DD.HAZ[DD.stageOrder(race)[menu.stage]]);
+    const players = [{ race, meta: save.races[race].meta, doctrine: tutorial ? 0 : (menu.doctrines[race] || 0), ally: tutorial || menu.mode !== 'solo' ? null : menu.ally, layout: tutorial ? null : (save.lay || {})[DD.layoutOf(menu.stage) + DD.entCount(menu.stage, menu.diff, false, effOaths.includes('extraent'))], bonusGold: tutorial ? 0 : save.bonusGold || 0 }];
+    if (!tutorial && menu.mode === 'multi') for (let i = 0; i < menu.allies - 1; i++) players.push({ race: others[i], bot: true });
+    if (!tutorial && save.bonusGold) { save.bonusGold = 0; persist(); }
+    if (!tutorial) clearRunSnap();
+    G = DD.newGame({ players, stage: tutorial ? 0 : menu.stage, diff: menu.diff, endless: !tutorial && menu.endless, oaths: effOaths, tutorial: !!tutorial, seed: (Date.now() & 0xffff) + 1 });
+    bootGame(false);
+  }
+  function resumeGame() {
+    const snap = loadRunSnap();
+    if (!snap) { drawMenu(); return; }
+    const loaded = DD.loadSnapshot(snap);
+    if (!loaded) { clearRunSnap(); drawMenu(); return; }
+    G = loaded;
+    bootGame(true);
   }
 
   // ───────── 참모 대화·대본 ─────────
@@ -175,51 +217,93 @@
   const spotOf = () => (script.goal && script.steps[script.i] ? script.steps[script.i].hl : null);
   const slot = (act, body, tip, o) => `<button class="slot ${o.on ? 'on' : ''} ${o.cls || ''} ${spotOf() === act ? 'spot' : ''}" data-a="${act}" data-tip="${tip.replace(/"/g, '&quot;')}" ${o.dim ? 'data-dim="1"' : ''}>${o.key ? `<kbd>${o.key}</kbd>` : ''}${body}</button>`;
   const grp = (name, slots, cls) => `<div class="grp ${cls || ''}"><h3>${name}</h3><div class="slots">${slots}</div></div>`;
-  const nextWave = () => { if ((!G.endless && G.wave >= C.WAVES)) return '마지막 웨이브'; const c = {}, mu = DD.MUTS[G.muts[G.wave + 1]]; const bg = DD.BOSS_GIM[DD.BOSS[G.wave + 1]]; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => { const m = t === 'boss' && bg && !G.tutorial ? Object.assign({}, DD.DEMONS[t], bg, DD.ATLAS.frames['d_lord_' + DD.BOSS[G.wave + 1]] ? { spr: 'd_lord_' + DD.BOSS[G.wave + 1] } : {}) : DD.DEMONS[t]; return `<span class="${m.fly ? 'fly' : ''}" data-tip="<b>${m.name} ×${c[t]}</b>${m.desc}">${icon(m.spr, 2)}${c[t]}</span>`; }).join(' ') + (G.thrust[G.wave + 1] != null ? ` <span class="thr" data-tip="<b>주공 · ${DD.gateName(me().ents[G.thrust[G.wave + 1]])} 입구</b>다음 웨이브의 악마 열에 여섯이 이 입구로 온다">주공 ${DD.gateName(me().ents[G.thrust[G.wave + 1]])}</span>` : '') + (mu ? ` <span class="mut" data-tip="<b>변이 · ${mu.name}</b>${mu.desc}">${mu.name}</span>` : ''); };
-  const UKEY = ['Q', 'W', 'R', 'Y'], BKEY = ['A', 'S', 'D', 'F', 'G', 'H', 'J'];
+  const nextWave = () => { if ((!G.endless && G.wave >= C.WAVES)) return '마지막 웨이브'; const c = {}, mu = DD.MUTS[G.muts[G.wave + 1]], mu2 = G.muts2 && DD.MUTS[G.muts2[G.wave + 1]]; const bg = DD.BOSS_GIM[DD.BOSS[G.wave + 1]]; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => { const m = t === 'boss' && bg && !G.tutorial ? Object.assign({}, DD.DEMONS[t], bg, DD.ATLAS.frames['d_lord_' + DD.BOSS[G.wave + 1]] ? { spr: 'd_lord_' + DD.BOSS[G.wave + 1] } : {}) : DD.DEMONS[t]; const ar = Math.round(DD.armAt(t, G.wave + 1)); return `<span class="${m.fly ? 'fly' : ''}" data-tip="<b>${m.name} ×${c[t]}</b>방어 ${ar}<br>${m.desc}">${icon(m.spr, 2)}${c[t]}</span>`; }).join(' ') + (G.thrust[G.wave + 1] != null ? ` <span class="thr" data-tip="<b>주공 · ${DD.gateName(me().ents[G.thrust[G.wave + 1]])} 입구</b>다음 웨이브의 악마 열에 여섯이 이 입구로 온다">주공 ${DD.gateName(me().ents[G.thrust[G.wave + 1]])}</span>` : '') + (mu ? ` <span class="mut" data-tip="<b>변이 · ${mu.name}</b>${mu.desc}">${mu.name}</span>` : '') + (mu2 ? ` <span class="mut" data-tip="<b>이중 변이 · ${mu2.name}</b>${mu2.desc}">${mu2.name}</span>` : ''); };
+  const UKEY = ['Q', 'W', 'R', 'Y'], BKEY = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'L'];
+  function synHtml(d) {
+    if (ui.world || G.tutorial) return '';
+    const pills = [];
+    const synN = d.race === 'human' ? d.blds.filter((b) => b.def.kind === 'tower' && DD.nearWall(d, b.cx, b.cy)).length
+      : d.race === 'dragon' ? (d.bc.wall || 0)
+      : d.race === 'beast' ? (d.ambushHits || 0)
+      : d.race === 'spirit' ? (d.beams ? d.beams.length : 0)
+      : (d.bc.pool || 0);
+    pills.push(`<span class="synp" title="${DD.RACE_MAZE_TRAIT[d.race]}">지형 시너지 · ${synN}</span>`);
+    const cbN = d.units.filter((u) => u.own === d.i && u.sig && u.sig.length >= 2).length;
+    if (cbN > 0) pills.push(`<span class="synp gold">각인 공명 ${cbN}기</span>`);
+    if (d.boons.length) {
+      const bNames = d.boons.map((id) => DD.BOONS.find((b) => b.id === id)).filter(Boolean);
+      pills.push(`<span class="synp" title="${bNames.map((b) => b.name + ': ' + b.desc).join(' | ')}">전리품 ${bNames.length}</span>`);
+    }
+    if (G.oaths && G.oaths.length) {
+      const oNames = G.oaths.map((id) => DD.OATHS.find((o) => o.id === id)).filter(Boolean);
+      pills.push(`<span class="synp bad" title="${oNames.map((o) => o.name + ': ' + o.desc).join(' | ')}">맹약 ${oNames.length} (×${DD.oathShardMul(G.oaths).toFixed(2)})</span>`);
+    }
+    if (G.medals > 0) pills.push(`<span class="synp good">연합 훈장 ${G.medals} (+${G.medals * 5}%)</span>`);
+    return pills.join('');
+  }
   function drawHud() {
     const d = me(), R = d.R, own = d.units.filter((u) => u.own === d.i).length, hp = d.heart.hp / d.heart.mhp;
     const next = G.nextWaveIn(), span = G.wave === 0 ? C.FIRST_WAVE : C.WAVE_T;
-    set('#top', `<div class="stage">${G.st.name} · ${R.name}${G.diff !== 1 ? ' · ' + G.D.name : ''}</div><div class="timer">${G.endless ? '∞' : mmss(G.endT - G.t)}</div>
+    set('#top', `<div class="stage"><img class="px ic" src="art/crest_${d.race}.png" alt="">${G.st.name} · ${R.name}${G.diff !== 1 ? ' · ' + G.D.name : ''}</div><div class="timer">${G.endless ? '∞' : mmss(G.endT - G.t)}</div>
       <div class="wave"><b>WAVE ${G.wave}<small style="display:inline">${G.endless ? ' 무한' : '/' + C.WAVES}</small></b><small>다음 ${mmss(next)}</small></div>${DD.canCall(G) ? `<button class="call" data-a="callwave:1"><kbd>N</kbd> ${(!G.endless && G.wave >= C.WAVES) ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'} <span class="gold">+●${DD.callBonus(G)}</span></button>` : `<button class="call" disabled><kbd>N</kbd> ${(!G.endless && G.wave >= C.WAVES) ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'}</button>`}
       <div class="nextw">${nextWave()}</div>
       <div class="prog"><i style="width:${Math.round(Math.max(0, 1 - next / span) * 50) * 2}%"></i></div>
       <div class="res"><span class="gold">${ic('ui_coin')} ${Math.floor(d.gold)}</span><span class="mat">${ic('ui_crate')} ${Math.floor(d.mat)}</span><span class="pop">${ic('ui_pop')} 인구 ${own}/${d.pop}</span></div>
       <div class="heart">${ic('ui_heart')} ${Math.ceil(d.heart.hp)}<i class="hpbar"><i style="width:${Math.max(0, hp * 100)}%"></i></i></div>`);
     set('#sys', `${[1, 2, 4].map((sp, i) => `<button class="${speed === sp && !paused ? 'on' : ''}" data-a="speed:${sp}" data-tip="<b>${sp}배속</b>단축키 ${i + 1}">${sp}×</button>`).join('')}<button class="${paused ? 'on' : ''}" data-a="pause:1" data-tip="<b>일시정지</b>단축키 Space · 멈춘 동안에도 소환·건설·길 편집을 할 수 있다">Ⅱ</button>
-      <button class="wide" data-a="settings:1" data-tip="<b>설정</b>배경음악·효과음 음량, 피격 번쩍임 · Esc">⚙ 설정</button><button class="wide" data-a="quit:1" data-tip="<b>나가기</b>이번 판을 포기한다(보상 없음)">나가기</button>`);
-    if (G.dungeons.length > 1) set('#allies', `<button class="${ui.world ? 'on' : ''}" data-a="world:1">지도 <kbd>Tab</kbd></button>` + G.dungeons.map((x) => `<button class="${ui.view === x.i && !ui.world ? 'on' : ''} ${x.alive ? '' : 'dead'}" data-a="view:${x.i}">${x.i + 1} ${x.i === G.human ? '나' : x.R.name} <small>${x.alive ? '♥' + pct(x.heart.hp / x.heart.mhp) + '%' : '함락'}</small></button>`).join(''));
+      <button class="dpsbtn ${ui.showDps ? 'on' : ''}" data-a="dps:1" data-tip="<b>실시간 피해 통계</b>전투 중 유닛·탑·영웅·함정의 피해 기여도를 본다">피해</button><button class="wide" data-a="settings:1" data-tip="<b>설정</b>배경음악·효과음 음량, 피격 번쩍임 · Esc">⚙ 설정</button><button data-a="quit:1" data-tip="<b>나가기</b>이번 판을 포기한다(보상 없음)">나가기</button>`);
+    if (G.dungeons.length > 1) set('#allies', `<button class="${ui.world ? 'on' : ''}" data-a="world:1">지도 <kbd>Tab</kbd></button>`
+      + G.dungeons.map((x) => {
+        const danger = x.alive && x.bot && (x.heart.hp < x.heart.mhp * 0.5 || x.demons.some((dm) => dm.def.spr === 'd_boss'));
+        const qs = x.alive && x.bot ? `<span class="qsend" data-a="quicksend:${x.i}" title="예비 병력 2기 즉시 파병 · Shift+${x.i + 1}">⚡지원</span>` : '';
+        return `<button class="${ui.view === x.i && !ui.world ? 'on' : ''} ${x.alive ? '' : 'dead'} ${danger ? 'danger' : ''}" data-a="view:${x.i}">${x.i + 1} ${x.i === G.human ? '나' : x.R.name} <small>${x.alive ? '♥' + pct(x.heart.hp / x.heart.mhp) + '%' : '함락'}</small>${qs}</button>`;
+      }).join('')
+      + (G.dungeons.some((x) => x.i !== G.human && x.alive && x.bot) ? `<button data-a="sos:1" ${d.sosCd > 0 ? 'disabled' : ''} data-tip="<b>지원 요청</b>여유 있는 동맹 요새에서 병력을 부른다">지원 요청 <kbd>K</kbd>${d.sosCd > 0 ? ' ' + mmss(d.sosCd) : ''}</button>` : ''));
     else set('#allies', '');
+    const sb = synHtml(d); set('#synbar', sb); $('#synbar').hidden = !sb;
     const gc = DD.gridCount(ui.draft ? ui.draft.grid : d.grid), no = (c) => d.gold < c.g || d.mat < c.m;
     const dr = ui.draft;
-    let maze = slot('edit:1', `<b class="glyph">${ui.edit ? '✔' : '▦'}</b><em>${ui.edit ? '적용' : '길 편집'}</em><span class="cost">${gc.road}/${d.roadCap}</span>`, ui.edit ? `<b>적용하고 계속</b>${dr.err ? `<small class="bad">${dr.err}</small>` : '조건이 맞습니다'}` : `<b>길 편집</b>게임을 멈추고 길과 벽을 고친다<small>악마 경로 ${d.path.length}칸 · 길 ${gc.road}/${d.roadCap} · 벽 ${gc.wall}/${d.wallCap}</small>`, { on: ui.edit, key: 'E', dim: ui.edit && !!dr.err, cls: '' });
+    const editSlot = slot('edit:1', `<b class="glyph">${ui.edit ? '✔' : '▦'}</b><em>${ui.edit ? '적용' : '길 편집'}</em><span class="cost">${gc.road}/${d.roadCap}</span>`, ui.edit ? `<b>적용하고 계속</b>${dr.err ? `<small class="bad">${dr.err}</small>` : '조건이 맞습니다'}` : `<b>길 편집</b>게임을 멈추고 길과 벽을 고친다<small>악마 경로 ${d.path.length}칸 · 길 ${gc.road}/${d.roadCap} · 벽 ${gc.wall}/${d.wallCap}</small>`, { on: ui.edit, key: 'E', dim: ui.edit && !!dr.err, cls: ui.edit ? '' : 'span2 short' });
+    const hs = DD.HEART_SKILLS[d.race], he = Math.min(100, Math.floor(d.heartE || 0));
+    const pulseSlot = slot('pulse:1', `<img class="px ic" src="art/pulse_${d.race}.png" alt=""><em>심장 공명</em><span class="cost">${he >= 100 ? '준비!' : he + '%'}</span>`, `<b><img class="px ic" src="art/pulse_${d.race}.png" alt="">${hs.name}</b>${hs.desc}<small>악마 처치·심장 피격으로 충전 · P 또는 클릭 발동</small>`, { key: 'P', cls: 'span2 short' + (he >= 100 ? ' ready' : ''), dim: he < 100 });
+    let maze = editSlot + (ui.edit ? '' : pulseSlot);
     if (ui.edit) maze += [[1, '길 깔기', '악마가 걷는 칸을 만든다', 'Z'], [2, '벽 쌓기', '통과와 사격을 막는 칸', 'X'], [0, '지우기', '바닥으로 되돌린다 · 우클릭으로도 지운다', 'C']].map(([t, n, tip, key]) => slot('tool:' + t, `<b class="glyph">${['✕', '▤', '▣'][t]}</b><em>${n}</em>`, `<b>${n}</b>${tip}`, { on: ui.tool === t, key })).join('')
+      + (d.blueprint ? slot('bp:1', `<b class="glyph">❖</b><em>청사진</em>`, '<b>청사진 적용</b>저장된 길·벽 설계를 현재 한도 안에서 이어 붙인다', {}) : '')
       + slot('resetmaze:1', `<b class="glyph">↺</b><em>기본 길</em>`, '<b>기본 길</b>곧은 길로 되돌린다', {}) + slot('undo:1', `<b class="glyph">↶</b><em>되돌리기</em>`, '<b>되돌리기</b>마지막으로 칠한 것을 되돌린다 · Ctrl+Z', { key: '^Z', dim: !dr.hist.length }) + slot('editcancel:1', `<b class="glyph">✖</b><em>취소</em>`, '<b>취소</b>고친 것을 버리고 나간다', { key: 'Esc' });
-    const units = R.units.map((u, i) => { const f = DD.reqFail(d, u); return slot('summon:' + i, `<img class="px tier" src="${DD.icon('ui_tier' + u.tier)}" alt="">${icon(u.spr, 2)}${f ? '<span class="cost bad">잠김</span>' : cost(u, d)}`, `<b>${u.name}</b>${ic('ui_coin')} ${u.g}${u.m ? ' ' + ic('ui_crate') + ' ' + u.m : ''} · 보유 ${d.units.filter((x) => x.def === u && x.own === d.i).length}기<br>체력 ${u.hp} · 공격 ${u.atk} · 사거리 ${u.rng}${u.heal ? ' · 치유 ' + u.heal : ''}${u.splash ? ' · 범위' : ''}${f ? `<small class="bad">${f}</small>` : ''}`, { dim: f || no(u), key: UKEY[i], cls: f ? 'lock' : '' }); }).join('')
+    const units = R.units.map((u, i) => { const f = DD.reqFail(d, u), uc = DD.unitCost(d, u); return slot('summon:' + i, `<img class="px tier" src="${DD.icon('ui_tier' + u.tier)}" alt="">${icon(u.spr, 2)}${f ? '<span class="cost bad">잠김</span>' : cost(uc, d)}`, `<b>${u.name}</b>${ic('ui_coin')} ${uc.g}${uc.m ? ' ' + ic('ui_crate') + ' ' + uc.m : ''} · 보유 ${d.units.filter((x) => x.def === u && x.own === d.i).length}기<br>체력 ${u.hp} · 공격 ${u.atk} · 사거리 ${u.rng}${u.heal ? ' · 치유 ' + u.heal : ''}${u.splash ? ' · 범위' : ''}${u.pierce ? ' · 방어 관통' : ''}${u.shred ? ' · 방어 파쇄' : ''}${f ? `<small class="bad">${f}</small>` : ''}`, { dim: f || no(uc), key: UKEY[i], cls: f ? 'lock' : '' }); }).join('')
       + (ui.edit ? '' : slot('hero:1', `<em>영웅</em><span class="cost">${d.heroT <= 0 ? '준비!' : mmss(d.heroT)}</span>`, `<b>영웅 소환</b>${d.heroT <= 0 ? '누가 올지는 모른다' : '대기 ' + mmss(d.heroT)}`, { dim: d.heroT > 0, key: 'T', cls: 'mini' + (d.heroT <= 0 ? ' ready' : '') })
-      + (() => { if (ui.edit) return ''; const mp = DD.mergePlan(d, [...ui.sel]), need = DD.mergeNeed(d.race), two = mp && !mp.to; // 1단계 조합은 두 2단계 유닛 중에서 고른다
-        const one = (pick, key) => { const to = mp ? mp.opts[pick] : null, off = !to, mc = to ? DD.mergeCost(to) : null, blk = to ? DD.mergeBlock(d, to) : null;
-          return slot('merge:' + pick, `<em>승급</em><span class="cost">${off ? (pick ? '—' : need + '기 필요') : '→ ' + to.name}</span>`, `<b>승급${off ? '' : ' → ' + to.name}</b>${off ? '' : `${ic('ui_coin')} ${mc.g}${mc.m ? ' ' + ic('ui_crate') + ' ' + mc.m : ''}<br>`}같은 유닛 ${need}기를 한 단계 위 유닛 하나로 올린다<br>${off ? (mp ? '지금 합칠 유닛은 갈 길이 하나뿐이다' : '지금은 합칠 유닛이 없다') : `${mp.def.name} ${need}기 → <span class="gold">${to.name}</span>`}${blk ? `<small class="bad">${blk}</small>` : ''}<small>유닛을 골라 두면 그 종류를 올린다 · 각인과 처치 수는 물려받는다<br>서로 다른 유닛 둘을 고르고 C를 누르면 각인</small>`, { key, cls: 'short' + (!off && to.legend ? ' ready' : ''), dim: off || !!blk || no(mc) }); };
-        const hn = d.units.filter((u) => u.hero && u.own === d.i).length, sk = hn && d.skillT <= 0;
-        const skill = slot('skill:1', `<em>기술</em><span class="cost">${!hn ? '—' : sk ? '준비!' : mmss(d.skillT)}</span>`, `<b>영웅 기술</b>살아 있는 영웅이 모두 기술을 쓴다 · 대기 ${DD.SKILL_CD}초<small>${Object.keys(DD.HERO_SKILL).map((r) => `${DD.HERO_ROLES[r].label} · ${DD.HERO_SKILL[r].name} — ${DD.HERO_SKILL[r].desc}`).join('<br>')}</small>`, { key: 'X', cls: 'mini' + (sk ? ' ready' : ''), dim: !sk });
-        return one(0, 'B') + skill + one(1, 'V'); })());
-    const bslots = R.blds.map((b, i) => { const c = DD.bldCost(d, b), have = d.bc[b.id] || 0, full = have >= DD.bldMax(b, d.race); return slot('build:' + i, `${b.kind === 'trap' ? icon(b.spr, 2) : icon(b.spr + '@' + d.race, 2)}${full ? '<span class="cost">최대</span>' : cost(c, d)}`, `<b>${b.name}</b>${ic('ui_coin')} ${c.g}${c.m ? ' ' + ic('ui_crate') + ' ' + c.m : ''} · 보유 ${have}/${DD.bldMax(b, d.race)}<br>${b.desc}${b.atk ? `<br>공격 ${b.atk} · 사거리 ${b.rng} · 간격 ${b.as}초${b.splash ? ' · 범위' : ''}` : ''}<small>${b.kind === 'wall' ? '길 위에만 세운다 · 악마를 붙잡아 둔다 · 골라서 U로 강화' : b.kind === 'trap' ? '길 위에 깐다 · 악마는 부수지 못한다 · 골라서 U로 강화' : b.kind === 'tower' ? '바닥에 세운다 · 골라서 U로 강화' : b.size === 2 ? '바닥 2×2칸에 세운다' : '바닥에 세운다'}</small>`, { dim: full || no(c), on: ui.build === i, key: BKEY[i] }); });
+      + (() => { if (ui.edit) return ''; const mp = DD.mergePlan(d, [...ui.sel]), need = DD.mergeNeed(d.race);
+        const one = (pick, key) => { const to = mp ? mp.opts[pick] : null, off = !to, mc = to ? DD.mergeCost(to, d.race, d.doc, d.mod.mergeMul) : null, blk = to ? DD.mergeBlock(d, to) : null;
+          return slot('merge:' + pick, `<em>승급</em><span class="cost">${off ? (pick ? '—' : need + '기 필요') : '→ ' + to.name}</span>`, `<b>승급${off ? '' : ' → ' + to.name}</b>${off ? '' : `${ic('ui_coin')} ${mc.g}${mc.m ? ' ' + ic('ui_crate') + ' ' + mc.m : ''}<br>`}같은 유닛 ${need}기를 한 단계 위 유닛 하나로 올린다<br>${off ? (mp ? '지금 합칠 유닛은 갈 길이 하나뿐이다' : '지금은 합칠 유닛이 없다') : `${mp.def.name} ${need}기 → <span class="gold">${to.name}</span>${to.pdesc ? `<br><span class="good">${to.pdesc}</span>` : ''}`}${blk ? `<small class="bad">${blk}</small>` : ''}<small>유닛을 골라 두면 그 종류를 올린다 · 각인과 처치 수는 물려받는다<br>서로 다른 유닛 둘을 고르고 C를 누르면 각인</small>`, { key, cls: 'short' + (!off && to.legend ? ' ready' : ''), dim: off || !!blk || no(mc) }); };
+        const hs = d.units.filter((u) => u.hero && u.own === d.i), hn = hs.length, selHs = hs.filter((u) => ui.sel.has(u.id));
+        const tgtHs = selHs.length ? selHs : hs, sk = tgtHs.some((u) => (u.skCd || 0) <= 0);
+        const nextCd = tgtHs.length ? Math.min(...tgtHs.map((u) => u.skCd || 0)) : 0;
+        const hrs = DD.HERO_RACE_SKILL[d.race];
+        const skill = slot('skill:1', `<em>기술</em><span class="cost">${!hn ? '—' : sk ? '준비!' : mmss(nextCd)}</span>`, `<b>영웅 기술</b>고른 영웅(없으면 전원)이 기술을 쓴다 · 대기 ${DD.SKILL_CD}초<br><span class="gold">${R.name} · ${hrs.name}</span> — ${hrs.desc}<small>${Object.keys(DD.HERO_SKILL).map((r) => `${DD.HERO_ROLES[r].label} · ${DD.HERO_SKILL[r].name} — ${DD.HERO_SKILL[r].desc}`).join('<br>')}</small>`, { key: 'X', cls: 'mini' + (sk ? ' ready' : ''), dim: !sk });
+        const allySlot = d.allyRace ? slot('allycall:1', `<em>동맹 · ${DD.RACES[d.allyRace].name}</em><span class="cost">${d.allyCd <= 0 ? '준비!' : mmss(d.allyCd)}</span>`, `<b>${DD.RACES[d.allyRace].name} 원정대</b>${DD.RACES[d.allyRace].units[0].name}·${DD.RACES[d.allyRace].units[1].name} 정예 소환 (각인 가능)`, { key: 'K', cls: 'allybtn' + (d.allyCd <= 0 ? ' ready' : ''), dim: d.allyCd > 0 }) : '';
+        return one(0, 'B') + skill + one(1, 'V') + allySlot; })());
+    const bslots = R.blds.map((b, i) => { const c = DD.bldCost(d, b), have = d.bc[b.id] || 0, blocked = d.noWall && b.kind === 'wall', full = blocked || have >= DD.bldMax(b, d.race, d.doc); const bImg = b.spr === 'trap_push' ? '<img class="px" src="art/trap_push_0.png" style="width:48px;height:48px" alt="">' : b.kind === 'trap' ? icon(b.spr, 2) : icon(b.spr + '@' + d.race, 2); return slot('build:' + i, `${bImg}${blocked ? '<span class="cost bad">금지</span>' : full ? '<span class="cost">최대</span>' : cost(c, d)}`, `<b>${b.name}</b>${ic('ui_coin')} ${c.g}${c.m ? ' ' + ic('ui_crate') + ' ' + c.m : ''} · 보유 ${have}/${blocked ? 0 : DD.bldMax(b, d.race, d.doc)}<br>${b.desc}${b.atk ? `<br>공격 ${b.atk} · 사거리 ${b.rng} · 간격 ${b.as}초${b.splash ? ' · 범위' : ''}` : ''}<small>${b.kind === 'wall' ? '길 위에만 세운다 · 악마를 붙잡아 둔다 · 골라서 U로 강화' : b.kind === 'trap' ? '길 위에 깐다 · 악마는 부수지 못한다 · 골라서 U로 강화' : b.kind === 'tower' ? '바닥에 세운다 · 골라서 U로 강화' : b.size === 2 ? '바닥 2×2칸에 세운다' : '바닥에 세운다'}</small>`, { dim: full || no(c), on: ui.build === i, key: BKEY[i] }); });
     const blds = bslots.filter((x, i) => i !== 3 && i < 5).join('');
-    maze = bslots[3] + bslots[5] + bslots[6] + maze;
+    maze = bslots[3] + bslots[5] + bslots[6] + bslots[7] + maze;
     const ac = DD.upCost(d, 'altar'), ap = DD.ALTAR[d.altarLv - 1].p;
     const ups = ['atk', 'hp', 'bld'].map((k) => { const u = DD.UPGRADES[k], c = DD.upCost(d, k); return slot('up:' + k, `<b class="glyph">${{ atk: '⚔', hp: '♥', bld: '▲' }[k]}<sub>${d.up[k]}</sub></b><em>${u.name.replace(' 강화', '')}</em>${c ? cost(c, d) : '<span class="cost">최대</span>'}`, `<b>${u.name} Lv.${d.up[k]}</b>${u.desc}`, { dim: !c || no(c) }); }).join('')
       + slot('up:altar', `<b class="glyph">★<sub>${d.altarLv}</sub></b><em>제단</em>${ac ? cost(ac, d) : '<span class="cost">최대</span>'}`, `<b>영웅 제단 Lv.${d.altarLv}</b>R ${pct(ap[0])}% · SR ${pct(ap[1])}% · SSR ${pct(ap[2])}%<small>강화하면 등급↑ 대기↓</small>`, { dim: !ac || no(ac) });
     set('#bar', grp('유닛 소환', units) + grp('건물 · 바닥에', blds) + grp('길 · 방벽과 함정은 길 위에', maze) + (ui.edit ? '' : grp('강화', ups))); // 편집 중에는 도구가 한 줄 더 생기므로 강화 묶음을 접는다
     const hl = spotOf(), gm = $('#game'); gm.classList.toggle('guide', !!hl); gm.classList.toggle('dimfield', !!hl && ui.build < 0 && !ui.edit); // 튜토리얼: 목표 칸만 밝게
-    set('#tip', ui.tip || inspect() || ''); placeTip();
+    set('#tip', ui.tip || inspect() || '');
     const ms = d.mission; // 진행 중인 미션
-    set('#mission', ms ? `<small>미션</small>${DD.MISSION[ms.k].name}${ms.k === 'fast' ? ` · <b>${Math.max(0, Math.ceil(DD.MISSION.fast.t - (G.t - ms.t0)))}초</b>` : ''} <span class="gold">${ic('ui_coin')}${ms.gold}</span>` : ''); $('#mission').hidden = !ms || ui.world;
     const hzd = G.hz && DD.HAZ[G.hz]; // 진행 중인 지형 현상
-    set('#hazard', hzd ? `<small>지형</small>${hzd.name} · <b>${Math.max(0, Math.ceil(G.haz.left))}초</b>` : ''); $('#hazard').hidden = !hzd || ui.world; $('#hazard').style.top = d.mission ? '176px' : '110px';
+    const topOff = (sb ? 42 : 0) + (G.dungeons.length > 1 ? 56 : 0);
+    set('#mission', ms ? `<small>미션</small>${DD.MISSION[ms.k].name}${ms.k === 'fast' ? ` · <b>${Math.max(0, Math.ceil(DD.MISSION.fast.t - (G.t - ms.t0)))}초</b>` : ''} <span class="gold">${ic('ui_coin')}${ms.gold}</span>` : ''); $('#mission').hidden = !ms || ui.world; $('#mission').style.top = (68 + topOff) + 'px';
+    set('#hazard', hzd ? `<small>지형</small>${hzd.name} · <b>${Math.max(0, Math.ceil(G.haz.left))}초</b>` : ''); $('#hazard').hidden = !hzd || ui.world; $('#hazard').style.top = (68 + topOff + (ms ? 62 : 0)) + 'px';
     const bp = d.boonPick; // 전리품 고르기: 고를 때까지 게임이 멈춘다
-    set('#boon', bp ? `<div class="box"><h2>전리품</h2><p>악마 군주를 쓰러뜨렸다. 하나를 고른다.</p><div class="cards c3">${bp.map((bi, i) => `<button class="card" data-a="boon:${i}"><kbd>${i + 1}</kbd>${DD.ATLAS.frames['boon_' + DD.BOONS[bi].id] ? icon('boon_' + DD.BOONS[bi].id, 3) : ''}<b>${DD.BOONS[bi].name}</b><small>${DD.BOONS[bi].desc}</small></button>`).join('')}</div></div>` : ''); $('#boon').hidden = !bp;
+    set('#boon', bp ? `<div class="box"><h2>전리품</h2><p>악마 군주를 쓰러뜨렸다. 하나를 고른다.</p><div class="cards c3">${bp.map((bi, i) => `<button class="card" data-a="boon:${i}"><kbd>${i + 1}</kbd>${DD.ATLAS.frames['boon_' + DD.BOONS[bi].id] ? icon('boon_' + DD.BOONS[bi].id, 3) : `<img class="px boonimg" src="art/boon_${DD.BOONS[bi].id}.png" alt="">`}<b>${DD.BOONS[bi].name}</b><small>${DD.BOONS[bi].desc}</small></button>`).join('')}</div></div>` : ''); $('#boon').hidden = !bp;
+    const ep = !bp && !dlg && d.eventPick; // 중반 전령 사건(전리품·대화와 겹치지 않게)
+    set('#event', ep ? `<div class="box"><div class="evhead"><img class="px" src="art/adv_${d.race}_1.webp" alt=""><div><h2>전령 사건</h2><b class="evtitle">${ep.title}</b><p>${ep.body}</p></div></div><div class="cards c2">${ep.opts.map((o, i) => `<button class="card" data-a="event:${i}"><kbd>${i + 1}</kbd><b>${o.name}</b><small>${o.desc}</small></button>`).join('')}</div></div>` : ''); $('#event').hidden = !ep;
     const vd = G.dungeons[ui.view], boss = !ui.world && vd.demons.find((e) => e.def.spr === 'd_boss' && e.hp > 0);
     set('#bossbar', boss ? `<b>${boss.gim && DD.BOSS_GIM[boss.gim] ? DD.BOSS_GIM[boss.gim].name : boss.def.name}</b><i><i style="width:${Math.max(0, Math.round((boss.hp / boss.mhp) * 100))}%"></i></i><span>${Math.ceil(boss.hp)}</span>` : '');
+    const dpsHtml = ui.showDps && !ui.world ? dmgHtml(vd) : '';
+    set('#dps', dpsHtml); $('#dps').hidden = !dpsHtml;
     $('#paused').hidden = !(paused && !ui.edit && !dlg && !G.over);
     // 아래 정보 줄: 편집 안내 > 선택 > 기본 안내
     let info = '유닛 선택 → 바닥 클릭으로 배치 · 더블클릭으로 같은 유닛 모두 선택 · 소환소를 누르면 집결지';
@@ -233,37 +317,49 @@
       us.forEach((u) => { const n = (u.hero ? `[${DD.GRADES[u.hero.grade].id}] ` : '') + u.def.name; names[n] = (names[n] || 0) + 1; });
       info = Object.keys(names).map((n) => `${n} ×${names[n]}`).join(' · ');
       if (us.length === 1) info += ` · ♥ ${Math.ceil(us[0].hp)}/${Math.ceil(us[0].mhp)} · 처치 ${us[0].kills}`;
-      { const ip = DD.imprintPlan(d, [...ui.sel]); if (!ip.err) info += ` <button data-a="imprint:1">각인 · ${ip.mat.def.name} → ${ip.base.def.name} <span class="gold">${DD.SIGS[ip.sig].name}</span> · C</button>`; }
+      info += ` <button class="${us.every((u) => u.hold) ? 'on' : ''}" data-a="hold:1">위치 고수 · Z</button>`;
+      { const ip = DD.imprintPlan(d, [...ui.sel]); if (!ip.err) { const ncb = DD.sigCombo((ip.base.sig || []).concat(ip.sig)); info += ` <button data-a="imprint:1">각인 · ${ip.mat.def.name} → ${ip.base.def.name} <span class="gold">${DD.SIGS[ip.sig].name}${ncb ? ' (' + ncb.name + ')' : ''}</span> · C</button>`; } }
       if (us.some((u) => !u.hero && u.own === d.i)) info += ` <button data-a="dismiss:1">해산 (30% 환급)</button>`;
       G.dungeons.forEach((x) => { if (x.i !== d.i && x.alive) info += ` <button data-a="support:${x.i}">→ ${x.R.name}</button>`; });
     } else if (ui.selB) {
       const b = d.blds.find((x) => x.id === ui.selB);
-      if (b) { const uc = DD.bldUpCost(d, b), lv = b.lv || 1, canUp = ['tower', 'wall', 'trap'].includes(b.def.kind);
-        info = `<b>${b.def.name}${canUp ? ' Lv.' + lv : ''}</b>${b.def.kind === 'trap' ? '' : ` · ♥ ${Math.ceil(b.hp)}/${Math.ceil(b.mhp)}`} · ${b.def.desc}`
-          + (uc ? ` <button data-a="upb:${b.id}" ${d.gold < uc.g || d.mat < uc.m ? 'data-dim="1"' : ''}>강화 Lv.${lv + 1} · ${ic('ui_coin')}${uc.g}${uc.m ? ' ' + ic('ui_crate') + uc.m : ''} · U</button>` : canUp ? ' <span class="gold">최대 강화</span>' : '')
+      if (b) { const uc = DD.bldUpCost(d, b), lv = b.lv || 1, canUp = ['tower', 'wall', 'trap'].includes(b.def.kind), dim = uc && (d.gold < uc.g || d.mat < uc.m) ? 'data-dim="1"' : '';
+        const pickOn = ui.specPick === b.id && b.def.kind === 'tower' && lv === 2;
+        if (!pickOn && ui.specPick === b.id) ui.specPick = null;
+        const upBtns = !uc ? (canUp ? ' <span class="gold">최대 강화</span>' : '')
+          : b.def.kind === 'tower' && lv === 2 ? DD.TOWER_SPECS[d.race].map((sp, si) => ` <button class="${pickOn ? 'on' : ''}" data-a="upb:${b.id}:${si}" data-tip="<b>Lv.3 특화 · <img class=&quot;px ic&quot; src=&quot;art/spec_${sp.id}.png&quot; alt=&quot;&quot;>${sp.name}</b>${sp.desc}" ${dim}>${pickOn ? `<kbd>${si + 1}</kbd> ` : ''}<img class="px ic" src="art/spec_${sp.id}.png" alt="">${sp.name} · ${ic('ui_coin')}${uc.g}${uc.m ? ' ' + ic('ui_crate') + uc.m : ''}</button>`).join('')
+          : ` <button data-a="upb:${b.id}" ${dim}>강화 Lv.${lv + 1} · ${ic('ui_coin')}${uc.g}${uc.m ? ' ' + ic('ui_crate') + uc.m : ''} · U</button>`;
+        info = `<b>${b.spec ? `<img class="px ic" src="art/spec_${b.spec.id}.png" alt="">` : ''}${b.spec ? b.spec.name : b.def.name}${canUp ? ' Lv.' + lv : ''}</b>${b.sealT > 0 ? ` <span class="bad">봉인 ${Math.ceil(b.sealT)}초 (X/P 해제)</span>` : ''}${b.def.kind === 'trap' ? '' : ` · ♥ ${Math.ceil(b.hp)}/${Math.ceil(b.mhp)}`} · ${b.spec ? b.spec.desc : b.def.desc}`
+          + (b.def.kind === 'tower' ? ` <button data-a="tmode:${b.id}">표적 · ${DD.TARGET_MODES[b.tmode || 0].name}</button>` : '')
+          + upBtns
           + ` <button data-a="sell:${b.id}">철거 (50% 환급) · Del</button>`; }
     }
     set('#info', (paused && !ui.edit ? '<b class="gold">Ⅱ 일시정지</b> · ' : '') + info); $('#info').hidden = !!ui.world;
+    placeTip();
   }
   $('#side').addEventListener('mouseover', (ev) => { const b = ev.target.closest('[data-tip]'); const t = b ? b.dataset.tip : null; if (ui && ui.tip !== t) { ui.tip = t; if (b) tipAt(b); if (G) drawHud(); } });
   $('#side').addEventListener('mouseleave', () => { if (ui) { ui.tip = null; if (G) drawHud(); } });
+  $('#info').addEventListener('mouseover', (ev) => { const b = ev.target.closest('[data-tip]'); const t = b ? b.dataset.tip : null; if (ui && ui.tip !== t) { ui.tip = t; ui.tipY = 1140; if (G) drawHud(); } });
+  $('#info').addEventListener('mouseleave', () => { if (ui && ui.tip) { ui.tip = null; if (G) drawHud(); } });
   // 설명 상자는 패널 왼쪽으로 펼쳐진다. 내용 길이에 맞춰 커지므로 글자가 잘리지 않는다
   function tipAt(b) { const r = b.getBoundingClientRect(), s = $('#side').getBoundingClientRect(); ui.tipY = (r.top - s.top) / (s.height / 1440); }
   function placeTip() {
     const t = $('#tip'), on = !!lastHtml['#tip']; t.hidden = !on; if (!on) return;
-    const h = t.offsetHeight, y = ui.tip ? ui.tipY : ui.mouse && ui.mouse.y > 180 ? 96 : 1440 - h - 110; // 전장 설명은 마우스 반대쪽에
+    const ib = ($('#info') && !$('#info').hidden ? $('#info').offsetHeight : 76) + 24;
+    const h = t.offsetHeight, y = ui.tip ? Math.min(ui.tipY, 1440 - h - Math.max(110, ib)) : ui.mouse && ui.mouse.y > 180 ? 96 : 1440 - h - Math.max(110, ib); // 전장·하단 설명은 정보 줄과 겹치지 않게
     t.style.top = Math.max(8, Math.min(y, 1440 - h - 8)) + 'px';
   }
   // 전장 위 마우스: 악마·유닛·건물 정보를 설명 상자에
   function inspect() {
     if (!ui.mouse || ui.world || ui.edit) return '';
     const q = pickAt(ui.mouse); if (!q) return '';
+    if (q.k === 'lm') return `<b>지형 거점 · ${q.lm.name}</b><span class="good">${q.lm.desc}</span><small>고정 지형 · 주변으로 길을 유도해 활용하자</small>`;
     const d = G.dungeons[ui.view], e = (q.k === 'd' ? d.demons : q.k === 'u' ? d.units : d.blds).find((x) => x.id === q.id && x.hp > 0); if (!e) return '';
     const hp = `♥ ${Math.ceil(e.hp)}/${Math.ceil(e.mhp)}`;
-    if (q.k === 'd') { const bg = e.gim && DD.BOSS_GIM[e.gim]; return `<b>${e.elite ? '우두머리 ' : ''}${bg ? bg.name : e.def.name}</b>${hp} · 공격 ${Math.round(e.atk)}${e.arm ? ' · 방어 ' + Math.round(e.arm) : ''}${e.def.rng > 30 ? ' · 원거리' : ''}<small>${bg ? bg.desc + ' · 중장갑' : e.def.desc}${e.elite ? ' · 쓰러뜨리면 골드 5배' : ''}</small>`; }
-    if (q.k === 'u') { const o = G.dungeons[e.own]; return `<b>${e.hero ? `[${DD.GRADES[e.hero.grade].id}] ` : ''}${e.def.name}</b>${hp} · 처치 ${e.kills}${e.sig && e.sig.length ? ` · 각인 <span class="gold">${e.sig.map((x) => DD.SIGS[x].name).join(' · ')}</span>` : ''}${e.rk ? ` · <span class="gold">${DD.RANKS[e.rk]}</span>` : e.hero || e.def.legend ? '' : ` <small style="display:inline">(${DD.rankKills(o.race)[1]}에 승급)</small>`}${e.own !== d.i ? `<small>${o.R.name} 지원군</small>` : e.hero ? `<small>${DD.HERO_ROLES[e.hero.role].label}</small>` : ''}`; }
-    if (e.def.kind === 'trap') return `<b>${e.def.name}</b>${e.def.desc}<small>고른 뒤 Del로 걷는다</small>`;
-    return `<b>${e.def.name}</b>${hp}<br>${e.def.desc}${e.def.atk ? `<small>공격 ${Math.round(e.def.atk * (1 + 0.4 * ((e.lv || 1) - 1)))} · 사거리 ${Math.round(e.def.rng * (1 + 0.1 * ((e.lv || 1) - 1)))}${e.lv > 1 ? ' · Lv.' + e.lv : ''}</small>` : ''}`;
+    if (q.k === 'd') { const bg = e.gim && DD.BOSS_GIM[e.gim]; return `<b>${e.elite ? '우두머리 ' : ''}${bg ? bg.name : e.def.name}${e.tele ? ' · 시전 중!' : ''}</b>${hp} · 공격 ${Math.round(e.atk)}${e.arm ? ' · 방어 ' + Math.round(e.arm) : ''}${e.def.rng > 30 ? ' · 원거리' : ''}<small>${bg ? bg.desc + ' · 중장갑' : e.def.desc}${e.elite ? ' · 쓰러뜨리면 골드 5배' : ''}</small>`; }
+    if (q.k === 'u') { const o = G.dungeons[e.own], cb = DD.sigCombo(e.sig); return `<b>${e.hero ? `[${DD.GRADES[e.hero.grade].id}] ` : ''}${e.def.name}</b>${hp} · 처치 ${e.kills}${e.hold ? ' · 위치 고수' : ''}${e.ally ? ` · ${DD.RACES[e.ally].name}` : ''}${e.sig && e.sig.length ? ` · 각인 <span class="gold">${e.sig.map((x) => DD.SIGS[x].name).join(' · ')}</span>` : ''}${cb ? `<br><span class="good">${cb.name}</span> — ${cb.desc}` : ''}${e.def.pdesc ? `<br><span class="gold">${e.def.pdesc}</span>` : ''}${e.rk ? ` · <span class="gold">${DD.RANKS[e.rk]}</span>` : e.hero || e.def.legend ? '' : ` <small style="display:inline">(${DD.rankKills(o.race, o.doc)[1]}에 승급)</small>`}${e.own !== d.i ? `<small>${o.R.name} 지원군</small>` : e.hero ? `<small>${DD.HERO_ROLES[e.hero.role].label}</small>` : ''}`; }
+    if (e.def.kind === 'trap') return `<b>${e.def.name}${e.lv > 1 ? ' Lv.' + e.lv : ''}</b>${e.def.desc}<small>${e.cd > 0 ? `대기 ${e.cd.toFixed(1)}초 · ` : ''}고른 뒤 Del로 걷는다</small>`;
+    return `<b>${e.spec ? `<img class="px ic" src="art/spec_${e.spec.id}.png" alt="">` : ''}${e.spec ? e.spec.name : e.def.name}</b>${hp}${e.sealT > 0 ? ` · <span class="bad">봉인 ${Math.ceil(e.sealT)}초</span>` : ''}<br>${e.spec ? e.spec.desc : e.def.desc}${e.def.atk ? `<small>공격 ${Math.round(e.def.atk * (1 + 0.4 * ((e.lv || 1) - 1)))} · 사거리 ${Math.round(e.def.rng * (1 + 0.1 * ((e.lv || 1) - 1)))} · 표적 ${DD.TARGET_MODES[e.tmode || 0].name}${e.lv > 1 ? ' · Lv.' + e.lv : ''}</small>` : ''}`;
   }
   function pickAt(p) {
     const d = G.dungeons[ui.view]; let best = null, bd = 120;
@@ -271,41 +367,54 @@
     for (const u of d.units) { const q = (u.x - p.x) ** 2 + (u.y - 7 - p.y) ** 2; if (q < bd) { bd = q; best = { k: 'u', id: u.id }; } }
     if (best) return best;
     const [cx, cy] = DD.tileAt(p.x, p.y), b = cx >= 0 && cx < C.GW && cy >= 0 && cy < C.GH ? d.occ[cx + cy * C.GW] : null;
-    return b ? { k: 'b', id: b.id } : null;
+    if (b) return { k: 'b', id: b.id };
+    const lm = DD.landmarkAt(G, cx, cy);
+    return lm ? { k: 'lm', lm } : null;
   }
 
   $('#game').addEventListener('pointerdown', (ev) => { // click은 패널이 다시 그려지면 사라진다(누른 버튼이 교체됨) → 누르는 순간 처리
     if (ev.button !== 0) return;
     const b = ev.target.closest('[data-a]'); if (!b || !G || b.disabled) return;
-    if (b.dataset.tip) { ui.tip = b.dataset.tip; tipAt(b); } // 터치 화면에서는 누르면 설명이 뜬다
+    const inInfo = !!b.closest('#info');
+    if (inInfo) ui.tip = null;
+    else if (b.dataset.tip) { ui.tip = b.dataset.tip; tipAt(b); } // 터치 화면에서는 누르면 설명이 뜬다
     b.blur(); // 눌린 버튼에 초점이 남으면 Space·Enter가 그 버튼을 다시 누른다
-    const [k, v] = b.dataset.a.split(':');
+    const [k, v, v2] = b.dataset.a.split(':');
     DD.Audio.play('click');
     if (k === 'boon') { act({ a: 'boon', i: +v }); lastHtml = {}; hudT = 0; }
+    else if (k === 'event') { act({ a: 'event', i: +v }); lastHtml = {}; hudT = 0; }
     else if (k === 'merge') { if (act({ a: 'merge', ids: [...ui.sel], pick: +v })) ui.sel.clear(); }
     else if (k === 'speed') setSpeed(+v);
+    else if (k === 'dps') ui.showDps = !ui.showDps;
     else if (k === 'settings') openSettings();
     else if (k === 'pause') togglePause();
-    else if (k === 'quit') { if (confirm(DD.tr('포기하고 나갈까요?'))) { G.over = true; G.win = false; G.quit = true; } }
+    else if (k === 'quit') { if (confirm(DD.tr('포기하고 나갈까요?'))) { clearRunSnap(); G.over = true; G.win = false; G.quit = true; } }
     else if (k === 'world') setWorld(!ui.world);
     else if (k === 'callwave') callWave();
     else if (k === 'skiptut') { script = { steps: [], i: 0, goal: null, el: 0 }; dlg = null; drawDlg(); setGoal(''); }
-    else if (k === 'view') { if (!applyEdit()) return; ui.veil = 12; ui.world = false; ui.view = +v; ui.sel.clear(); ui.selB = null; ui.build = -1; ui.ghost = null; }
+    else if (k === 'view') { if (!applyEdit()) return; ui.veil = 12; ui.world = false; ui.view = +v; ui.sel.clear(); ui.selB = null; ui.specPick = null; ui.build = -1; ui.ghost = null; }
+    else if (k === 'quicksend') act({ a: 'quicksend', to: +v });
     else if (ui.view !== G.human || ui.world) toast('내 요새에서만 조작', 'bad');
     else if (k === 'rallyclear') { act({ a: 'rally', which: v }); ui.rally = null; ui.hover = null; }
     else if (k === 'edit') { if (ui.edit) applyEdit(); else enterEdit(); }
     else if (k === 'editcancel') leaveEdit();
     else if (k === 'tool') ui.tool = +v;
     else if (k === 'undo') undoEdit();
+    else if (k === 'bp') { const res = DD.blueprintApply(me(), ui.draft.grid); if (res && res.added) { pushHist(); ui.draft.grid = res.grid; draftSync(); toast(`청사진 ${res.added}칸 적용`, 'good'); } else toast('추가할 청사진 칸이 없습니다', 'info'); }
     else if (k === 'resetmaze') { pushHist(); const d = me(), def = DD.defaultGrid(d.ents.length); for (let n = 0; n < def.length; n++) if (!d.occ[n]) ui.draft.grid[n] = def[n]; draftSync(); } // 건물 아래 칸은 그대로 둔다
     else if (k === 'summon') act({ a: 'summon', u: +v });
-    else if (k === 'build') { if (applyEdit()) { ui.build = ui.build === +v ? -1 : +v; ui.ghost = null; ui.sel.clear(); } }
+    else if (k === 'build') { if (applyEdit()) { ui.build = ui.build === +v ? -1 : +v; ui.ghost = null; ui.sel.clear(); ui.specPick = null; } }
     else if (k === 'up') act({ a: 'up', k: v });
     else if (k === 'hero') act({ a: 'hero' });
+    else if (k === 'allycall') act({ a: 'allycall' });
+    else if (k === 'sos') act({ a: 'sos' });
+    else if (k === 'pulse') act({ a: 'pulse' });
+    else if (k === 'hold') act({ a: 'hold', ids: [...ui.sel] });
+    else if (k === 'tmode') act({ a: 'tmode', id: +v });
     else if (k === 'imprint') { if (act({ a: 'imprint', ids: [...ui.sel] })) { const p = me().units; ui.sel.forEach((id) => { if (!p.some((u) => u.id === id)) ui.sel.delete(id); }); } }
-    else if (k === 'skill') act({ a: 'skill' });
-    else if (k === 'sell') { act({ a: 'sell', id: +v }); ui.selB = null; }
-    else if (k === 'upb') act({ a: 'upb', id: +v });
+    else if (k === 'skill') act({ a: 'skill', ids: [...ui.sel] });
+    else if (k === 'sell') { act({ a: 'sell', id: +v }); ui.selB = null; ui.specPick = null; }
+    else if (k === 'upb') { act({ a: 'upb', id: +v, spec: v2 != null ? +v2 : 0 }); ui.specPick = null; ui.tip = null; }
     else if (k === 'dismiss') { if (act({ a: 'dismiss', ids: [...ui.sel] })) ui.sel.clear(); }
     else if (k === 'support') { if (act({ a: 'support', ids: [...ui.sel], to: +v })) ui.sel.clear(); }
     lastHtml = {}; drawHud();
@@ -390,10 +499,11 @@
   cv.addEventListener('contextmenu', (ev) => ev.preventDefault());
   cv.addEventListener('pointerleave', () => { if (ui) { ui.mouse = ui.insp = null; hudT = 0; } });
   // 단축키는 ev.code(자판 위치)로 읽는다: 한글 입력 상태·Caps Lock·Shift와 상관없이 듣는다
-  const UCODE = ['KeyQ', 'KeyW', 'KeyR', 'KeyY'], BCODE = ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ'], TCODE = { KeyZ: 1, KeyX: 2, KeyC: 0 };
+  const UCODE = ['KeyQ', 'KeyW', 'KeyR', 'KeyY'], BCODE = ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyL'], TCODE = { KeyZ: 1, KeyX: 2, KeyC: 0 };
   const SCODE = { Digit1: 1, Digit2: 2, Digit3: 4, Numpad1: 1, Numpad2: 2, Numpad3: 4 };
   window.addEventListener('keydown', (ev) => {
     const k = ev.code, ctrl = ev.ctrlKey || ev.metaKey, enter = k === 'Enter' || k === 'NumpadEnter';
+    if (!$('#codex').hidden) { if (k === 'Escape' || enter) $('#codex').hidden = true; return; }
     if (!$('#ach').hidden) { if (k === 'Escape' || enter) $('#ach').hidden = true; return; }
     if (!$('#settings').hidden) { if (k === 'Escape' && !ev.repeat) closeSettings(); return; }
     if (!$('#story').hidden) { if (k === 'Space' || enter) { ev.preventDefault(); $('#next').click(); } else if (k === 'Escape') $('#skip').click(); return; }
@@ -402,35 +512,60 @@
     if (!G || G.over) return;
     if (dlg) { if (k === 'Space' || enter) advance(); ev.preventDefault(); return; }
     if (me().boonPick) { const bi = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[k]; if (bi != null && !ev.repeat) { act({ a: 'boon', i: bi }); lastHtml = {}; hudT = 0; } ev.preventDefault(); return; }
+    if (me().eventPick) { const ei = { Digit1: 0, Digit2: 1, Numpad1: 0, Numpad2: 1 }[k]; if (ei != null && !ev.repeat) { act({ a: 'event', i: ei }); lastHtml = {}; hudT = 0; } ev.preventDefault(); return; }
     lastHtml = {}; hudT = 0;
     const mine = !ui.world && ui.view === G.human, rep = ev.repeat;
     if (ctrl) {
-      if (k === 'KeyA' && mine) { me().units.forEach((u) => u.own === G.human && ui.sel.add(u.id)); ui.selB = null; ev.preventDefault(); }
+      if (k === 'KeyA' && mine) { me().units.forEach((u) => u.own === G.human && ui.sel.add(u.id)); ui.selB = null; ui.specPick = null; ev.preventDefault(); }
       else if (k === 'KeyZ' && ui.edit) { undoEdit(); ev.preventDefault(); }
       return;
     }
+    if (ui.specPick && mine && ui.selB === ui.specPick && !rep) {
+      if (k === 'Digit1' || k === 'Numpad1' || k === 'Digit2' || k === 'Numpad2') {
+        ev.preventDefault();
+        const si = (k === 'Digit2' || k === 'Numpad2') ? 1 : 0;
+        act({ a: 'upb', id: ui.specPick, spec: si }); ui.specPick = null; ui.tip = null;
+        return;
+      }
+      if (k === 'Escape') { ui.specPick = null; return; }
+    }
+    if (ev.shiftKey && !rep && G.dungeons.length > 1) {
+      const qi = { Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4 }[k];
+      if (qi != null && G.dungeons[qi]) { ev.preventDefault(); act({ a: 'quicksend', to: qi }); return; }
+    }
     if (k === 'KeyE' && mine) { if (!rep) { if (ui.edit) applyEdit(); else enterEdit(); } }
+    else if (mine && (k === 'F1' || k === 'F2' || k === 'F3')) {
+      ev.preventDefault();
+      if (!rep) {
+        const gi = k === 'F1' ? 0 : k === 'F2' ? 1 : 2;
+        if (ev.shiftKey) { ui.groups[gi] = [...ui.sel]; toast(`부대 ${gi + 1} 지정 (${ui.sel.size}기)`, 'info'); }
+        else { const ids = new Set(me().units.filter((u) => u.own === G.human).map((u) => u.id)); ui.sel = new Set((ui.groups[gi] || []).filter((id) => ids.has(id))); ui.selB = null; ui.specPick = null; }
+      }
+    }
     else if (k === 'KeyN') { if (!rep) callWave(); }
     else if (k === 'Tab' || k === 'KeyM') { ev.preventDefault(); if (!rep) setWorld(!ui.world); }
-    else if (k === 'Escape') { if (!rep && !ui.edit && !ui.rally && ui.build < 0 && !ui.sel.size && !ui.selB) return openSettings(); if (ui.edit) leaveEdit(); ui.rally = null; ui.build = -1; ui.ghost = null; ui.sel.clear(); ui.selB = null; }
+    else if (k === 'Escape') { if (!rep && !ui.edit && !ui.rally && ui.build < 0 && !ui.sel.size && !ui.selB) return openSettings(); if (ui.edit) leaveEdit(); ui.rally = null; ui.build = -1; ui.ghost = null; ui.sel.clear(); ui.selB = null; ui.specPick = null; }
     else if (ui.edit && k in TCODE) ui.tool = TCODE[k];
+    else if (!ui.edit && mine && k === 'KeyZ' && ui.sel.size) { if (!rep) act({ a: 'hold', ids: [...ui.sel] }); }
+    else if (mine && k === 'KeyK') { if (!rep) { if (me().allyRace) act({ a: 'allycall' }); else if (G.dungeons.length > 1) act({ a: 'sos' }); } }
+    else if (mine && k === 'KeyP') { if (!rep) act({ a: 'pulse' }); }
     else if (mine && k === 'KeyC') { if (!rep && act({ a: 'imprint', ids: [...ui.sel] })) { const p = me().units; ui.sel.forEach((id) => { if (!p.some((u) => u.id === id)) ui.sel.delete(id); }); } }
     else if (mine && UCODE.includes(k)) act({ a: 'summon', u: UCODE.indexOf(k) });
     else if (mine && k === 'KeyT') act({ a: 'hero' });
-    else if (mine && k === 'KeyX') { if (!rep) act({ a: 'skill' }); }
+    else if (mine && k === 'KeyX') { if (!rep) act({ a: 'skill', ids: [...ui.sel] }); }
     else if (mine && (k === 'KeyB' || k === 'KeyV')) { if (!rep && act({ a: 'merge', ids: [...ui.sel], pick: k === 'KeyV' ? 1 : 0 })) ui.sel.clear(); }
-    else if (mine && BCODE.includes(k)) { if (!rep && applyEdit()) { const i = BCODE.indexOf(k); ui.build = ui.build === i ? -1 : i; ui.ghost = null; ui.sel.clear(); ui.selB = null; } }
+    else if (mine && BCODE.includes(k)) { if (!rep && applyEdit()) { const i = BCODE.indexOf(k); ui.build = ui.build === i ? -1 : i; ui.ghost = null; ui.sel.clear(); ui.selB = null; ui.specPick = null; } }
     else if (k === 'Space') { ev.preventDefault(); if (!rep) togglePause(); }
     else if (k in SCODE) setSpeed(SCODE[k]);
-    else if (k === 'KeyU' && mine && ui.selB) { if (!rep) act({ a: 'upb', id: ui.selB }); }
-    else if ((k === 'Delete' || k === 'Backspace') && mine && ui.selB) { ev.preventDefault(); act({ a: 'sell', id: ui.selB }); ui.selB = null; }
+    else if (k === 'KeyU' && mine && ui.selB) { if (!rep) { const sb = me().blds.find((x) => x.id === ui.selB); if (sb && sb.def.kind === 'tower' && (sb.lv || 1) === 2) { ui.specPick = ui.specPick === sb.id ? null : sb.id; if (ui.specPick) toast('Lv.3 특화 선택: 1 또는 2 키 (Esc 취소)', 'info'); } else act({ a: 'upb', id: ui.selB }); } }
+    else if ((k === 'Delete' || k === 'Backspace') && mine && ui.selB) { ev.preventDefault(); act({ a: 'sell', id: ui.selB }); ui.selB = null; ui.specPick = null; }
   });
 
   const K = 3; // 캔버스는 언제나 3배(2088×1440)로 그린다
   function resize() {
     const s = Math.min(window.innerWidth / 2560, window.innerHeight / 1440);
     $('#root').style.transform = `translate(-50%, -50%) scale(${s})`;
-    cv.style.imageRendering = Number.isInteger(s * K) ? 'pixelated' : 'auto'; // 정수 배가 아니면 부드럽게 줄인다
+    cv.style.imageRendering = save.opt.sharp !== false || Number.isInteger(s * K) ? 'pixelated' : 'auto';
   }
   window.addEventListener('resize', resize);
 
@@ -438,13 +573,27 @@
     if (!G) return;
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     runScript(dt);
-    if (!paused && !dlg && !G.over && !me().boonPick) { acc += dt * speed; let n = 0; while (acc >= DD.DT && n++ < 60) { G.step(); acc -= DD.DT; } }
+    if (ui.hitstop > 0) { ui.hitstop -= dt; }
+    else if (!paused && !dlg && !G.over && !me().boonPick && !me().eventPick) { acc += dt * speed; let n = 0; while (acc >= DD.DT && n++ < 60) { G.step(); acc -= DD.DT; } }
     for (const e of G.events.splice(0)) {
       const who = (i) => (i === G.human ? '내 요새' : G.dungeons[i].R.name);
-      if (e.t === 'wave') { DD.Audio.play(e.w % 5 === 0 ? 'boss' : 'wave'); if (e.w % 5 === 0) ui.shake = 0.5; } else if (e.t === 'fall') DD.Audio.play('fall');
-      if (e.t === 'wave') banner('WAVE ' + e.w, e.w % 5 === 0 ? (DD.BOSS[e.w] && !G.tutorial ? `${DD.BOSS_GIM[DD.BOSS[e.w]].name} — ${DD.BOSS_GIM[DD.BOSS[e.w]].desc}` : '악마 군주가 온다') : (e.mut ? `변이 · ${DD.MUTS[e.mut].name} — ${DD.MUTS[e.mut].desc}` : '악마 침공') + (G.thrust[e.w] != null ? ` · 주공 ${DD.gateName(me().ents[G.thrust[e.w]])}` : ''), e.w % 5 === 0);
-      else if (e.t === 'merge' && e.d === G.human) { if (e.legend) banner(e.name, '전설 유닛 탄생'); else toast(`승급 · ${e.name}`, 'good'); }
-      else if (e.t === 'imprint' && e.d === G.human) toast(`각인 · ${DD.SIGS[e.sig].name} ${e.name} — ${DD.SIGS[e.sig].desc}`, 'good');
+      if (e.t === 'wave') { DD.Audio.play(e.w % 5 === 0 ? 'boss' : 'wave'); if (e.w % 5 === 0) ui.shake = 0.5; saveRunSnap(); } else if (e.t === 'fall') DD.Audio.play('fall');
+      if (e.t === 'wave') banner('WAVE ' + e.w, e.w % 5 === 0 ? (DD.BOSS[e.w] && !G.tutorial ? `${DD.BOSS_GIM[DD.BOSS[e.w]].name} — ${DD.BOSS_GIM[DD.BOSS[e.w]].desc}` : '악마 군주가 온다') : (e.mut ? `변이 · ${DD.MUTS[e.mut].name}${e.mut2 ? ' + ' + DD.MUTS[e.mut2].name : ''} — ${DD.MUTS[e.mut].desc}` : '악마 침공') + (G.thrust[e.w] != null ? ` · 주공 ${DD.gateName(me().ents[G.thrust[e.w]])}` : ''), e.w % 5 === 0);
+      else if (e.t === 'merge' && e.d === G.human) { if (e.legend) { banner(e.name, '전설 유닛 탄생'); DD.Audio.play('legend'); } else toast(`승급 · ${e.name}`, 'good'); }
+      else if (e.t === 'imprint' && e.d === G.human) { DD.Audio.play('imprint'); toast(`각인 · ${DD.SIGS[e.sig].name} ${e.name} — ${DD.SIGS[e.sig].desc}`, 'good'); if (e.combo) toast(`공명 발동 · ${e.combo.name} — ${e.combo.desc}`, 'good'); }
+      else if (e.t === 'bossDead' && e.d === ui.view) { ui.hitstop = 0.16; ui.shake = 0.6; }
+      else if (e.t === 'bossInterrupt' && e.d === ui.view) { toast('군주 시전 차단!', 'good'); DD.Audio.play('interrupt'); }
+      else if (e.t === 'bossPhase' && e.d === ui.view) { ui.shake = 0.45; toast(e.sealed ? `군주 광폭! 탑 ${e.sealed}기 봉인 (X·P로 해제)` : '군주 2페이즈 돌입!', 'bad'); }
+      else if (e.t === 'spec' && e.d === G.human) { ui.shake = 0.25; toast(`타워 특화 · ${e.name}`, 'good'); }
+      else if (e.t === 'pulse' && e.d === G.human) { ui.shake = 0.5; banner(DD.HEART_SKILLS[e.race].name, DD.HEART_SKILLS[e.race].desc); }
+      else if (e.t === 'skill' && e.d === G.human) { ui.shake = Math.max(ui.shake || 0, 0.22); }
+      else if (e.t === 'event' && e.d === G.human) { DD.Audio.play('event'); lastHtml = {}; hudT = 0; }
+      else if (e.t === 'eventDone' && e.d === G.human) { toast(`전령 · ${e.pick}`, 'good'); }
+      else if (e.t === 'medal') { DD.Audio.play('medal'); toast(`연합 훈장 획득 · 전원 공격 +${e.n * 5}%`, 'good'); }
+      else if (e.t === 'endlessMile') { DD.Audio.play('hero'); banner(`WAVE ${e.w} 지원군`, `${DD.RACES[e.race].name} [${e.grade}] ${e.name} 합류`); }
+      else if (e.t === 'hazWarn') { toast(`지형 현상 예고 · ${DD.HAZ[e.id].name}`, 'bad'); DD.Audio.play('telegraph'); }
+      else if (e.t === 'allycall' && e.d === G.human) { toast(`${DD.RACES[e.race].name} 원정대 합류`, 'good'); DD.Audio.play('ally'); }
+      else if (e.t === 'sos' && e.d === G.human) { toast(`${G.dungeons[e.from].R.name} 지원군 ${e.n}기 도착`, 'good'); DD.Audio.play('ally'); }
       else if (e.t === 'missionNew' && e.d === G.human) { toast(`미션 · ${DD.MISSION[e.k].name}`, 'info'); DD.Audio.play('alert'); }
       else if (e.t === 'mission' && e.d === G.human) { toast(e.ok ? `미션 성공 · ${DD.MISSION[e.k].name} (+●${e.gold})` : `미션 실패 · ${DD.MISSION[e.k].name}`, e.ok ? 'good' : 'bad'); if (e.ok) DD.Audio.play('coin'); }
       else if (e.t === 'bossRage' && e.d === ui.view) toast('군주가 돌진한다!', 'bad');
@@ -485,10 +634,52 @@
     if (G.over) return finish();
     requestAnimationFrame(loop);
   }
+  function syncCodex(d) {
+    if (!d || !d.codex) return;
+    for (const k of ['demons', 'bosses', 'heroes', 'legends']) {
+      save.codex[k] = save.codex[k] || {};
+      Object.assign(save.codex[k], d.codex[k]);
+    }
+  }
+  function dmgHtml(d) {
+    const s = d.stats; if (!s) return '';
+    const rows = [['유닛', s.units], ['탑', s.towers], ['영웅', s.heroes], ['함정', s.traps]].filter((r) => r[1] > 0);
+    const tot = rows.reduce((a, r) => a + r[1], 0);
+    if (!tot) return '';
+    const top = Object.entries(s.top || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    return `<div class="dmgbars"><h3>피해 기여도</h3>${rows.map(([n, v]) => `<div class="dmgrow"><span>${n}</span><i><i style="width:${Math.round((v / tot) * 100)}%"></i></i><span>${Math.round(v)} (${Math.round((v / tot) * 100)}%)</span></div>`).join('')}${top.length ? `<div class="dmgtop">최다 기여 · ${top.map(([n, v]) => `${n} ${Math.round(v)}`).join(' / ')}</div>` : ''}</div>`;
+  }
+  function chronHtml(d) {
+    if (G.tutorial) return '';
+    const bits = [];
+    if (d.mvp) bits.push(`<b>MVP</b> ${d.mvp.name} (${d.mvp.kills}처치)`);
+    bits.push(`<b>최장 미로</b> ${d.maxPath || d.path.length}칸`);
+    bits.push(`<b>교리</b> ${DD.DOCTRINES[d.race][d.doc].name}`);
+    if (d.boons.length) bits.push(`<b>전리품</b> ${d.boons.length}개`);
+    if (G.oaths && G.oaths.length) bits.push(`<b>맹약</b> ${G.oaths.length}개`);
+    if (G.medals) bits.push(`<b>연합 훈장</b> ${G.medals}`);
+    return `<div class="chron">${bits.join(' · ')}</div>`;
+  }
+  function recordHistory(d, win, endless) {
+    if (G.tutorial || G.quit) return;
+    save.history = Array.isArray(save.history) ? save.history : [];
+    save.history.unshift({
+      win: !!win, endless: !!endless, race: d.race, stage: G.stage, stId: G.st.id, diff: G.diff,
+      wave: d.wavesCleared, kills: d.kills, time: Math.round(G.t),
+      mvp: d.mvp ? `${d.mvp.name} (${d.mvp.kills})` : '',
+      maxPath: d.maxPath || d.path.length, doc: d.doc,
+      oaths: (G.oaths || []).slice(), medals: G.medals || 0, boons: (d.boons || []).length,
+    });
+    if (save.history.length > 10) save.history.length = 10;
+  }
   function finish() {
     const d = me(), rs = save.races[d.race];
+    clearRunSnap();
+    syncCodex(d);
     if (G.endless) return finishEndless();
-    let sh = G.quit ? 0 : DD.shardsFor(G.stage, d.wavesCleared, G.win, G.diff), recLine = '';
+    recordHistory(d, G.win, false);
+    const oMul = DD.oathShardMul(G.oaths);
+    let sh = G.quit ? 0 : DD.shardsFor(G.stage, d.wavesCleared, G.win, G.diff, oMul), recLine = '';
     if (G.win && !G.tutorial && !G.quit) { // 기록 갱신: 더 높은 난이도, 같은 난이도면 별이 더 많을 때. 오른 만큼 영혼석을 더 준다
       const s = DD.starsFor(d.heart.hp / d.heart.mhp), sc = (r) => (r ? r.d * 3 + r.s : 0), old = (rs.rec = rs.rec || {})[G.stage], now = { d: G.diff, s };
       const gain = sc(now) - sc(old), bonus = gain > 0 ? Math.round(gain * 3 * (1 + G.stage * 0.5)) : 0;
@@ -508,10 +699,12 @@
     dlg = null; drawDlg(); setGoal('');
     const nextOk = !G.tutorial && G.win && G.stage < 5 && rs.stage > G.stage && !DD.DEMO;
     const tipL = !G.win && !G.tutorial ? DD.TIPS_LOSE[Math.floor(Math.random() * DD.TIPS_LOSE.length)] : '';
-    $('#result').innerHTML = `<div><h1 class="${G.win ? 'good' : 'bad'}">${G.win ? '승리' : '패배'}</h1>
+    $('#result').innerHTML = `<div><img class="px resart" src="art/${G.win ? 'victory' : 'defeat'}.webp" alt=""><h1 class="${G.win ? 'good' : 'bad'}">${G.win ? '승리' : '패배'}</h1>
       <p>${d.R.name} · ${G.st.name}${G.tutorial ? '' : ' · ' + G.D.name}</p>${recLine}
       <div class="stats"><span><b>${d.wavesCleared}/${C.WAVES}</b>웨이브</span><span><b>${d.kills}</b>처치</span><span><b>${mmss(G.t)}</b>시간</span>
         <span><b>${d.nSum}</b>소환</span><span><b>${d.heroN}</b>영웅</span><span><b>${d.alive ? pct(d.heart.hp / d.heart.mhp) + '%' : '함락'}</b>심장</span></div>
+      ${dmgHtml(d)}
+      ${chronHtml(d)}
       <p class="gold">${ic('ui_shard')} 영혼석 +${sh}${sh && !G.tutorial ? ` (보유 ${rs.shards})` : ''}</p>${achLine}${unlocked}${tipL ? `<p class="tip">팁 · ${tipL}</p>` : ''}
       ${nextOk ? '<button id="next2" class="on">다음 스테이지 ▸</button> ' : ''}${tut || G.tutorial ? '' : `<button id="again" class="${nextOk ? '' : 'on'}">다시 도전</button> `}<button id="back">${tut ? '종족 선택' : '돌아가기'}</button>
       <small>Enter · ${nextOk ? '다음 스테이지' : tut || G.tutorial ? '종족 선택' : '다시 도전'}</small></div>`;
@@ -522,12 +715,17 @@
   }
   function finishEndless() { // 무한 침공이 끝났다: 20웨이브 뒤로 버틴 만큼 영혼석, 스테이지별 최고 기록
     const d = me(), rs = save.races[d.race], extra = Math.max(0, d.wavesCleared - C.WAVES);
-    const sh = G.quit ? 0 : DD.shardsFor(G.stage, Math.min(C.WAVES, d.wavesCleared), false, G.diff) + Math.round(extra * 3 * (1 + G.stage * 0.5) * G.D.shard), best = (rs.endless = rs.endless || {}), isBest = extra > 0 && d.wavesCleared > (best[G.stage] || 0);
+    clearRunSnap();
+    syncCodex(d);
+    recordHistory(d, false, true);
+    const sh = G.quit ? 0 : DD.shardsFor(G.stage, Math.min(C.WAVES, d.wavesCleared), false, G.diff, DD.oathShardMul(G.oaths)) + Math.round(extra * 3 * (1 + G.stage * 0.5) * G.D.shard * DD.oathShardMul(G.oaths)), best = (rs.endless = rs.endless || {}), isBest = extra > 0 && d.wavesCleared > (best[G.stage] || 0);
     if (isBest) best[G.stage] = d.wavesCleared; rs.shards += sh; const achLine = grantAch(d, rs, false); (save.lay = save.lay || {})[G.layout + d.ents.length] = Array.from(d.grid); persist();
     DD.Audio.stopAmbience(); if (G.quit) DD.Music.stop(); else DD.Music.play('defeat', { fade: 0.4 }); dlg = null; drawDlg(); setGoal('');
-    $('#result').innerHTML = `<div><h1 class="gold">무한 침공 종료</h1>
+    $('#result').innerHTML = `<div><img class="px resart" src="art/defeat.webp" alt=""><h1 class="gold">무한 침공 종료</h1>
       <p>${d.R.name} · ${G.st.name} · ${G.D.name}</p>
       <div class="stats"><span><b>${d.wavesCleared}</b>웨이브</span><span><b>${d.kills}</b>처치</span><span><b>${mmss(G.t)}</b>시간</span></div>
+      ${dmgHtml(d)}
+      ${chronHtml(d)}
       ${isBest ? '<p class="good">최고 기록 갱신</p>' : best[G.stage] ? `<p>최고 기록 ${best[G.stage]}웨이브</p>` : ''}
       <p class="gold">${ic('ui_shard')} 영혼석 +${sh} (보유 ${rs.shards})</p>${achLine}
       <button id="again" class="on">다시 도전</button> <button id="back">돌아가기</button><small>Enter · 다시 도전</small></div>`;
@@ -542,10 +740,64 @@
     got.forEach((a) => { save.ach[a.id] = 1; rs.shards += a.sh; });
     return got.map((a) => `<p class="ach">${ic('ui_gradeSSR')} 업적 · <b>${a.name}</b> <span class="gold">${ic('ui_shard')} +${a.sh}</span></p>`).join('');
   }
-  function showAch() { // 메뉴의 업적 목록
+  function showCodex(tab) {
+    tab = tab || 'races';
+    const cx = save.codex || {}, tabs = [['races', '종족·전설'], ['heroes', '영웅'], ['demons', '악마·군주'], ['lands', '대륙'], ['history', '전투 기록']];
+    let body = '', cls = '';
+    if (tab === 'races') {
+      body = DD.RACE_IDS.map((r) => {
+        const R = DD.RACES[r], gotL = cx.legends && cx.legends[r], hrs = DD.HERO_RACE_SKILL[r];
+        return `<div class="citem"><div>${icon(R.legend.spr, 3)}</div><div><b><img class="px ic" src="art/crest_${r}.png" alt="">${R.name} · ${R.legend.name}${gotL ? '' : ' (미개방)'}</b><small>${R.trait}<br><span class="good">${DD.RACE_MAZE_TRAIT[r]}</span><br>영웅 기술 · ${hrs.name}: ${hrs.desc}<br>전설 패시브 · ${R.legend.pdesc}</small></div></div>`;
+      }).join('');
+    } else if (tab === 'heroes') {
+      cls = 'c4';
+      body = DD.RACE_IDS.flatMap((r) => DD.RACES[r].heroes.map(([name, role]) => {
+        const seen = cx.heroes && cx.heroes[r + '_' + role];
+        return `<div class="citem ${seen ? '' : 'lock'}"><img class="px port" src="${DD.icon('p_' + r + '_' + role)}" alt=""><div><b>${seen ? name : '???'}</b><small>${DD.RACES[r].name} · ${DD.HERO_ROLES[role].label}<br>${DD.HERO_SKILL[role].name}: ${DD.HERO_SKILL[role].desc}</small></div></div>`;
+      })).join('');
+    } else if (tab === 'demons') {
+      const dm = Object.keys(DD.DEMONS).map((k) => {
+        const m = DD.DEMONS[k], seen = cx.demons && cx.demons[k];
+        return `<div class="citem ${seen ? '' : 'lock'}"><div>${icon(m.spr, 3)}</div><div><b>${seen ? m.name : '???'}</b><small>체력 ${m.hp} · 공격 ${m.atk} · 방어 ${m.arm}<br>${m.desc}</small></div></div>`;
+      });
+      const bs = Object.keys(DD.BOSS_GIM).map((k) => {
+        const g = DD.BOSS_GIM[k], seen = cx.bosses && cx.bosses[k];
+        return `<div class="citem ${seen ? '' : 'lock'}"><div>${icon('d_lord_' + k, 2)}</div><div><b>${seen ? g.name : '???'}</b><small>${g.desc}</small></div></div>`;
+      });
+      body = dm.concat(bs).join('');
+    } else if (tab === 'history') {
+      cls = 'c2';
+      const hs = save.history || [];
+      body = hs.length ? hs.map((h) => {
+        const R = DD.RACES[h.race] || DD.RACES.human, st = DD.LANDS[h.stId] || DD.stageOf(h.race, h.stage || 0), df = DD.DIFFS[h.diff] || DD.DIFFS[1];
+        const dc = DD.DOCTRINES[h.race] && DD.DOCTRINES[h.race][h.doc || 0];
+        const tag = h.endless ? '<span class="gold">무한</span>' : h.win ? '<span class="good">승리</span>' : '<span class="bad">패배</span>';
+        const extras = [h.mvp ? `MVP ${h.mvp}` : '', `최장 미로 ${h.maxPath || 0}칸`, dc ? dc.name : '', h.oaths && h.oaths.length ? `맹약 ${h.oaths.length}개` : '', h.medals ? `연합 훈장 ${h.medals}` : ''].filter(Boolean).join(' · ');
+        return `<div class="citem"><div><img class="px lmthumb" src="art/crest_${h.race}.png" alt=""></div><div><b>${tag} · ${R.name} · ${st.name} (${df.name})</b><small>WAVE ${h.wave} · 처치 ${h.kills} · ${mmss(h.time || 0)}<br>${extras}</small></div></div>`;
+      }).join('') : '<div class="citem empty"><div><b>전투 기록 없음</b><small>전투를 마치면 최근 10판의 연대기가 이곳에 기록됩니다.</small></div></div>';
+    } else {
+      body = Object.keys(DD.LANDS).map((id) => {
+        const l = DD.LANDS[id], lm = DD.LANDMARKS[id], hz = DD.HAZ[id];
+        return `<div class="citem">${lm ? `<img class="px lmthumb" src="art/lm_${lm.id}.png" alt="">` : ''}<div><b>${l.name}</b><small>${l.desc}${lm ? `<br><span class="good">${lm.name}</span> — ${lm.desc}` : ''}${hz ? `<br>지형 현상 · ${hz.name}: ${hz.desc}` : ''}</small></div></div>`;
+      }).join('');
+    }
+    $('#codex').innerHTML = `<div class="box"><h2>그리기스 연대기 <span class="tabs">${tabs.map(([id, n]) => `<button class="${tab === id ? 'on' : ''}" data-ct="${id}">${n}</button>`).join('')}</span></h2><div class="body ${cls}">${body}</div><button class="cclose" id="codexclose">닫기 · Esc</button></div>`;
+    $('#codex').hidden = false;
+    $('#codexclose').onclick = () => { $('#codex').hidden = true; };
+    $('#codex').querySelectorAll('[data-ct]').forEach((b) => { b.onclick = () => { DD.Audio.play('click'); showCodex(b.dataset.ct); }; });
+  }
+  function showAch(cat) { // 메뉴의 업적 목록(공통 + 도전 + 종족별 탭)
+    cat = cat || 'common';
     const n = DD.ACH.filter((a) => save.ach[a.id]).length;
-    $('#ach').innerHTML = `<div class="box"><h2>업적 <span class="gold">${n}/${DD.ACH.length}</span></h2><div class="achlist">${DD.ACH.map((a) => `<div class="${save.ach[a.id] ? 'done' : ''}"><b>${save.ach[a.id] ? '✔ ' : ''}${a.name}</b><small>${a.desc}</small><span class="gold">${ic('ui_shard')} ${a.sh}</span></div>`).join('')}</div><button id="achclose">닫기 · Esc</button></div>`;
+    const list = DD.ACH.filter((a) => (a.cat || 'common') === cat);
+    const tabs = DD.ACH_CATS.map(([id, name]) => {
+      const sub = DD.ACH.filter((a) => (a.cat || 'common') === id);
+      const done = sub.filter((a) => save.ach[a.id]).length;
+      return `<button class="${cat === id ? 'on' : ''}" data-at="${id}">${id !== 'common' && id !== 'challenge' ? `<img class="px ic" src="art/crest_${id}.png" alt="">` : ''}${name} (${done}/${sub.length})</button>`;
+    }).join('');
+    $('#ach').innerHTML = `<div class="box"><h2>업적 <span class="gold">${n}/${DD.ACH.length}</span><span class="tabs">${tabs}</span></h2><div class="achlist">${list.map((a) => `<div class="${save.ach[a.id] ? 'done' : ''}"><b>${save.ach[a.id] ? '✔ ' : ''}${a.name}</b><small>${a.desc}</small><span class="gold">${ic('ui_shard')} ${a.sh}</span></div>`).join('')}</div><button id="achclose">닫기 · Esc</button></div>`;
     $('#ach').hidden = false; $('#achclose').onclick = () => { $('#ach').hidden = true; };
+    $('#ach').querySelectorAll('[data-at]').forEach((b) => { b.onclick = () => { DD.Audio.play('click'); showAch(b.dataset.at); }; });
   }
   // ───────── 설정(배경음악·효과음 음량, 번쩍임). 메뉴의 설정 버튼, 게임 중 ⚙ 또는 Esc ─────────
   let setWasPaused = false;
@@ -553,6 +805,7 @@
     const o = save.opt, row = (k, name) => `<label class="vol"><span>${name}</span><input type="range" min="0" max="100" step="5" value="${Math.round(o[k] * 100)}" data-o="${k}"><b>${Math.round(o[k] * 100)}</b></label>`;
     $('#settings').innerHTML = `<div class="box"><h2>설정</h2>${row('bgm', '배경음악')}${row('vol', '효과음')}
       <label class="vol"><span>피격 번쩍임</span><button class="${o.flash ? 'on' : ''}" data-o="flash">${o.flash ? '켜짐' : '꺼짐'}</button></label>
+      <label class="vol"><span>픽셀 선명하게</span><button class="${o.sharp !== false ? 'on' : ''}" data-o="sharp">${o.sharp !== false ? '켜짐' : '꺼짐'}</button></label>
       <div class="vol"><span>언어</span><span class="langs">${langRow()}</span></div>
       <div class="vol"><span>화면</span><span class="langs"><button class="${document.fullscreenElement ? 'on' : ''}" data-o="fs">전체 화면</button></span></div>
       <div class="vol"><span>저장</span><span class="langs"><button data-o="reset">처음부터 다시</button></span></div>
@@ -560,7 +813,7 @@
   }
   function openSettings() {
     if (!$('#settings').hidden) return;
-    if (G && !G.over) { setWasPaused = paused; paused = true; }
+    if (G && !G.over) { setWasPaused = paused; paused = true; saveRunSnap(); }
     drawSettings(); $('#settings').hidden = false; if (G) { lastHtml = {}; drawHud(); }
   }
   function closeSettings() { $('#settings').hidden = true; if (G && !G.over) { paused = setWasPaused; lastHtml = {}; drawHud(); } }
@@ -575,11 +828,12 @@
     if (!b) { if (ev.target.id === 'settings') closeSettings(); return; } // 바깥을 누르면 닫는다
     DD.Audio.play('click');
     if (b.dataset.o === 'flash') { save.opt.flash = !save.opt.flash; if (ui) ui.flash = save.opt.flash; persist(); drawSettings(); }
+    else if (b.dataset.o === 'sharp') { save.opt.sharp = !(save.opt.sharp !== false); persist(); resize(); drawSettings(); }
     else if (b.dataset.o === 'close') closeSettings();
     else if (b.dataset.o === 'fs') { const el = document.documentElement; (document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen ? el.requestFullscreen() : Promise.reject()).then(drawSettings, () => {}); }
-    else if (b.dataset.o === 'reset') { if (confirm(DD.tr('모든 진행을 지우고 처음부터 다시 할까요?'))) { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* 무시 */ } location.reload(); } }
+    else if (b.dataset.o === 'reset') { if (confirm(DD.tr('모든 진행을 지우고 처음부터 다시 할까요?'))) { try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(RUN_KEY); } catch (e) { /* 무시 */ } location.reload(); } }
   });
-  DD.debug = { get G() { return G; }, menu, startGame, save, get script() { return script; }, get dlg() { return dlg; } };
+  DD.debug = { get G() { return G; }, menu, startGame, resumeGame, saveRunSnap, loadRunSnap, save, get script() { return script; }, get dlg() { return dlg; } };
   resize();
   DD.artReady(showTitle);
 })();

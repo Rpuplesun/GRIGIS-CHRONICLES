@@ -14,6 +14,17 @@
     heart: R('heart', 0.55, 0.25, 0.04), bfall: R('bfall', 0.7, 0.2, 0.05), wave: R('wave', 0.5, 1), boss: R('boss', 0.7, 1), fall: R('fall', 0.7, 1),
     // 개선과 함께 생긴 순간들
     coin: R('coin', 0.5, 0.15, 0.04), clear: R('clear', 0.5, 1), ready: R('ready', 0.45, 1), alert: R('alert', 0.55, 1), alarm: R('alarm', 0.7, 2), edit: R('edit', 0.4, 0.15),
+    imprint: { gap: 0.15, vol: 0.4, syn: (a) => { a.tone('triangle', 440, 660, 0.12, 0.6); a.tone('sine', 660, 880, 0.18, 0.5, 0.08); } },
+    legend: { gap: 0.5, vol: 0.5, syn: (a) => { a.tone('triangle', 330, 660, 0.2, 0.6); a.tone('sine', 523, 1046, 0.35, 0.7, 0.12); } },
+    interrupt: { gap: 0.2, vol: 0.45, syn: (a) => { a.tone('sawtooth', 880, 220, 0.18, 0.5, 0, 1200); a.tone('sine', 1046, 523, 0.15, 0.4, 0.06); } },
+    ally: { gap: 0.3, vol: 0.4, syn: (a) => { a.tone('triangle', 392, 587, 0.14, 0.5); a.tone('triangle', 587, 784, 0.22, 0.5, 0.1); } },
+    telegraph: { gap: 0.4, vol: 0.38, syn: (a) => { a.tone('square', 240, 320, 0.12, 0.35, 0, 700); a.tone('square', 320, 440, 0.14, 0.35, 0.14, 900); } },
+    push: { gap: 0.12, vol: 0.42, syn: (a) => { a.tone('triangle', 140, 420, 0.13, 0.65); a.noise(0.08, 0.28, 900, 'bandpass', 2200); } },
+    pulse: { gap: 0.5, vol: 0.6, syn: (a) => { a.tone('sawtooth', 165, 330, 0.35, 0.5, 0, 900); a.tone('triangle', 330, 660, 0.4, 0.6, 0.08); a.tone('sine', 495, 990, 0.45, 0.5, 0.16); } },
+    event: { gap: 0.3, vol: 0.45, syn: (a) => { a.tone('triangle', 523, 659, 0.12, 0.5); a.tone('triangle', 659, 784, 0.18, 0.5, 0.1); } },
+    spec: { gap: 0.2, vol: 0.5, syn: (a) => { a.tone('triangle', 392, 523, 0.12, 0.5); a.tone('sine', 523, 784, 0.16, 0.55, 0.08); a.tone('sine', 784, 1046, 0.25, 0.6, 0.16); } },
+    phase: { gap: 0.5, vol: 0.55, syn: (a) => { a.tone('sawtooth', 180, 95, 0.45, 0.6, 0, 600); a.noise(0.35, 0.35, 420, 'lowpass', 140); } },
+    medal: { gap: 0.4, vol: 0.55, syn: (a) => { a.tone('triangle', 440, 554, 0.12, 0.5); a.tone('triangle', 554, 659, 0.14, 0.5, 0.1); a.tone('sine', 659, 880, 0.28, 0.6, 0.2); } },
   };
   const AMB = { water: 'audio/ambience/Amb_Ch1Corridor_RainLoop.ogg' };
   let ac = null, master = null, vol = 0.6, lastAt = {}, ambEl = null, ambNode = null, nbuf = null;
@@ -65,15 +76,40 @@
       }
       if (ctx()) ev.syn(api(ev));
     },
-    ambience(stageId) { // 스테이지 환경음. 녹음이 없으면 낮은 잡음 웅웅거림(임시)
+    ambience(stageId) { // 스테이지 환경음: 실제 녹음이 없으면 스테이지별 다층 Web Audio 환경음
       this.stopAmbience(); if (!stageId) return;
       if (AMB[stageId]) { ambEl = new Audio(AMB[stageId]); ambEl.loop = true; ambEl.volume = Math.min(1, vol * 0.7); ambEl.play().catch(() => {}); return; }
       if (!ctx()) return;
-      const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
-      s.buffer = nbuf; s.loop = true; f.type = 'lowpass'; f.frequency.value = stageId === 'fire' ? 220 : 130; g.gain.value = 0.05;
-      s.connect(f); f.connect(g); g.connect(master); s.start(); ambNode = { s, g };
+      const cfg = {
+        cave: { f: 110, q: 1.5, type: 'lowpass', g: 0.045, modF: 0.18, modA: 30, drone: 55 },
+        fire: { f: 240, q: 2.0, type: 'bandpass', g: 0.05, modF: 0.45, modA: 80, drone: 68 },
+        wild: { f: 420, q: 1.2, type: 'bandpass', g: 0.04, modF: 0.25, modA: 180 },
+        forest: { f: 680, q: 0.9, type: 'bandpass', g: 0.032, modF: 0.14, modA: 220 },
+        abyss: { f: 95, q: 2.2, type: 'lowpass', g: 0.055, modF: 0.12, modA: 25, drone: 46 },
+      }[stageId] || { f: 140, q: 1, type: 'lowpass', g: 0.04, modF: 0.2, modA: 20 };
+      const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain();
+      s.buffer = nbuf; s.loop = true; f.type = cfg.type; f.frequency.value = cfg.f; f.Q.value = cfg.q; g.gain.value = cfg.g;
+      lfo.frequency.value = cfg.modF; lg.gain.value = cfg.modA;
+      lfo.connect(lg); lg.connect(f.frequency);
+      s.connect(f); f.connect(g); g.connect(master);
+      s.start(); lfo.start();
+      let dr = null;
+      if (cfg.drone) {
+        const o = ac.createOscillator(), dg = ac.createGain();
+        o.type = 'sine'; o.frequency.value = cfg.drone; dg.gain.value = 0.018;
+        o.connect(dg); dg.connect(master); o.start(); dr = o;
+      }
+      ambNode = { s, lfo, dr, g };
     },
-    stopAmbience() { if (ambEl) { ambEl.pause(); ambEl = null; } if (ambNode) { try { ambNode.s.stop(); } catch (e) { /* 무시 */ } ambNode = null; } },
+    stopAmbience() {
+      if (ambEl) { ambEl.pause(); ambEl = null; }
+      if (ambNode) {
+        try { ambNode.s.stop(); } catch (e) { /* 무시 */ }
+        try { if (ambNode.lfo) ambNode.lfo.stop(); } catch (e) { /* 무시 */ }
+        try { if (ambNode.dr) ambNode.dr.stop(); } catch (e) { /* 무시 */ }
+        ambNode = null;
+      }
+    },
   };
 
   // ── 배경음악: web/audio/bgm/<id>.ogg (tools/music/compose.py로 만든 곡) ──

@@ -62,11 +62,27 @@
     if (f.k === 'smoke') return vfx('smoke', 0, 5);
     if (f.k === 'hero') vfx('burst', 0, 5);
     if (f.k === 'corpse') { const n = DD.frames(f.s).length; DD.blit(x, f.s, Math.min(n - 1, 9 + ((p * 3) | 0)), X, Y + 3, f.face < 0); }
-    else if (f.k === 'dust') { const a = DD.fxArt('dust', Math.min(4, (p * 5) | 0), f.c); x.drawImage(a.c, X - 8, Y - 12); }
-    else if (f.k === 'hit') { x.fillStyle = P[f.c]; if (p < 0.5) { x.fillRect(X - 1, Y, 3, 1); x.fillRect(X, Y - 1, 1, 3); } else { [[-2, -2], [2, -2], [-2, 2], [2, 2], [-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => x.fillRect(X + a, Y + b, 1, 1)); } }
-    else if (f.k === 'boom') { const fr = (p * 3) | 0; dotted(x, X, Y, Math.round(f.r * (0.45 + fr * 0.27)), fr === 2 ? 'W' : f.c, 20 + fr * 8); if (fr === 0) { x.fillStyle = P.W; x.fillRect(X - 1, Y - 1, 3, 3); } }
-    else if (f.k === 'heal') { x.fillStyle = P[f.c]; const y = Y - ((p * 4) | 0) * 2; x.fillRect(X - 1, y, 3, 1); x.fillRect(X, y - 1, 1, 3); }
     else if (f.k === 'gold') num(x, '+' + f.n, X, Y - ((p * 5) | 0) * 2, 'g1');
+    else if (f.k === 'crit') { x.fillStyle = P.g1; const s = (p * 4) | 0; x.fillRect(X - 2 - s, Y - 2 - s, 2, 2); x.fillRect(X + 1 + s, Y - 2 - s, 2, 2); x.fillStyle = P.W; x.fillRect(X, Y - 3 - s, 1, 3); }
+    else if (f.k === 'block') { x.fillStyle = P.s1; const s = (p * 3) | 0; x.fillRect(X - 2, Y - s, 5, 1); x.fillStyle = P.s3; x.fillRect(X - 1, Y + 1 - s, 3, 1); }
+    else if (f.k === 'interrupt') { const r = Math.round(10 + p * 26); dotted(x, X, Y, r, 'b1', 20); dotted(x, X, Y, Math.max(4, r - 6), 'W', 12); }
+    else if (f.k === 'push') { const r = Math.round(6 + p * 18); dotted(x, X, Y, r, 'b1', 16); dotted(x, X, Y - 3, Math.max(3, r - 5), 'g1', 10); }
+    else if (f.k === 'pulse') { const r = Math.round(24 + p * 210); dotted(x, X, Y, r, f.c || 'g1', 56); if (r > 24) dotted(x, X, Y, r - 14, 'W', 36); }
+    else if (f.k === 'seal') { x.fillStyle = P.K; x.fillRect(X - 8, Y - 8, 16, 4); x.fillStyle = P.p1; x.fillRect(X - 7, Y - 7, 14, 2); }
+    else if (f.k === 'specbeam') {
+      const dx = f.tx - X, dy = f.ty - Y, steps = Math.max(6, (Math.hypot(dx, dy) / 2) | 0);
+      for (let i = 0; i <= steps; i++) {
+        const t0 = i / steps, jx = f.zig && i > 1 && i < steps - 1 ? ((i % 2 ? 2 : -2) * (dy >= 0 ? 1 : -1)) : 0;
+        const jy = f.zig && i > 1 && i < steps - 1 ? ((i % 2 ? -2 : 2) * (dx >= 0 ? 1 : -1)) : 0;
+        const px = Math.round(X + dx * t0 + jx), py = Math.round(Y + dy * t0 + jy);
+        x.fillStyle = P[i % 3 === 0 ? 'W' : (f.c || 'g1')];
+        x.fillRect(px, py, p < 0.5 ? 2 : 1, p < 0.5 ? 2 : 1);
+      }
+    } else if (f.k === 'specring') {
+      const r = Math.max(4, Math.round((f.r || 18) * (0.4 + p * 0.6)));
+      dotted(x, X, Y, r, f.c || 'g1', 20);
+      if (p < 0.55) dotted(x, X, Y, Math.max(2, r - 4), 'W', 10);
+    }
     else if (f.k === 'summon' || f.k === 'hero') {
       const fr = (p * (f.k === 'hero' ? 9 : 5)) | 0, big = f.k === 'hero';
       ring(x, X, Y - fr * 3, big ? 8 : 6, f.c, true);
@@ -122,6 +138,22 @@
     glow(x, C.SUMMON.x, C.SUMMON.y, 40, 'b3'); glow(x, C.ALTAR.x, C.ALTAR.y, 40, 'g3');
     for (const e of d.ents) { if (e[0] === 0) glow(x, OX + 14, tcy(e[1]), 30, 'r3'); else if (e[0] === GW - 1) glow(x, OX + GW * T - 14, tcy(e[1]), 30, 'r3'); else if (e[1] === 0) glow(x, tcx(e[0]), OY + 14, 30, 'r3'); else glow(x, tcx(e[0]), OY + GH * T - 16, 34, 'r3'); }
     for (const [cx, cy] of C.PLOTS) x.drawImage(DD.frame('t_platform', 0, 0), tcx(cx) - 14, tcy(cy) - 13);
+    if (C.LANDMARKS && C.LANDMARKS.length && DD.LANDMARKS[st]) {
+      const lm = DD.LANDMARKS[st], li = DD.lmImg && DD.lmImg(lm.id);
+      for (const [cx, cy] of C.LANDMARKS) {
+        const lx = tcx(cx), ly = tcy(cy);
+        glow(x, lx, ly, 26, lm.col);
+        if (li) {
+          x.imageSmoothingEnabled = false;
+          x.drawImage(li, lx - 14, ly - 14, 28, 28);
+        } else {
+          x.fillStyle = P.K; x.fillRect(lx - 7, ly - 7, 14, 14);
+          x.fillStyle = P.e3; x.fillRect(lx - 6, ly - 6, 12, 12);
+          x.fillStyle = P[lm.col]; x.fillRect(lx - 4, ly - 4, 8, 8);
+          x.fillStyle = P.W; x.fillRect(lx - 2, ly - 2, 4, 4);
+        }
+      }
+    }
     for (const sx of [0, GW - 1]) DD.blit(x, 't_standard', 0, tcx(sx), tcy(0) + 12);
     bgCache[d.i] = { k, c };
     return c;
@@ -175,9 +207,35 @@
       for (let k = -3; k <= 3; k++) { const a = 3 - Math.abs(k); if (dx) { ctx.fillRect(X + dx * a - 1, Y + k, 2, 1); } else { ctx.fillRect(X + k, Y + dy * a - 1, 1, 2); } }
     }));
     for (const b of d.blds) if (b.def.kind === 'trap') { // 함정은 바닥에 깔린다
-      DD.blit(ctx, b.def.spr, b.def.slow ? ((TT * 3 + b.id) | 0) % 4 : b.hit > 0.2 ? 1 : b.hit > 0.1 ? 2 : b.hit > 0 ? 3 : 0, b.x, b.y + 12); // 늪은 끓고, 가시는 악마가 밟을 때 튀어나온다
+      const tf = b.def.push ? (b.hit > 0 ? 1 : 0) : b.def.slow ? ((TT * 3 + b.id) | 0) % 4 : b.hit > 0.2 ? 1 : b.hit > 0.1 ? 2 : b.hit > 0 ? 3 : 0;
+      DD.blit(ctx, b.def.spr, tf, b.x, b.y + 12); // 늪은 끓고, 가시는 악마가 밟을 때 튀어나온다
       if (b.lv > 1) { ctx.fillStyle = P.K; ctx.fillRect(b.x + 5, b.y + 6, 2 + (b.lv - 1) * 3, 4); ctx.fillStyle = P.g1; for (let i = 0; i < b.lv - 1; i++) ctx.fillRect(b.x + 6 + i * 3, b.y + 7, 2, 2); }
+      if (b.cd > 0 && b.def.cdMax) bar(ctx, b.x - 6, b.y + 9, 12, Math.max(0, 1 - b.cd / b.def.cdMax), 'b1');
       if (ui.selB === b.id) ring(ctx, Math.round(b.x), Math.round(b.y), 11, 'n1', true);
+    }
+    // 스테이지 지형 거점 오라
+    if (C.LANDMARKS && C.LANDMARKS.length && DD.LANDMARKS[G.st.id]) {
+      const lm = DD.LANDMARKS[G.st.id], pulse = ((TT * 2) | 0) % 2;
+      for (const [cx, cy] of C.LANDMARKS) dotted(ctx, tcx(cx), tcy(cy), lm.rad + pulse, lm.col, 32);
+    }
+    // 정령 결계 공명선 & 용족 영웅 화염 장판
+    if (d.beams && d.beams.length) {
+      const ph = ((TT * 8) | 0) % 4;
+      for (const bm of d.beams) {
+        const dx = bm.x2 - bm.x1, dy = bm.y2 - bm.y1, steps = Math.max(4, Math.hypot(dx, dy) / 3 | 0);
+        for (let i = 0; i <= steps; i++) {
+          if ((i + ph) % 3) continue;
+          const px = Math.round(bm.x1 + (dx * i) / steps), py = Math.round(bm.y1 + (dy * i) / steps);
+          ctx.fillStyle = P[(i + ph) % 6 === 0 ? 'W' : 't1']; ctx.fillRect(px, py, 2, 2);
+        }
+      }
+    }
+    if (d.zones && d.zones.length) {
+      for (const z of d.zones) {
+        const fr = ((TT * 6) | 0) % 2;
+        dotted(ctx, Math.round(z.x), Math.round(z.y), z.r - fr * 2, 'o2', 24);
+        dither(ctx, 3 + fr, 'r2', Math.round(z.x - z.r * 0.6), Math.round(z.y - z.r * 0.6), Math.round(z.r * 1.2), Math.round(z.r * 1.2));
+      }
     }
     const all = d.blds.filter((b) => b.def.kind !== 'trap').concat(d.units, d.demons).sort((a, b) => (a.k === 'b' ? a.y + 8 : a.y) - (b.k === 'b' ? b.y + 8 : b.y));
     for (const e of all) {
@@ -188,7 +246,17 @@
         if (big && DD.ATLAS.frames[bk]) { c = DD.blit(ctx, bk, fr, e.x, e.y + 24, false, wh); c = { height: c.height - 11 }; } // 2×2 전용 그림
         else if (big) { ctx.save(); ctx.translate(e.x, e.y + 25); ctx.scale(2, 2); c = DD.blit(ctx, id, fr, 0, 0, false, wh); ctx.restore(); c = { height: c.height * 2 - 12 }; } // 전용 그림이 없으면 두 배로 그린다
         else c = DD.blit(ctx, id, fr, e.x, e.y + 13, false, wh);
-        if (e.lv > 1) { ctx.fillStyle = P.K; ctx.fillRect(e.x + 6, e.y + 6, 2 + (e.lv - 1) * 3, 4); ctx.fillStyle = P.g1; for (let i = 0; i < e.lv - 1; i++) ctx.fillRect(e.x + 7 + i * 3, e.y + 7, 2, 2); } // 강화 단계
+        if (e.spec) {
+          const fl = ((TT * 3) | 0) % 2;
+          dotted(ctx, e.x, e.y + 4, 13 + fl, e.spec.col, 16);
+          const cy0 = e.y + 11 - c.height;
+          ctx.fillStyle = P.K; ctx.fillRect(e.x - 4, cy0 - 4, 9, 5); ctx.fillRect(e.x - 2, cy0 - 6, 5, 2);
+          ctx.fillStyle = P[e.spec.col]; ctx.fillRect(e.x - 3, cy0 - 3, 7, 3); ctx.fillRect(e.x - 1, cy0 - 5, 3, 2);
+          ctx.fillStyle = P.W; ctx.fillRect(e.x, cy0 - 4 + fl, 1, 2);
+        }
+        if (e.lv > 1) { ctx.fillStyle = P.K; ctx.fillRect(e.x + 6, e.y + 6, 2 + (e.lv - 1) * 3 + (e.spec ? 4 : 0), 4); ctx.fillStyle = P.g1; for (let i = 0; i < e.lv - 1; i++) ctx.fillRect(e.x + 7 + i * 3, e.y + 7, 2, 2); if (e.spec) { ctx.fillStyle = P[e.spec.col]; ctx.fillRect(e.x + 7 + (e.lv - 1) * 3, e.y + 7, 3, 2); } } // 강화·특화 단계
+        if (d.invulnBldT > 0) dotted(ctx, e.x, e.y, big ? 20 : 12, 'b1', 16);
+        if (e.sealT > 0) { const fl = ((TT * 6) | 0) % 2; ctx.fillStyle = P.K; ctx.fillRect(e.x - 8, e.y - 16, 16, 5); ctx.fillStyle = P[fl ? 'p1' : 'r1']; ctx.fillRect(e.x - 7, e.y - 15, 14, 3); }
         if (e.hp < e.mhp) bar(ctx, e.x - (big ? 14 : 8), e.y + 13 - c.height - 2, big ? 28 : 16, e.hp / e.mhp, 's2');
         if (ui.selB === e.id) { ctx.fillStyle = P.n1; (big ? [[-25, -25], [23, -25], [-25, 23], [23, 23]] : [[-13, -13], [11, -13], [-13, 11], [11, 11]]).forEach(([a1, b1]) => ctx.fillRect(e.x + a1, e.y + b1, 2, 2)); if (e.def.rng) dotted(ctx, e.x, e.y, Math.round(e.def.rng * (1 + 0.1 * ((e.lv || 1) - 1))), 'n1'); if (e.def.rad) dotted(ctx, e.x, e.y, e.def.rad, 'b1'); }
       } else {
@@ -196,13 +264,29 @@
         if (e.k === 'u') {
           if (ui.sel.has(e.id)) ring(ctx, x0, y0, 8, 'n1', true);
           else if (e.hero) ring(ctx, x0, y0, 9, DD.GRADES[e.hero.grade].col, ((TT * 3) | 0) % 2 === 0);
+          else if (e.def.legend) ring(ctx, x0, y0, 10, 'g1', ((TT * 4) | 0) % 2 === 0);
+          else if (e.ally) ring(ctx, x0, y0, 7, DD.RACES[e.ally].color, true);
           else if (e.own !== d.i) ring(ctx, x0, y0, 7, 's2', false);
+          if (e.shieldT > 0) dotted(ctx, x0, y0 - 4, 10, 'b1', 12);
+          if (e.sig && e.sig.length >= 2) dotted(ctx, x0, y0, 11, 'g1', 14);
+        } else if (e.tele) { // 군주 기술 전조
+          const p = 1 - e.tele.t / e.tele.T, r0 = e.tele.kind === 'roar' ? 70 : 28;
+          dotted(ctx, x0, y0, Math.round(r0 * (0.35 + p * 0.65)), 'r1', 28);
+          dotted(ctx, x0, y0, r0, ((TT * 8) | 0) % 2 ? 'r1' : 'g1', 24);
         }
         spr(ctx, e, e.gim && DD.ATLAS.frames['d_lord_' + e.gim] ? 'd_lord_' + e.gim : e.def.spr, TT, flash); // 군주는 기믹마다 모습이 다르다
+        if (e.k === 'd') {
+          if (e.tele) { ctx.fillStyle = P.K; ctx.fillRect(x0 - 2, y0 - 30, 5, 9); ctx.fillStyle = P[((TT * 10) | 0) % 2 ? 'r1' : 'g1']; ctx.fillRect(x0 - 1, y0 - 29, 3, 5); ctx.fillRect(x0 - 1, y0 - 23, 3, 2); }
+          if (e.burnT > 0) { ctx.fillStyle = P.o2; ctx.fillRect(x0 + 6, y0 - 12, 2, 2); }
+          if (e.shredT > 0) { ctx.fillStyle = P.p1; ctx.fillRect(x0 - 8, y0 - 12, 2, 2); }
+        }
         if (e.rk) { ctx.fillStyle = P.K; ctx.fillRect(x0 - 9, y0 - 1 - e.rk * 3, 5, e.rk * 3 + 1); ctx.fillStyle = P.g1; for (let i = 0; i < e.rk; i++) ctx.fillRect(x0 - 8, y0 - 3 - i * 3, 3, 2); } // 숙련 표식
         if (e.sig) e.sig.forEach((sg, i) => { ctx.fillStyle = P.K; ctx.fillRect(x0 + 5, y0 - 2 - i * 4, 4, 4); ctx.fillStyle = P[DD.SIGS[sg].col]; ctx.fillRect(x0 + 6, y0 - 1 - i * 4, 2, 2); }); // 각인 표식
+        if (e.sig && e.sig.length >= 2) { ctx.fillStyle = P.g1; ctx.fillRect(x0 + 5, y0 - 14, 3, 3); }
+        if (e.hold) { ctx.fillStyle = P.K; ctx.fillRect(x0 - 4, y0 + 4, 8, 3); ctx.fillStyle = P.b1; ctx.fillRect(x0 - 3, y0 + 5, 6, 1); }
+        if (e.hero && (e.skCd || 0) <= 0 && ((TT * 4) | 0) % 2) { ctx.fillStyle = P.g1; ctx.fillRect(x0 - 1, y0 - 22, 3, 2); }
         if (e.stun > 0) { ctx.fillStyle = P.g1; const o = ((TT * 8) | 0) % 3; ctx.fillRect(x0 - 5 + o * 4, y0 - 20, 2, 2); ctx.fillRect(x0 + 3 - o * 4, y0 - 22, 2, 2); }
-        if (e.fast) { ctx.fillStyle = P.g1; ctx.fillRect(x0 - 7, y0 - 16 - (((TT * 6) | 0) % 2), 1, 2); }
+        if (e.fast || e.hasteT > 0) { ctx.fillStyle = P.g1; ctx.fillRect(x0 - 7, y0 - 16 - (((TT * 6) | 0) % 2), 1, 2); }
       }
     }
     // 집결지 깃발(소환소는 푸른색, 제단은 금색)과 선택한 시설 표시
@@ -214,9 +298,40 @@
     for (const s of d.shots) drawShot(ctx, s);
     for (const f of d.fx) drawFx(ctx, f);
     motes(ctx, TT, G.st);
-    if (ui.edit) { // 길 편집: 칸 모서리 점, 악마의 최단 경로, 커서 칸
+    if (ui.edit) { // 길 편집: 칸 모서리 점, 청사진, 악마의 최단 경로, 커서 칸
+      if (d.blueprint) {
+        for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) {
+          const bv = d.blueprint[cx + cy * GW], gv = gd.grid[cx + cy * GW];
+          if (bv && bv !== gv) dither(ctx, 4, bv === 1 ? 'b2' : 's2', OX + cx * T + 2, OY + cy * T + 2, T - 4, T - 4);
+        }
+      }
       ctx.fillStyle = P.e2;
       for (let cy = 0; cy <= GH; cy++) for (let cx = 0; cx <= GW; cx++) ctx.fillRect(OX + cx * T, OY + cy * T, 1, 1);
+      // 종족별 길·지형 시너지 실시간 오버레이
+      if (d.race === 'human') {
+        for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) {
+          if (gd.grid[cx + cy * GW] !== 0 || DD.isFixed(cx, cy)) continue;
+          const nw = [[0, -1], [1, 0], [0, 1], [-1, 0]].some(([dx, dy]) => { const ax = cx + dx, ay = cy + dy; if (ax < 0 || ay < 0 || ax >= GW || ay >= GH) return false; return gd.grid[ax + ay * GW] === 2 || (d.occ[ax + ay * GW] && d.occ[ax + ay * GW].def.kind === 'wall'); });
+          if (nw) { ctx.fillStyle = P.g1; const X = OX + cx * T, Y = OY + cy * T; ctx.fillRect(X + 2, Y + 2, 2, 2); ctx.fillRect(X + T - 4, Y + T - 4, 2, 2); }
+        }
+      } else if (d.race === 'beast') {
+        const isR = (ax, ay) => ax >= 0 && ay >= 0 && ax < GW && ay < GH && gd.grid[ax + ay * GW] === 1;
+        for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) {
+          if (isR(cx, cy) && (isR(cx - 1, cy) || isR(cx + 1, cy)) && (isR(cx, cy - 1) || isR(cx, cy + 1))) {
+            const X = OX + cx * T, Y = OY + cy * T;
+            ctx.fillStyle = P.o1; ctx.fillRect(X + 2, Y + 2, 3, 1); ctx.fillRect(X + 2, Y + 2, 1, 3); ctx.fillRect(X + T - 5, Y + T - 3, 3, 1); ctx.fillRect(X + T - 3, Y + T - 5, 1, 3);
+          }
+        }
+      } else if (d.race === 'spirit' && DD.calcBeams) {
+        for (const bm of DD.calcBeams(d, gd.grid)) {
+          const dx = bm.x2 - bm.x1, dy = bm.y2 - bm.y1, steps = Math.max(4, Math.hypot(dx, dy) / 3 | 0);
+          for (let i = 0; i <= steps; i += 2) { ctx.fillStyle = P.t1; ctx.fillRect(Math.round(bm.x1 + (dx * i) / steps), Math.round(bm.y1 + (dy * i) / steps), 2, 2); }
+        }
+      } else if (d.race === 'dragon' || d.race === 'merfolk') {
+        const srcs = d.blds.filter((b) => (d.race === 'dragon' ? b.def.kind === 'wall' : b.def.regen));
+        const r2 = (d.race === 'dragon' ? 36 : 56) ** 2, col = d.race === 'dragon' ? 'o2' : 'b2';
+        for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) if (gd.grid[cx + cy * GW] === 1 && srcs.some((s) => (tcx(cx) - s.x) ** 2 + (tcy(cy) - s.y) ** 2 <= r2)) dither(ctx, 3, col, OX + cx * T + 2, OY + cy * T + 2, T - 4, T - 4);
+      }
       const rt = (performance.now() / 160) | 0; // 게임이 멈춰 있어도 흐르게
       gd.path.forEach(([cx, cy], i) => { ctx.fillStyle = P[(rt + i) % 4 === 0 ? 'W' : 'g2']; ctx.fillRect(tcx(cx) - 1, tcy(cy) - 1, 3, 3); });
       // 심장에 닿지 않는 길은 붉게 칠해 끊긴 곳을 보여 준다
@@ -241,10 +356,46 @@
       else if (sz === 2) { ctx.save(); ctx.translate(X + 24, Y + 49); ctx.scale(2, 2); DD.blit(ctx, b.spr + '@' + d.race, 0, 0, 0); ctx.restore(); }
       else DD.blit(ctx, b.spr + '@' + d.race, 0, X + 12, Y + 25);
       ctx.fillStyle = P[ok ? 'n1' : 'r2']; ctx.fillRect(X, Y, W2, 1); ctx.fillRect(X, Y + W2 - 1, W2, 1); ctx.fillRect(X, Y, 1, W2); ctx.fillRect(X + W2 - 1, Y, 1, W2);
-      if (b.rng) dotted(ctx, X + 12, Y + 12, b.rng, 'n1'); if (b.rad) dotted(ctx, X + W2 / 2, Y + W2 / 2, b.rad, 'b1');
+      if (b.rng) {
+        dotted(ctx, X + 12, Y + 12, b.rng, 'n1');
+        if (ok && DD.killzoneCount) {
+          const r2 = b.rng * b.rng;
+          for (let ry = 0; ry < GH; ry++) for (let rx = 0; rx < GW; rx++) {
+            if (d.grid[rx + ry * GW] === 1 && ((tcx(rx) - (X + 12)) ** 2 + (tcy(ry) - (Y + 12)) ** 2 <= r2)) {
+              dither(ctx, 4, 'g1', OX + rx * T + 4, OY + ry * T + 4, T - 8, T - 8);
+            }
+          }
+          const kz = DD.killzoneCount(d, cx, cy, b.rng);
+          if (kz > 0) num(ctx, '+' + kz, X + 12, Y - 8, d.race === 'human' && DD.nearWall && DD.nearWall(d, cx, cy) ? 'g1' : 'n1');
+        }
+      }
+      if (b.rad) dotted(ctx, X + W2 / 2, Y + W2 / 2, b.rad, 'b1');
+      if (ok && d.race === 'spirit' && (b.kind === 'tower' || b.kind === 'wall') && DD.calcBeams) {
+        for (const bm of DD.calcBeams(d, d.grid, [cx, cy])) {
+          const dx = bm.x2 - bm.x1, dy = bm.y2 - bm.y1, steps = Math.max(4, Math.hypot(dx, dy) / 3 | 0);
+          for (let i = 0; i <= steps; i += 2) { ctx.fillStyle = P.t1; ctx.fillRect(Math.round(bm.x1 + (dx * i) / steps), Math.round(bm.y1 + (dy * i) / steps), 2, 2); }
+        }
+      }
     }
     if (ui.box) { const b = ui.box; ctx.fillStyle = P.W; const x0 = Math.min(b.x0, b.x1) | 0, y0 = Math.min(b.y0, b.y1) | 0, w = Math.abs(b.x1 - b.x0) | 0, h = Math.abs(b.y1 - b.y0) | 0; for (let i = 0; i < w; i += 2) { ctx.fillRect(x0 + i, y0, 1, 1); ctx.fillRect(x0 + i, y0 + h, 1, 1); } for (let i = 0; i < h; i += 2) { ctx.fillRect(x0, y0 + i, 1, 1); ctx.fillRect(x0 + w, y0 + i, 1, 1); } }
-    if (G.hz && DD.HAZ[G.hz] && ((TT * 2) | 0) % 2) { const hc = DD.HAZ[G.hz].col; dither(ctx, 6, hc, 0, 0, C.W, 4); dither(ctx, 6, hc, 0, C.H - 4, C.W, 4); dither(ctx, 6, hc, 0, 0, 4, C.H); dither(ctx, 6, hc, C.W - 4, 0, 4, C.H); } // 지형 현상 중에는 테두리가 깜박인다
+    if (G.hz && DD.HAZ[G.hz]) { // 지형 현상 전장 연출 + 테두리 깜박임
+      const hc = DD.HAZ[G.hz].col;
+      if (((TT * 2) | 0) % 2) { dither(ctx, 6, hc, 0, 0, C.W, 4); dither(ctx, 6, hc, 0, C.H - 4, C.W, 4); dither(ctx, 6, hc, 0, 0, 4, C.H); dither(ctx, 6, hc, C.W - 4, 0, 4, C.H); }
+      if (G.hz === 'wild') {
+        for (let i = 0; i < 36; i++) { const sx = ((i * 89 + TT * 160) % C.W) | 0, sy = ((i * 53 + TT * 28) % C.H) | 0; ctx.fillStyle = P[i % 3 ? 'w1' : 'g2']; ctx.fillRect(sx, sy, 5, 1); }
+      } else if (G.hz === 'water') {
+        for (let i = 0; i < 24; i++) { const sx = ((i * 113 + TT * 70) % C.W) | 0, sy = ((i * 67) % (C.H - 40)) + 20; ctx.fillStyle = P[i % 2 ? 'b1' : 'b2']; ctx.fillRect(sx, sy, 8, 1); }
+      } else if (G.hz === 'fire') {
+        for (let i = 0; i < 28; i++) { const sx = ((i * 97 + Math.sin(TT * 3 + i) * 6) % C.W + C.W) % C.W | 0, sy = ((i * 59 - TT * 45) % C.H + C.H) % C.H | 0; ctx.fillStyle = P[i % 3 ? 'o2' : 'g1']; ctx.fillRect(sx, sy, 2, 2); }
+      } else if (G.hz === 'forest') {
+        for (let i = 0; i < 24; i++) { const sx = (i * 83) % C.W, sy = ((i * 61 - TT * 26) % C.H + C.H) % C.H | 0; ctx.fillStyle = P[i % 2 ? 'n1' : 'n2']; ctx.fillRect(sx, sy, 2, 2); }
+      } else if (G.hz === 'abyss') {
+        dither(ctx, 4, 'p4', 0, 0, 28, C.H); dither(ctx, 4, 'p4', C.W - 28, 0, 28, C.H);
+        for (let i = 0; i < 20; i++) { const sx = (i * 107) % C.W, sy = ((i * 71 - TT * 32) % C.H + C.H) % C.H | 0; ctx.fillStyle = P.r1; ctx.fillRect(sx, sy, 2, 2); }
+      }
+    } else if (G.hazWarn && DD.HAZ[G.hazWarn] && ((TT * 5) | 0) % 2) {
+      dither(ctx, 4, DD.HAZ[G.hazWarn].col, 0, 0, C.W, 2); dither(ctx, 4, DD.HAZ[G.hazWarn].col, 0, C.H - 2, C.W, 2);
+    }
     if (d.alive && d.heart.hp / d.heart.mhp < 0.3) { dither(ctx, 8, 'r2', 0, 0, C.W, 3); dither(ctx, 8, 'r2', 0, C.H - 3, C.W, 3); dither(ctx, 8, 'r2', 0, 0, 3, C.H); dither(ctx, 8, 'r2', C.W - 3, 0, 3, C.H); }
     if (!d.alive) DD.veil(ctx, 10);
     if (ui.veil > 0) DD.veil(ctx, ui.veil);

@@ -225,3 +225,97 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #result .ach{margin:6px 0;font-size:28px}#result .ach b{color:var(--gold)}
 .diffnote{display:flex;align-items:center;gap:14px;white-space:nowrap}.diffnote .dn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}.diffnote .endl{float:none;margin:0;flex:none}
 #info button .gold{color:var(--gold)}
+/* 교리·동맹·청사진·연대기·피해 통계 */
+.subpick{display:flex;flex-wrap:wrap;gap:14px 26px;align-items:center;margin-top:12px;padding-top:12px;border-top:3px solid var(--pn3);font-size:23px}
+.subpick .grp2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.subpick .lbl{margin-left:0;color:var(--acc);font-weight:700}
+.subpick button{font-size:22px;padding:4px 12px 7px}
+.subpick small{display:inline;margin-left:6px;color:var(--dim);font-size:20px}
+.slot.allybtn{grid-column:1/-1;height:44px;flex-direction:row;align-items:center;justify-content:flex-start;padding:0 12px 4px 48px;gap:10px}
+.slot.allybtn kbd{top:50%;transform:translateY(-55%)}
+.slot.allybtn em{margin:0;font-size:22px}
+.slot.allybtn .cost{width:auto;height:auto;margin:0 0 0 auto;background:none;box-shadow:none;font-size:20px}
+#codex{position:absolute;inset:0;background:#07050acc;display:flex;align-items:center;justify-content:center;z-index:70}#codex[hidden]{display:none}
+#codex .box{width:1960px;max-height:1320px;display:flex;flex-direction:column;padding:28px 46px 34px;background:var(--pn);border:30px solid transparent;border-image:var(--ui-panel) 16 / 48px;image-rendering:pixelated}
+#codex h2{font:55px/1.1 "Galmuri14";margin:0 0 16px;color:var(--acc);display:flex;justify-content:space-between;align-items:center;gap:20px}
+#codex .tabs{display:flex;gap:10px}
+#codex .tabs button{font-size:26px;padding:6px 20px 10px}
+#codex .body{overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding-right:6px;margin-bottom:20px}
+#codex .body.c4{grid-template-columns:repeat(4,1fr)}
+#codex .citem{background:var(--edge);padding:14px 16px;border:3px solid var(--ln);text-align:left;display:flex;gap:14px;align-items:flex-start}
+#codex .citem.lock{opacity:.45}
+#codex .citem b{display:block;font-size:26px;color:var(--gold);margin-bottom:4px}
+#codex .citem small{font-size:20px;line-height:1.35;color:var(--dim)}
+#codex .citem .good{color:var(--good)}
+#codex .citem img.port{width:88px;height:88px;object-fit:contain;background:var(--pn);flex:none}
+#codex .cclose{align-self:center;font-size:34px;padding:10px 48px 14px}
+.dmgbars{max-width:960px;margin:16px auto 0;text-align:left;background:var(--edge);padding:14px 20px}
+.dmgbars h3{margin:0 0 8px;font-size:22px;color:var(--dim);font-weight:400}
+.dmgrow{display:grid;grid-template-columns:130px 1fr 120px;gap:12px;align-items:center;font-size:22px;margin:5px 0}
+.dmgrow i{display:block;height:14px;background:var(--pn2)}.dmgrow i>i{height:100%;background:var(--acc)}
+.dmgtop{margin-top:8px;font-size:20px;color:var(--dim)}
+#dps{position:absolute;right:112px;bottom:106px;width:460px;background:#1c1526e6;box-shadow:var(--frame);padding:12px 16px;font-size:22px;pointer-events:none;z-index:4}
+#dps .dmgbars{margin:0;padding:8px 12px}
+#dps .dmgrow{grid-template-columns:86px 1fr 110px;font-size:20px}
+#ach .box{width:1860px;max-height:1300px;display:flex;flex-direction:column}
+#ach h2{align-items:center;gap:16px}
+#ach .tabs{display:flex;gap:8px;margin-left:auto}
+#ach .tabs button{font-size:24px;padding:6px 16px 10px}
+#ach .achlist{overflow-y:auto;max-height:920px;padding-right:6px}
+#sys .dpsbtn{grid-column:span 1}
+/* 추가 픽셀 아트: 결과 배너·전리품·종족 문장·거점 랜드마크 */
+#result>div{padding:24px 96px 34px;max-height:1380px;overflow-y:auto}
+#result h1{font-size:100px;margin:0 0 14px}
+#result .stats{margin:12px 0}
+#result button{margin-top:20px}
+.resart{display:block;width:608px;height:340px;object-fit:cover;margin:0 auto 18px;border:4px solid var(--edge);box-shadow:0 0 0 4px var(--ln)}
+#boon .card img.boonimg{width:96px;height:96px;object-fit:contain}
+.card b.rname{display:flex;align-items:center;gap:8px}
+.card b.rname .crest{width:34px;height:34px;object-fit:contain;flex:none}
+#top .stage .ic,#ach .tabs .ic,#codex .citem b .ic{margin-right:6px}
+#codex .citem img.lmthumb{width:84px;height:84px;object-fit:contain;background:var(--pn);border:3px solid var(--edge);flex:none}
+/* 시련의 맹약 · 시너지 배지 바 · 심장 공명 · 전령 사건 · 타워 특화 · 연대기 요약 */
+.oathrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;font-size:21px}
+.oathrow .lbl{margin:0 4px 0 0;color:var(--acc);font-weight:700}
+.oathrow button{font-size:20px;padding:3px 12px 6px}
+.oathrow small{display:inline;margin-left:4px;color:var(--dim);font-size:19px}
+#synbar{position:absolute;left:112px;top:12px;max-width:1120px;display:flex;flex-wrap:wrap;gap:6px;z-index:3}#synbar:empty{display:none}
+#allies:not(:empty)~#synbar{top:68px}
+.synp{background:#1c1526e6;border:3px solid var(--ln);padding:2px 12px 4px;font-size:20px;color:var(--tx)}
+.synp.gold{border-color:var(--gold);color:var(--gold)}
+.synp.good{border-color:var(--good);color:var(--good)}
+.synp.bad{border-color:var(--bad);color:var(--bad)}
+#allies button{flex:1 1 auto;display:flex;align-items:center;gap:5px;min-width:0;padding:6px 10px 8px;font-size:21px;overflow:hidden}
+:root[lang=en] #allies button{font-size:19px;padding:6px 8px 8px;gap:4px}
+#allies button small{flex:none;font-size:19px}
+:root[lang=en] #allies button small{font-size:17px}
+#allies button.danger{box-shadow:inset 0 0 0 3px var(--bad);animation:pulse .7s steps(2) infinite alternate}
+#allies .qsend{float:none;margin-left:auto;flex:none;padding:0 6px 2px;background:var(--blood);color:#fff;font-size:17px;border:2px solid var(--edge);cursor:pointer}
+.slot.span2.short{grid-column:span 2;height:52px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:1fr 1fr;align-items:center;justify-items:start;column-gap:6px;row-gap:0;padding:2px 8px 4px 36px}
+.slot.span2.short:active:not(:disabled){padding:4px 8px 2px 36px}
+.slot.span2.short .glyph,.slot.span2.short .ic{grid-row:1/3;margin:0;height:28px;font-size:28px;line-height:28px}
+.slot.span2.short em{font-size:19px;line-height:1.1;margin:0;white-space:nowrap;overflow:hidden;max-width:100%}
+.slot.span2.short .cost{font-size:18px;line-height:1.1;margin:0;color:var(--gold);justify-content:flex-start}
+#side{padding:10px 10px 10px 22px}
+#top .stage{margin-bottom:2px}
+#feed{bottom:146px}
+#info button{padding:2px 12px 5px;margin-left:10px;font-size:24px}
+#event{position:absolute;inset:0;background:#07050ab3;display:flex;align-items:center;justify-content:center;z-index:45}#event[hidden]{display:none}
+#event .box{width:1420px;padding:30px 48px 40px;background:var(--pn);border:30px solid transparent;border-image:var(--ui-panel) 16 / 48px;image-rendering:pixelated;text-align:left}
+#event .evhead{display:flex;gap:24px;align-items:center;margin-bottom:22px}
+#event .evhead img{width:140px;height:140px;object-fit:contain;background:var(--edge);border:4px solid var(--ln);flex:none}
+#event h2{font:30px/1 "Galmuri14";margin:0 0 6px;color:var(--acc)}
+#event .evtitle{display:block;font:44px/1.15 "Galmuri14";color:var(--gold);margin-bottom:10px}
+#event p{margin:0;color:var(--tx);font-size:26px;line-height:1.45}
+#event .cards.c2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+#event .card{position:relative;min-height:150px;padding:34px 24px 22px;text-align:center}
+#event .card b{font-size:34px;color:var(--acc);margin-bottom:8px}
+#event .card small{font-size:24px}
+#event .card kbd{position:absolute;left:10px;top:10px;font:700 24px/1 "Galmuri11";color:var(--edge);background:var(--gold);padding:4px 10px 6px}
+#result .chron{max-width:960px;margin:12px auto 4px;padding:8px 16px;background:var(--edge);border:2px solid var(--ln);font-size:22px;color:var(--dim)}
+#result .chron b{color:var(--gold)}
+.oathrow .ic,#info .ic,#tip .ic{height:1.25em;width:auto;vertical-align:-0.22em;margin-right:5px}
+#codex .body.c2{grid-template-columns:repeat(2,1fr)}
+#codex .citem.empty{grid-column:1/-1;justify-content:center;padding:36px}
+#info button kbd{display:inline-block;padding:1px 6px 2px;background:var(--gold);color:var(--edge);font-size:19px;font-weight:700;margin-right:4px}
+#menu footer button.resume{font-size:28px;padding:14px 26px 18px}

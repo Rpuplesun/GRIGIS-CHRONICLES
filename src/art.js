@@ -1,18 +1,58 @@
 // 아틀라스(사용자 제공 아트, tools/slice_art.py 산출물)에서 프레임을 꺼낸다.
 (function () {
   const DD = window.DD, A = DD.ATLAS, img = new Image();
-  let ready = false; const cbs = [];
-  img.onload = () => { ready = true; cbs.splice(0).forEach((f) => f()); };
+  const LMS = ['watch', 'lava', 'wind', 'root', 'vortex', 'rift'], lmImgs = {}, pushImgs = [null, null];
+  let ready = false, left = 1 + LMS.length + 2; const cbs = [];
+  const done = () => { if (--left <= 0 && !ready) { ready = true; cbs.splice(0).forEach((f) => f()); } };
+  img.onload = done;
   img.src = A.img;
+  LMS.forEach((id) => {
+    const im = new Image();
+    im.onload = () => { if (im.naturalWidth > 0) lmImgs[id] = im; done(); };
+    im.onerror = done;
+    im.src = 'art/lm_' + id + '.png';
+  });
+  [0, 1].forEach((i) => {
+    const im = new Image();
+    im.onload = () => { if (im.naturalWidth > 0) pushImgs[i] = im; done(); };
+    im.onerror = done;
+    im.src = 'art/trap_push_' + i + '.png';
+  });
   DD.artReady = (f) => (ready ? f() : cbs.push(f));
+  DD.lmImg = (id) => lmImgs[id] || null;
   const BIDX = { b_unlock1: 0, b_unlock2: 1, b_tower: 2, b_wall: 3, b_special: 4 };
   const keyOf = (id) => { if (id.indexOf('@') < 0) return id; const [s, r] = id.split('@'); return 'b_' + r + '_' + BIDX[s]; };
-  DD.frames = (id) => A.frames[keyOf(id)] || A.frames.t_void;
+  DD.frames = (id) => (id === 'trap_push' ? [[0, 0, 24, 24, 12], [0, 0, 24, 24, 12]] : A.frames[keyOf(id)] || A.frames.t_void);
   const cache = {};
+  function makePushTrap(i, mode) {
+    const c = document.createElement('canvas'); c.width = 24; c.height = 24;
+    const x = c.getContext('2d'), up = i > 0;
+    const r = (px, py, w, h, col) => { x.fillStyle = col; x.fillRect(px, py, w, h); };
+    r(2, 4, 20, 17, '#07050a'); r(3, 5, 18, 15, '#3a2c4b'); r(4, 6, 16, 13, up ? '#5b4b73' : '#4a3d5f');
+    r(4, 17, 16, 2, '#1c1526');
+    r(3, 5, 2, 2, '#9aa5be'); r(19, 5, 2, 2, '#9aa5be'); r(3, 18, 2, 2, '#9aa5be'); r(19, 18, 2, 2, '#9aa5be');
+    const glow = up ? '#fff3b0' : '#7cc4ff', mid = up ? '#ffd66b' : '#4895ef', dy = up ? -2 : 0;
+    r(11, 7 + dy, 2, 2, glow); r(9, 9 + dy, 6, 2, glow); r(7, 11 + dy, 10, 2, mid);
+    r(9, 14 + dy, 6, 2, mid); r(11, 12 + dy, 2, 5, glow);
+    if (mode & 2) { x.globalCompositeOperation = 'source-in'; x.fillStyle = '#fff'; x.fillRect(0, 0, 24, 24); }
+    c.ax = 12;
+    return c;
+  }
   // mode: 0 그대로, 1 좌우 반전, 2 흰 실루엣, 3 흰 실루엣 반전
   DD.frame = function (id, i, mode) {
     const k = id + '|' + i + '|' + (mode || 0);
     if (cache[k]) return cache[k];
+    if (id === 'trap_push') {
+      const pi = pushImgs[i ? 1 : 0];
+      if (!pi) return (cache[k] = makePushTrap(i, mode));
+      const c = document.createElement('canvas'), x = c.getContext('2d');
+      c.width = 24; c.height = 24; x.imageSmoothingEnabled = false;
+      if (mode & 1) { x.translate(24, 0); x.scale(-1, 1); }
+      x.drawImage(pi, 0, 0, 24, 24);
+      if (mode & 2) { x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = '#fff'; x.fillRect(0, 0, 24, 24); }
+      c.ax = 12;
+      return (cache[k] = c);
+    }
     const fr = DD.frames(id), f = fr[Math.min(i, fr.length - 1)], c = document.createElement('canvas'), x = c.getContext('2d');
     c.width = f[2]; c.height = f[3];
     if (mode & 1) { x.translate(f[2], 0); x.scale(-1, 1); }
