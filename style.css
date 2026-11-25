@@ -318,4 +318,62 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #codex .body.c2{grid-template-columns:repeat(2,1fr)}
 #codex .citem.empty{grid-column:1/-1;justify-content:center;padding:36px}
 #info button kbd{display:inline-block;padding:1px 6px 2px;background:var(--gold);color:var(--edge);font-size:19px;font-weight:700;margin-right:4px}
-#menu footer button.resume{font-size:28px;padding:14px 26px 18px}
+#menu footer button.resume{font-size:26px;padding:12px 22px 15px}
+/* ── UI/UX 전면 정돈: 메뉴 1:1 맞춤 · 사이드바 오버플로 및 비용 잘림 해소 · 모달 통일 ── */
+#menu{padding:18px 68px 18px;gap:10px 32px;grid-template-rows:auto auto 1fr auto}
+#menu h1{font-size:66px}#menu .sub{margin:6px 0 0;font-size:24px}
+#menu section{border-width:18px;border-image:var(--ui-panel) 16 / 32px;padding:4px 10px}
+#menu h2{font-size:36px;margin:0 0 8px}
+#menu .card{min-height:84px;padding:8px 12px 10px}
+#menu .card .icons{height:68px;margin-bottom:4px}
+#menu .subpick{margin-top:8px;padding-top:8px;gap:8px 20px;font-size:21px}
+#menu .diffnote{margin:0 0 6px}
+#menu .oathrow{margin:0 0 6px;gap:6px}#menu .oathrow small{flex-basis:100%;margin:2px 0 0}
+#menu footer .start{font:700 44px/1 "Galmuri11","Galmuri14";padding:2px 48px 6px;border-width:20px;border-image-width:20px}
+#menu footer .start:active:not(:disabled){padding:5px 48px 3px}
+.brief{margin-top:12px;padding:12px 16px;background:var(--edge);border:3px solid var(--ln);font-size:21px;line-height:1.45;display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}
+.brief h3{grid-column:1/-1;margin:0 0 4px;font:24px/1.1 "Galmuri14";color:var(--acc);letter-spacing:2px}
+.brief div{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brief b{color:var(--tx);margin-right:6px}
+#side{padding:8px 10px 8px 20px;gap:5px}
+#top .stage{font-size:20px;margin-bottom:0}
+#top .timer{font-size:62px}
+#top .wave{margin-top:3px}#top .wave b{font-size:38px}
+.call{height:38px;margin:2px 0 4px;padding:2px 0 5px;font-size:21px}
+.nextw{min-height:34px;row-gap:2px;font-size:20px}.nextw img{max-height:32px}
+.prog{height:10px;margin:4px 0 6px}
+.res{gap:4px}.res span{padding:3px 10px 4px;font-size:27px}.res .pop{font-size:23px}
+.heart{margin-top:4px;font-size:26px}.hpbar{height:18px;margin-top:3px}
+#bar{gap:4px}
+.grp h3{margin:0 0 3px;font-size:20px;border-bottom-width:3px}
+.slot{height:108px;padding:0 0 4px}.slot:active:not(:disabled){padding:2px 0 2px}
+.slot>img:not(.tier){max-height:56px;width:auto!important;margin-top:2px;object-fit:contain}
+.slot .glyph{font:38px/34px "Galmuri14";height:34px;margin-top:3px}
+.slot .cost{height:38px;font-size:18px;line-height:1;gap:2px}
+.slot .cost .ic{height:15px;vertical-align:-2px}
+.slot.mini{height:50px;gap:2px}.slot.short{height:50px}.slot.short .cost{height:auto;font-size:20px}
+.slot.allybtn{height:40px}.slot.allybtn .cost{height:auto;font-size:19px}
+.slot.span2.short{height:48px}.slot.span2.short .cost{height:auto;font-size:17px}
+#sys button{padding:5px 0 8px;font-size:23px}
+#boon .box,#ach .box,#confirm .box{border:30px solid transparent;border-image:var(--ui-panel) 16 / 48px;image-rendering:pixelated;box-shadow:none;background:var(--pn)}
+#boon .box{padding:20px 38px 30px}#ach .box{width:1960px;padding:18px 34px 26px}#ach h2{font-size:48px;white-space:nowrap}#ach .tabs{gap:6px}#ach .tabs button{font-size:21px;padding:6px 12px 9px;white-space:nowrap}
+#event .card:hover{box-shadow:inset 0 0 0 4px var(--gold)}
+#allies kbd{display:inline-block;padding:0 6px 1px;background:var(--pn3);border:2px solid var(--ln);color:var(--gold);font-size:16px;line-height:1.15;margin-left:3px}
+#allies .qsend:hover{background:#c42f49;box-shadow:inset 0 0 0 2px var(--gold)}
+#synbar .synp{cursor:default}
+#info{line-height:1.55}#info button{margin:2px 0 2px 10px}#info button[data-dim]{opacity:.45}
+#confirm{position:absolute;inset:0;background:#07050acc;display:flex;align-items:center;justify-content:center;z-index:90}#confirm[hidden]{display:none}
+#confirm .box{width:980px;padding:24px 44px 30px;text-align:center}
+#confirm h2{font:44px/1.15 "Galmuri14";margin:0 0 14px;color:var(--gold)}
+#confirm p{margin:0 0 26px;font-size:28px;color:var(--tx);line-height:1.45;word-break:keep-all}
+#confirm .acts{display:flex;gap:18px;justify-content:center}
+#confirm .acts button{min-width:200px;font-size:30px;padding:10px 30px 14px}
+#confirm .acts button.danger{background:var(--blood);box-shadow:inset 0 0 0 3px var(--gold),inset 0 -6px 0 #5c1220;color:#fff}
+#confirm .acts button.danger:hover{background:#c42f49}
+#dps .dpsempty{font-size:20px;color:var(--dim);padding:4px 0}
+#codex .body,#ach .achlist,#result>div{scrollbar-width:thin;scrollbar-color:var(--ln) var(--edge)}
+#codex .body::-webkit-scrollbar,#ach .achlist::-webkit-scrollbar,#result>div::-webkit-scrollbar{width:12px}
+#codex .body::-webkit-scrollbar-track,#ach .achlist::-webkit-scrollbar-track,#result>div::-webkit-scrollbar-track{background:var(--edge)}
+#codex .body::-webkit-scrollbar-thumb,#ach .achlist::-webkit-scrollbar-thumb,#result>div::-webkit-scrollbar-thumb{background:var(--ln);border:2px solid var(--edge)}
+#codex .body::-webkit-scrollbar-thumb:hover,#ach .achlist::-webkit-scrollbar-thumb:hover,#result>div::-webkit-scrollbar-thumb:hover{background:var(--acc)}
+

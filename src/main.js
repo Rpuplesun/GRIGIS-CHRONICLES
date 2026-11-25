@@ -68,8 +68,12 @@
       <section><h2>영구 강화 <span class="gold">${ic('ui_shard')} ${rs.shards}</span></h2><div class="cards c3">${DD.META.map((m) => { const fmt = fmtMeta(m), lv = rs.meta[m.k] || 0, cost = DD.metaCost(lv), max = lv >= DD.META_MAX; return `
         <button class="card" ${max || rs.shards < cost ? 'disabled' : ''} data-m="meta:${m.k}">
           <b>${m.name}</b><small>Lv.${lv}/${DD.META_MAX} · ${fmt(lv)}${max ? '' : ` → <span class="good">${fmt(lv + 1)}</span>`}</small><small class="gold">${max ? '최대' : ic('ui_shard') + ' ' + cost}</small>
-        </button>`; }).join('')}</div></section>
-      <span></span><span></span>
+        </button>`; }).join('')}</div>${(() => {
+        const stObj = DD.stageOf(menu.race, menu.stage), di = menu.doctrines[menu.race] || 0, dc = DD.DOCTRINES[menu.race][di];
+        const stId = DD.stageOrder(menu.race)[menu.stage], effO = menu.oaths.filter((id) => id !== 'wildhaz' || DD.HAZ[stId]);
+        const modeTxt = menu.mode === 'multi' ? `멀티 · 요새 ${menu.allies}` : menu.ally ? `솔로 · 동맹 ${DD.RACES[menu.ally].name}` : '솔로';
+        return `<div class="brief"><h3>출전 편성</h3><div><b>종족</b>${R.name} · ${dc.name}</div><div><b>방식</b>${modeTxt}</div><div><b>전장</b>${stObj.name} (${DF.name}${menu.endless ? ' · 무한' : ''})</div><div><b>보상</b><span class="gold">${ic('ui_shard')} ×${(DF.shard * DD.oathShardMul(effO)).toFixed(2)}</span>${effO.length ? ` · 맹약 ${effO.length}` : ''}</div></div>`;
+      })()}</section>
       <footer><button class="start" data-m="start:1">출전</button>${resumeBtn}<button data-m="story:1">이야기</button><button data-m="tutorial:1">튜토리얼</button><button data-m="codex:1">연대기</button><button data-m="ach:1">업적 ${DD.ACH.filter((a) => save.ach[a.id]).length}/${DD.ACH.length}</button><button data-m="settings:1">설정</button>
         <details class="help"><summary>조작법</summary><div class="helpbox">
         <p><b>유닛</b> 클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Shift+F1~F3 부대 지정(F1~F3 선택) · Z 위치 고수 · Q W R Y 소환 · T 영웅 · X 영웅 기술 · B V 승급 · C 각인 · K 동맹 원군 · Shift+2~5 멀티 긴급 파병 · 소환소나 제단을 누르면 집결지 지정</p>
@@ -79,6 +83,8 @@
     fitMenu(); setTimeout(fitMenu, 0); // 번역이 끝난 뒤의 길이로 한 번 더 맞춘다
   }
   $('#menu').addEventListener('click', (ev) => {
+    const openHelp = $('#menu .help[open]');
+    if (openHelp && !ev.target.closest('.help')) openHelp.removeAttribute('open');
     const b = ev.target.closest('[data-m]'); if (!b || b.disabled) return;
     DD.Audio.play('click'); b.blur();
     const [k, v] = b.dataset.m.split(':');
@@ -112,6 +118,9 @@
     for (const id of ['#title', '#story', '#menu', '#result']) $(id).hidden = true;
     $('#game').hidden = false; $('#feed').innerHTML = ''; $('#herocard').innerHTML = ''; $('#banner').innerHTML = '';
     if (isResume) {
+      const d0 = me();
+      for (let w = 1; w <= G.wave; w++) DD.waveList(w).forEach((t) => ui.seenD.add(t));
+      ui.lastHp = d0.heart.hp; ui.heroReady = d0.heroT <= 0; ui.low = d0.heart.hp < d0.heart.mhp * 0.3; ui.busy = !!(d0.demons.length || d0.queue.length);
       script = { steps: [], i: 0, goal: null, el: 0 };
       toast('저장된 전투를 이어갑니다', 'good');
     } else {
@@ -172,7 +181,7 @@
 
   // ───────── 타이틀·이야기 ─────────
   // 글이 긴 언어에서는 메뉴가 화면보다 길어진다. 넘치면 통째로 줄여 한 화면에 담는다
-  function fitMenu() { const m = $('#menu'); m.style.zoom = 1; if (m.hidden) return; const f = m.querySelector('footer'); if (!f) return; const need = f.offsetTop + f.offsetHeight + 40; if (need > 1440) m.style.zoom = Math.max(0.7, 1440 / need); }
+  function fitMenu() { const m = $('#menu'); m.style.zoom = 1; if (m.hidden) return; const f = m.querySelector('footer'); if (!f) return; const need = Math.max(m.scrollHeight, f.offsetTop + f.offsetHeight + 12); if (need > 1440) m.style.zoom = Math.max(0.75, 1440 / need); }
   function showMenu() { $('#menu').hidden = false; drawMenu(); fitMenu(); DD.Music.play('menu'); }
   // 언어 버튼(타이틀·설정). 누르면 화면의 글이 그 자리에서 바뀐다
   const langRow = () => Object.keys(DD.LANGS).map((l) => `<button class="${DD.lang === l ? 'on' : ''}" data-lang="${l}" data-no-i18n>${DD.LANGS[l]}</button>`).join('');
@@ -219,6 +228,7 @@
   const grp = (name, slots, cls) => `<div class="grp ${cls || ''}"><h3>${name}</h3><div class="slots">${slots}</div></div>`;
   const nextWave = () => { if ((!G.endless && G.wave >= C.WAVES)) return '마지막 웨이브'; const c = {}, mu = DD.MUTS[G.muts[G.wave + 1]], mu2 = G.muts2 && DD.MUTS[G.muts2[G.wave + 1]]; const bg = DD.BOSS_GIM[DD.BOSS[G.wave + 1]]; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => { const m = t === 'boss' && bg && !G.tutorial ? Object.assign({}, DD.DEMONS[t], bg, DD.ATLAS.frames['d_lord_' + DD.BOSS[G.wave + 1]] ? { spr: 'd_lord_' + DD.BOSS[G.wave + 1] } : {}) : DD.DEMONS[t]; const ar = Math.round(DD.armAt(t, G.wave + 1)); return `<span class="${m.fly ? 'fly' : ''}" data-tip="<b>${m.name} ×${c[t]}</b>방어 ${ar}<br>${m.desc}">${icon(m.spr, 2)}${c[t]}</span>`; }).join(' ') + (G.thrust[G.wave + 1] != null ? ` <span class="thr" data-tip="<b>주공 · ${DD.gateName(me().ents[G.thrust[G.wave + 1]])} 입구</b>다음 웨이브의 악마 열에 여섯이 이 입구로 온다">주공 ${DD.gateName(me().ents[G.thrust[G.wave + 1]])}</span>` : '') + (mu ? ` <span class="mut" data-tip="<b>변이 · ${mu.name}</b>${mu.desc}">${mu.name}</span>` : '') + (mu2 ? ` <span class="mut" data-tip="<b>이중 변이 · ${mu2.name}</b>${mu2.desc}">${mu2.name}</span>` : ''); };
   const UKEY = ['Q', 'W', 'R', 'Y'], BKEY = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'L'];
+  const escTip = (s) => String(s).replace(/"/g, '&quot;');
   function synHtml(d) {
     if (ui.world || G.tutorial) return '';
     const pills = [];
@@ -227,18 +237,18 @@
       : d.race === 'beast' ? (d.ambushHits || 0)
       : d.race === 'spirit' ? (d.beams ? d.beams.length : 0)
       : (d.bc.pool || 0);
-    pills.push(`<span class="synp" title="${DD.RACE_MAZE_TRAIT[d.race]}">지형 시너지 · ${synN}</span>`);
+    pills.push(`<span class="synp" data-tip="${escTip(`<b>${d.R.name} 지형 시너지</b>${DD.RACE_MAZE_TRAIT[d.race]}`)}">지형 시너지 · ${synN}</span>`);
     const cbN = d.units.filter((u) => u.own === d.i && u.sig && u.sig.length >= 2).length;
-    if (cbN > 0) pills.push(`<span class="synp gold">각인 공명 ${cbN}기</span>`);
+    if (cbN > 0) pills.push(`<span class="synp gold" data-tip="${escTip('<b>각인 공명</b>각인 2개를 새긴 유닛이 추가 공명 효과를 발동 중')}">각인 공명 ${cbN}기</span>`);
     if (d.boons.length) {
       const bNames = d.boons.map((id) => DD.BOONS.find((b) => b.id === id)).filter(Boolean);
-      pills.push(`<span class="synp" title="${bNames.map((b) => b.name + ': ' + b.desc).join(' | ')}">전리품 ${bNames.length}</span>`);
+      pills.push(`<span class="synp" data-tip="${escTip(`<b>획득한 전리품 (${bNames.length})</b>${bNames.map((b) => b.name + ' — ' + b.desc).join('<br>')}`)}">전리품 ${bNames.length}</span>`);
     }
     if (G.oaths && G.oaths.length) {
       const oNames = G.oaths.map((id) => DD.OATHS.find((o) => o.id === id)).filter(Boolean);
-      pills.push(`<span class="synp bad" title="${oNames.map((o) => o.name + ': ' + o.desc).join(' | ')}">맹약 ${oNames.length} (×${DD.oathShardMul(G.oaths).toFixed(2)})</span>`);
+      pills.push(`<span class="synp bad" data-tip="${escTip(`<b>활성 시련의 맹약 (×${DD.oathShardMul(G.oaths).toFixed(2)})</b>${oNames.map((o) => o.name + ' — ' + o.desc).join('<br>')}`)}">맹약 ${oNames.length} (×${DD.oathShardMul(G.oaths).toFixed(2)})</span>`);
     }
-    if (G.medals > 0) pills.push(`<span class="synp good">연합 훈장 ${G.medals} (+${G.medals * 5}%)</span>`);
+    if (G.medals > 0) pills.push(`<span class="synp good" data-tip="${escTip(`<b>연합 훈장 ${G.medals}</b>아군 요새 지원 공로 · 아군 전체 공격력 +${G.medals * 5}%`)}">연합 훈장 ${G.medals} (+${G.medals * 5}%)</span>`);
     return pills.join('');
   }
   function drawHud() {
@@ -252,13 +262,13 @@
       <div class="heart">${ic('ui_heart')} ${Math.ceil(d.heart.hp)}<i class="hpbar"><i style="width:${Math.max(0, hp * 100)}%"></i></i></div>`);
     set('#sys', `${[1, 2, 4].map((sp, i) => `<button class="${speed === sp && !paused ? 'on' : ''}" data-a="speed:${sp}" data-tip="<b>${sp}배속</b>단축키 ${i + 1}">${sp}×</button>`).join('')}<button class="${paused ? 'on' : ''}" data-a="pause:1" data-tip="<b>일시정지</b>단축키 Space · 멈춘 동안에도 소환·건설·길 편집을 할 수 있다">Ⅱ</button>
       <button class="dpsbtn ${ui.showDps ? 'on' : ''}" data-a="dps:1" data-tip="<b>실시간 피해 통계</b>전투 중 유닛·탑·영웅·함정의 피해 기여도를 본다">피해</button><button class="wide" data-a="settings:1" data-tip="<b>설정</b>배경음악·효과음 음량, 피격 번쩍임 · Esc">⚙ 설정</button><button data-a="quit:1" data-tip="<b>나가기</b>이번 판을 포기한다(보상 없음)">나가기</button>`);
-    if (G.dungeons.length > 1) set('#allies', `<button class="${ui.world ? 'on' : ''}" data-a="world:1">지도 <kbd>Tab</kbd></button>`
+    if (G.dungeons.length > 1) set('#allies', `<button class="${ui.world ? 'on' : ''}" data-a="world:1" data-tip="<b>대륙 지도</b>모든 요새의 전황을 한눈에 본다 · Tab 또는 휠">지도 <kbd>Tab</kbd></button>`
       + G.dungeons.map((x) => {
         const danger = x.alive && x.bot && (x.heart.hp < x.heart.mhp * 0.5 || x.demons.some((dm) => dm.def.spr === 'd_boss'));
-        const qs = x.alive && x.bot ? `<span class="qsend" data-a="quicksend:${x.i}" title="예비 병력 2기 즉시 파병 · Shift+${x.i + 1}">⚡지원</span>` : '';
+        const qs = x.alive && x.bot ? `<span class="qsend" data-a="quicksend:${x.i}" data-tip="${escTip(`<b>긴급 파병 · ${x.R.name}</b>예비 병력 2기를 즉시 파견한다 · 단축키 Shift+${x.i + 1}`)}">⚡지원</span>` : '';
         return `<button class="${ui.view === x.i && !ui.world ? 'on' : ''} ${x.alive ? '' : 'dead'} ${danger ? 'danger' : ''}" data-a="view:${x.i}">${x.i + 1} ${x.i === G.human ? '나' : x.R.name} <small>${x.alive ? '♥' + pct(x.heart.hp / x.heart.mhp) + '%' : '함락'}</small>${qs}</button>`;
       }).join('')
-      + (G.dungeons.some((x) => x.i !== G.human && x.alive && x.bot) ? `<button data-a="sos:1" ${d.sosCd > 0 ? 'disabled' : ''} data-tip="<b>지원 요청</b>여유 있는 동맹 요새에서 병력을 부른다">지원 요청 <kbd>K</kbd>${d.sosCd > 0 ? ' ' + mmss(d.sosCd) : ''}</button>` : ''));
+      + (G.dungeons.some((x) => x.i !== G.human && x.alive && x.bot) ? `<button data-a="sos:1" ${d.sosCd > 0 ? 'disabled' : ''} data-tip="<b>지원 요청</b>여유 있는 동맹 요새에서 병력을 부른다 · 단축키 K">지원 요청 <kbd>K</kbd>${d.sosCd > 0 ? ' ' + mmss(d.sosCd) : ''}</button>` : ''));
     else set('#allies', '');
     const sb = synHtml(d); set('#synbar', sb); $('#synbar').hidden = !sb;
     const gc = DD.gridCount(ui.draft ? ui.draft.grid : d.grid), no = (c) => d.gold < c.g || d.mat < c.m;
@@ -293,16 +303,17 @@
     set('#tip', ui.tip || inspect() || '');
     const ms = d.mission; // 진행 중인 미션
     const hzd = G.hz && DD.HAZ[G.hz]; // 진행 중인 지형 현상
-    const topOff = (sb ? 42 : 0) + (G.dungeons.length > 1 ? 56 : 0);
-    set('#mission', ms ? `<small>미션</small>${DD.MISSION[ms.k].name}${ms.k === 'fast' ? ` · <b>${Math.max(0, Math.ceil(DD.MISSION.fast.t - (G.t - ms.t0)))}초</b>` : ''} <span class="gold">${ic('ui_coin')}${ms.gold}</span>` : ''); $('#mission').hidden = !ms || ui.world; $('#mission').style.top = (68 + topOff) + 'px';
-    set('#hazard', hzd ? `<small>지형</small>${hzd.name} · <b>${Math.max(0, Math.ceil(G.haz.left))}초</b>` : ''); $('#hazard').hidden = !hzd || ui.world; $('#hazard').style.top = (68 + topOff + (ms ? 62 : 0)) + 'px';
-    const bp = d.boonPick; // 전리품 고르기: 고를 때까지 게임이 멈춘다
+    const alliesEl = $('#allies'), synEl = $('#synbar');
+    const topBase = Math.max(12, alliesEl.offsetHeight ? alliesEl.offsetTop + alliesEl.offsetHeight + 10 : 12, !synEl.hidden && synEl.offsetHeight ? synEl.offsetTop + synEl.offsetHeight + 10 : 12);
+    set('#mission', ms ? `<small>미션</small>${DD.MISSION[ms.k].name}${ms.k === 'fast' ? ` · <b>${Math.max(0, Math.ceil(DD.MISSION.fast.t - (G.t - ms.t0)))}초</b>` : ''} <span class="gold">${ic('ui_coin')}${ms.gold}</span>` : ''); $('#mission').hidden = !ms || ui.world; $('#mission').style.top = topBase + 'px';
+    set('#hazard', hzd ? `<small>지형</small>${hzd.name} · <b>${Math.max(0, Math.ceil(G.haz.left))}초</b>` : ''); $('#hazard').hidden = !hzd || ui.world; $('#hazard').style.top = (topBase + (ms ? ($('#mission').offsetHeight || 56) + 8 : 0)) + 'px';
+    const bp = !dlg && d.boonPick; // 전리품 고르기: 대화·다른 모달과 겹치지 않게
     set('#boon', bp ? `<div class="box"><h2>전리품</h2><p>악마 군주를 쓰러뜨렸다. 하나를 고른다.</p><div class="cards c3">${bp.map((bi, i) => `<button class="card" data-a="boon:${i}"><kbd>${i + 1}</kbd>${DD.ATLAS.frames['boon_' + DD.BOONS[bi].id] ? icon('boon_' + DD.BOONS[bi].id, 3) : `<img class="px boonimg" src="art/boon_${DD.BOONS[bi].id}.png" alt="">`}<b>${DD.BOONS[bi].name}</b><small>${DD.BOONS[bi].desc}</small></button>`).join('')}</div></div>` : ''); $('#boon').hidden = !bp;
     const ep = !bp && !dlg && d.eventPick; // 중반 전령 사건(전리품·대화와 겹치지 않게)
     set('#event', ep ? `<div class="box"><div class="evhead"><img class="px" src="art/adv_${d.race}_1.webp" alt=""><div><h2>전령 사건</h2><b class="evtitle">${ep.title}</b><p>${ep.body}</p></div></div><div class="cards c2">${ep.opts.map((o, i) => `<button class="card" data-a="event:${i}"><kbd>${i + 1}</kbd><b>${o.name}</b><small>${o.desc}</small></button>`).join('')}</div></div>` : ''); $('#event').hidden = !ep;
     const vd = G.dungeons[ui.view], boss = !ui.world && vd.demons.find((e) => e.def.spr === 'd_boss' && e.hp > 0);
     set('#bossbar', boss ? `<b>${boss.gim && DD.BOSS_GIM[boss.gim] ? DD.BOSS_GIM[boss.gim].name : boss.def.name}</b><i><i style="width:${Math.max(0, Math.round((boss.hp / boss.mhp) * 100))}%"></i></i><span>${Math.ceil(boss.hp)}</span>` : '');
-    const dpsHtml = ui.showDps && !ui.world ? dmgHtml(vd) : '';
+    const dpsHtml = ui.showDps && !ui.world ? dmgHtml(vd, true) : '';
     set('#dps', dpsHtml); $('#dps').hidden = !dpsHtml;
     $('#paused').hidden = !(paused && !ui.edit && !dlg && !G.over);
     // 아래 정보 줄: 편집 안내 > 선택 > 기본 안내
@@ -311,7 +322,7 @@
     else if (ui.view !== G.human) info = `<b>${G.dungeons[ui.view].R.name}</b> 관전 중`;
     else if (ui.rally) info = `<b>${ui.rally === 'H' ? '영웅 제단' : '소환소'}</b> · 새로 오는 ${ui.rally === 'H' ? '영웅' : '유닛'}이 모일 자리를 클릭 <button data-a="rallyclear:${ui.rally}">기본 배치로</button>`;
     else if (ui.edit) info = `<b>길 편집 · 게임 멈춤</b> · ${['지우기', '길 깔기', '벽 쌓기'][ui.tool]} · 악마 경로 <b class="${dr.path.length > d.path.length ? 'good' : dr.path.length < d.path.length ? 'bad' : ''}">${dr.path.length}칸</b>(지금 ${d.path.length}) · 길 ${gc.road}/${d.roadCap} 벽 ${gc.wall}/${d.wallCap} · ${ui.draft.err ? `<span class="bad">✘ ${ui.draft.err}</span>` : '<span class="good">✔ E로 적용</span>'}`;
-    else if (ui.build >= 0) info = `<b>${R.blds[ui.build].name}</b> · <span class="good">초록 칸</span>${R.blds[ui.build].kind === 'wall' ? '(길 위)' : '(바닥)'}을 클릭 · Shift 연속 · 우클릭 취소`;
+    else if (ui.build >= 0) info = `<b>${R.blds[ui.build].name}</b> · <span class="good">초록 칸</span>${['wall', 'trap'].includes(R.blds[ui.build].kind) ? '(길 위)' : '(바닥)'}을 클릭 · Shift 연속 · 우클릭 취소`;
     else if (ui.sel.size) {
       const us = d.units.filter((u) => ui.sel.has(u.id)), names = {};
       us.forEach((u) => { const n = (u.hero ? `[${DD.GRADES[u.hero.grade].id}] ` : '') + u.def.name; names[n] = (names[n] || 0) + 1; });
@@ -337,14 +348,19 @@
     set('#info', (paused && !ui.edit ? '<b class="gold">Ⅱ 일시정지</b> · ' : '') + info); $('#info').hidden = !!ui.world;
     placeTip();
   }
-  $('#side').addEventListener('mouseover', (ev) => { const b = ev.target.closest('[data-tip]'); const t = b ? b.dataset.tip : null; if (ui && ui.tip !== t) { ui.tip = t; if (b) tipAt(b); if (G) drawHud(); } });
-  $('#side').addEventListener('mouseleave', () => { if (ui) { ui.tip = null; if (G) drawHud(); } });
-  $('#info').addEventListener('mouseover', (ev) => { const b = ev.target.closest('[data-tip]'); const t = b ? b.dataset.tip : null; if (ui && ui.tip !== t) { ui.tip = t; ui.tipY = 1140; if (G) drawHud(); } });
-  $('#info').addEventListener('mouseleave', () => { if (ui && ui.tip) { ui.tip = null; if (G) drawHud(); } });
+  const bindTip = (sel, fixedY) => {
+    $(sel).addEventListener('mouseover', (ev) => { const b = ev.target.closest('[data-tip]'); const t = b ? b.dataset.tip : null; if (ui && ui.tip !== t) { ui.tip = t; if (b) { if (fixedY != null) ui.tipY = fixedY; else tipAt(b); } if (G) drawHud(); } });
+    $(sel).addEventListener('mouseleave', () => { if (ui && ui.tip) { ui.tip = null; if (G) drawHud(); } });
+  };
+  bindTip('#side', null);
+  bindTip('#info', 1140);
+  bindTip('#allies', 88);
+  bindTip('#synbar', 132);
   // 설명 상자는 패널 왼쪽으로 펼쳐진다. 내용 길이에 맞춰 커지므로 글자가 잘리지 않는다
   function tipAt(b) { const r = b.getBoundingClientRect(), s = $('#side').getBoundingClientRect(); ui.tipY = (r.top - s.top) / (s.height / 1440); }
   function placeTip() {
-    const t = $('#tip'), on = !!lastHtml['#tip']; t.hidden = !on; if (!on) return;
+    const t = $('#tip'), blocked = dlg || (G && (me().boonPick || me().eventPick)) || !$('#settings').hidden || !$('#confirm').hidden;
+    const on = !blocked && !!lastHtml['#tip']; t.hidden = !on; if (!on) return;
     const ib = ($('#info') && !$('#info').hidden ? $('#info').offsetHeight : 76) + 24;
     const h = t.offsetHeight, y = ui.tip ? Math.min(ui.tipY, 1440 - h - Math.max(110, ib)) : ui.mouse && ui.mouse.y > 180 ? 96 : 1440 - h - Math.max(110, ib); // 전장·하단 설명은 정보 줄과 겹치지 않게
     t.style.top = Math.max(8, Math.min(y, 1440 - h - 8)) + 'px';
@@ -359,7 +375,7 @@
     if (q.k === 'd') { const bg = e.gim && DD.BOSS_GIM[e.gim]; return `<b>${e.elite ? '우두머리 ' : ''}${bg ? bg.name : e.def.name}${e.tele ? ' · 시전 중!' : ''}</b>${hp} · 공격 ${Math.round(e.atk)}${e.arm ? ' · 방어 ' + Math.round(e.arm) : ''}${e.def.rng > 30 ? ' · 원거리' : ''}<small>${bg ? bg.desc + ' · 중장갑' : e.def.desc}${e.elite ? ' · 쓰러뜨리면 골드 5배' : ''}</small>`; }
     if (q.k === 'u') { const o = G.dungeons[e.own], cb = DD.sigCombo(e.sig); return `<b>${e.hero ? `[${DD.GRADES[e.hero.grade].id}] ` : ''}${e.def.name}</b>${hp} · 처치 ${e.kills}${e.hold ? ' · 위치 고수' : ''}${e.ally ? ` · ${DD.RACES[e.ally].name}` : ''}${e.sig && e.sig.length ? ` · 각인 <span class="gold">${e.sig.map((x) => DD.SIGS[x].name).join(' · ')}</span>` : ''}${cb ? `<br><span class="good">${cb.name}</span> — ${cb.desc}` : ''}${e.def.pdesc ? `<br><span class="gold">${e.def.pdesc}</span>` : ''}${e.rk ? ` · <span class="gold">${DD.RANKS[e.rk]}</span>` : e.hero || e.def.legend ? '' : ` <small style="display:inline">(${DD.rankKills(o.race, o.doc)[1]}에 승급)</small>`}${e.own !== d.i ? `<small>${o.R.name} 지원군</small>` : e.hero ? `<small>${DD.HERO_ROLES[e.hero.role].label}</small>` : ''}`; }
     if (e.def.kind === 'trap') return `<b>${e.def.name}${e.lv > 1 ? ' Lv.' + e.lv : ''}</b>${e.def.desc}<small>${e.cd > 0 ? `대기 ${e.cd.toFixed(1)}초 · ` : ''}고른 뒤 Del로 걷는다</small>`;
-    return `<b>${e.spec ? `<img class="px ic" src="art/spec_${e.spec.id}.png" alt="">` : ''}${e.spec ? e.spec.name : e.def.name}</b>${hp}${e.sealT > 0 ? ` · <span class="bad">봉인 ${Math.ceil(e.sealT)}초</span>` : ''}<br>${e.spec ? e.spec.desc : e.def.desc}${e.def.atk ? `<small>공격 ${Math.round(e.def.atk * (1 + 0.4 * ((e.lv || 1) - 1)))} · 사거리 ${Math.round(e.def.rng * (1 + 0.1 * ((e.lv || 1) - 1)))} · 표적 ${DD.TARGET_MODES[e.tmode || 0].name}${e.lv > 1 ? ' · Lv.' + e.lv : ''}</small>` : ''}`;
+    return `<b>${e.spec ? `<img class="px ic" src="art/spec_${e.spec.id}.png" alt="">` : ''}${e.spec ? e.spec.name : e.def.name}</b>${hp}${e.sealT > 0 ? ` · <span class="bad">봉인 ${Math.ceil(e.sealT)}초</span>` : ''}<br>${e.spec ? e.spec.desc : e.def.desc}${e.def.atk ? `<small>공격 ${Math.round(e.def.atk * (1 + 0.4 * ((e.lv || 1) - 1)) * (e.spec && e.spec.atkMul ? e.spec.atkMul : 1))} · 사거리 ${Math.round(e.def.rng * (1 + 0.1 * ((e.lv || 1) - 1)) * (e.spec && e.spec.rngMul ? e.spec.rngMul : 1))} · 표적 ${DD.TARGET_MODES[e.tmode || 0].name}${e.lv > 1 ? ' · Lv.' + e.lv : ''}</small>` : ''}`;
   }
   function pickAt(p) {
     const d = G.dungeons[ui.view]; let best = null, bd = 120;
@@ -388,7 +404,7 @@
     else if (k === 'dps') ui.showDps = !ui.showDps;
     else if (k === 'settings') openSettings();
     else if (k === 'pause') togglePause();
-    else if (k === 'quit') { if (confirm(DD.tr('포기하고 나갈까요?'))) { clearRunSnap(); G.over = true; G.win = false; G.quit = true; } }
+    else if (k === 'quit') askConfirm('전투 포기', '포기하고 나갈까요? 이번 판의 보상은 받을 수 없습니다.', '포기', () => { clearRunSnap(); G.over = true; G.win = false; G.quit = true; });
     else if (k === 'world') setWorld(!ui.world);
     else if (k === 'callwave') callWave();
     else if (k === 'skiptut') { script = { steps: [], i: 0, goal: null, el: 0 }; dlg = null; drawDlg(); setGoal(''); }
@@ -503,9 +519,11 @@
   const SCODE = { Digit1: 1, Digit2: 2, Digit3: 4, Numpad1: 1, Numpad2: 2, Numpad3: 4 };
   window.addEventListener('keydown', (ev) => {
     const k = ev.code, ctrl = ev.ctrlKey || ev.metaKey, enter = k === 'Enter' || k === 'NumpadEnter';
-    if (!$('#codex').hidden) { if (k === 'Escape' || enter) $('#codex').hidden = true; return; }
-    if (!$('#ach').hidden) { if (k === 'Escape' || enter) $('#ach').hidden = true; return; }
+    if (!$('#confirm').hidden) { if (k === 'Escape' && !ev.repeat) { ev.preventDefault(); closeConfirm(false); } else if (enter && !ev.repeat) { ev.preventDefault(); closeConfirm(true); } return; }
+    if (!$('#codex').hidden) { if (k === 'Escape' || enter) { DD.Audio.play('click'); $('#codex').hidden = true; } return; }
+    if (!$('#ach').hidden) { if (k === 'Escape' || enter) { DD.Audio.play('click'); $('#ach').hidden = true; } return; }
     if (!$('#settings').hidden) { if (k === 'Escape' && !ev.repeat) closeSettings(); return; }
+    if (!$('#menu').hidden) { const oh = $('#menu .help[open]'); if (k === 'Escape' && oh) oh.removeAttribute('open'); return; }
     if (!$('#story').hidden) { if (k === 'Space' || enter) { ev.preventDefault(); $('#next').click(); } else if (k === 'Escape') $('#skip').click(); return; }
     if (!$('#result').hidden) { if (enter && !ev.repeat) { ev.preventDefault(); const b = $('#next2') || $('#again') || $('#back'); if (b) b.click(); } return; }
     if (!$('#title').hidden) { if ((enter || k === 'Space') && !ev.repeat) { ev.preventDefault(); $('#begin').click(); } return; }
@@ -557,7 +575,18 @@
     else if (mine && BCODE.includes(k)) { if (!rep && applyEdit()) { const i = BCODE.indexOf(k); ui.build = ui.build === i ? -1 : i; ui.ghost = null; ui.sel.clear(); ui.selB = null; ui.specPick = null; } }
     else if (k === 'Space') { ev.preventDefault(); if (!rep) togglePause(); }
     else if (k in SCODE) setSpeed(SCODE[k]);
-    else if (k === 'KeyU' && mine && ui.selB) { if (!rep) { const sb = me().blds.find((x) => x.id === ui.selB); if (sb && sb.def.kind === 'tower' && (sb.lv || 1) === 2) { ui.specPick = ui.specPick === sb.id ? null : sb.id; if (ui.specPick) toast('Lv.3 특화 선택: 1 또는 2 키 (Esc 취소)', 'info'); } else act({ a: 'upb', id: ui.selB }); } }
+    else if (k === 'KeyU' && mine && ui.selB) {
+      if (!rep) {
+        const d0 = me(), sb = d0.blds.find((x) => x.id === ui.selB);
+        if (sb && sb.def.kind === 'tower' && (sb.lv || 1) === 2) {
+          const uc = DD.bldUpCost(d0, sb);
+          if (!uc) { toast('더 강화할 수 없습니다', 'bad'); DD.Audio.play('err'); }
+          else if (d0.gold < uc.g) { toast('골드 부족', 'bad'); DD.Audio.play('err'); }
+          else if (d0.mat < uc.m) { toast('자재 부족', 'bad'); DD.Audio.play('err'); }
+          else { ui.specPick = ui.specPick === sb.id ? null : sb.id; if (ui.specPick) toast('Lv.3 특화 선택: 1 또는 2 키 (Esc 취소)', 'info'); }
+        } else act({ a: 'upb', id: ui.selB });
+      }
+    }
     else if ((k === 'Delete' || k === 'Backspace') && mine && ui.selB) { ev.preventDefault(); act({ a: 'sell', id: ui.selB }); ui.selB = null; ui.specPick = null; }
   });
 
@@ -641,11 +670,11 @@
       Object.assign(save.codex[k], d.codex[k]);
     }
   }
-  function dmgHtml(d) {
+  function dmgHtml(d, showEmpty) {
     const s = d.stats; if (!s) return '';
     const rows = [['유닛', s.units], ['탑', s.towers], ['영웅', s.heroes], ['함정', s.traps]].filter((r) => r[1] > 0);
     const tot = rows.reduce((a, r) => a + r[1], 0);
-    if (!tot) return '';
+    if (!tot) return showEmpty ? '<div class="dmgbars"><h3>피해 기여도</h3><div class="dpsempty">아직 기록된 피해가 없습니다</div></div>' : '';
     const top = Object.entries(s.top || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
     return `<div class="dmgbars"><h3>피해 기여도</h3>${rows.map(([n, v]) => `<div class="dmgrow"><span>${n}</span><i><i style="width:${Math.round((v / tot) * 100)}%"></i></i><span>${Math.round(v)} (${Math.round((v / tot) * 100)}%)</span></div>`).join('')}${top.length ? `<div class="dmgtop">최다 기여 · ${top.map(([n, v]) => `${n} ${Math.round(v)}`).join(' / ')}</div>` : ''}</div>`;
   }
@@ -783,7 +812,8 @@
     }
     $('#codex').innerHTML = `<div class="box"><h2>그리기스 연대기 <span class="tabs">${tabs.map(([id, n]) => `<button class="${tab === id ? 'on' : ''}" data-ct="${id}">${n}</button>`).join('')}</span></h2><div class="body ${cls}">${body}</div><button class="cclose" id="codexclose">닫기 · Esc</button></div>`;
     $('#codex').hidden = false;
-    $('#codexclose').onclick = () => { $('#codex').hidden = true; };
+    $('#codexclose').onclick = () => { DD.Audio.play('click'); $('#codex').hidden = true; };
+    $('#codex').onclick = (ev) => { if (ev.target.id === 'codex') { DD.Audio.play('click'); $('#codex').hidden = true; } };
     $('#codex').querySelectorAll('[data-ct]').forEach((b) => { b.onclick = () => { DD.Audio.play('click'); showCodex(b.dataset.ct); }; });
   }
   function showAch(cat) { // 메뉴의 업적 목록(공통 + 도전 + 종족별 탭)
@@ -796,9 +826,33 @@
       return `<button class="${cat === id ? 'on' : ''}" data-at="${id}">${id !== 'common' && id !== 'challenge' ? `<img class="px ic" src="art/crest_${id}.png" alt="">` : ''}${name} (${done}/${sub.length})</button>`;
     }).join('');
     $('#ach').innerHTML = `<div class="box"><h2>업적 <span class="gold">${n}/${DD.ACH.length}</span><span class="tabs">${tabs}</span></h2><div class="achlist">${list.map((a) => `<div class="${save.ach[a.id] ? 'done' : ''}"><b>${save.ach[a.id] ? '✔ ' : ''}${a.name}</b><small>${a.desc}</small><span class="gold">${ic('ui_shard')} ${a.sh}</span></div>`).join('')}</div><button id="achclose">닫기 · Esc</button></div>`;
-    $('#ach').hidden = false; $('#achclose').onclick = () => { $('#ach').hidden = true; };
+    $('#ach').hidden = false;
+    $('#achclose').onclick = () => { DD.Audio.play('click'); $('#ach').hidden = true; };
+    $('#ach').onclick = (ev) => { if (ev.target.id === 'ach') { DD.Audio.play('click'); $('#ach').hidden = true; } };
     $('#ach').querySelectorAll('[data-at]').forEach((b) => { b.onclick = () => { DD.Audio.play('click'); showAch(b.dataset.at); }; });
   }
+  // ───────── 인게임 확인 모달(window.confirm 대체) ─────────
+  let cfmCb = null, cfmWasPaused = false;
+  function askConfirm(title, body, okLabel, onOk) {
+    cfmCb = onOk;
+    if (G && !G.over && $('#settings').hidden) { cfmWasPaused = paused; paused = true; }
+    $('#confirm').innerHTML = `<div class="box"><h2>${title}</h2><p>${body}</p><div class="acts"><button class="danger" data-cf="ok">${okLabel} · Enter</button><button data-cf="no">취소 · Esc</button></div></div>`;
+    $('#confirm').hidden = false;
+    if (G) { lastHtml = {}; drawHud(); }
+  }
+  function closeConfirm(ok) {
+    const fn = ok ? cfmCb : null;
+    cfmCb = null; $('#confirm').hidden = true;
+    DD.Audio.play('click');
+    if (G && !G.over && $('#settings').hidden) paused = cfmWasPaused;
+    if (fn) fn();
+    if (G && !G.over) { lastHtml = {}; drawHud(); }
+  }
+  $('#confirm').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-cf]');
+    if (!b) { if (ev.target.id === 'confirm') closeConfirm(false); return; }
+    closeConfirm(b.dataset.cf === 'ok');
+  });
   // ───────── 설정(배경음악·효과음 음량, 번쩍임). 메뉴의 설정 버튼, 게임 중 ⚙ 또는 Esc ─────────
   let setWasPaused = false;
   function drawSettings() {
@@ -831,7 +885,7 @@
     else if (b.dataset.o === 'sharp') { save.opt.sharp = !(save.opt.sharp !== false); persist(); resize(); drawSettings(); }
     else if (b.dataset.o === 'close') closeSettings();
     else if (b.dataset.o === 'fs') { const el = document.documentElement; (document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen ? el.requestFullscreen() : Promise.reject()).then(drawSettings, () => {}); }
-    else if (b.dataset.o === 'reset') { if (confirm(DD.tr('모든 진행을 지우고 처음부터 다시 할까요?'))) { try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(RUN_KEY); } catch (e) { /* 무시 */ } location.reload(); } }
+    else if (b.dataset.o === 'reset') askConfirm('저장 초기화', '모든 진행을 지우고 처음부터 다시 할까요?', '초기화', () => { try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(RUN_KEY); } catch (e) { /* 무시 */ } location.reload(); });
   });
   DD.debug = { get G() { return G; }, menu, startGame, resumeGame, saveRunSnap, loadRunSnap, save, get script() { return script; }, get dlg() { return dlg; } };
   resize();

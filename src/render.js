@@ -258,7 +258,7 @@
         if (d.invulnBldT > 0) dotted(ctx, e.x, e.y, big ? 20 : 12, 'b1', 16);
         if (e.sealT > 0) { const fl = ((TT * 6) | 0) % 2; ctx.fillStyle = P.K; ctx.fillRect(e.x - 8, e.y - 16, 16, 5); ctx.fillStyle = P[fl ? 'p1' : 'r1']; ctx.fillRect(e.x - 7, e.y - 15, 14, 3); }
         if (e.hp < e.mhp) bar(ctx, e.x - (big ? 14 : 8), e.y + 13 - c.height - 2, big ? 28 : 16, e.hp / e.mhp, 's2');
-        if (ui.selB === e.id) { ctx.fillStyle = P.n1; (big ? [[-25, -25], [23, -25], [-25, 23], [23, 23]] : [[-13, -13], [11, -13], [-13, 11], [11, 11]]).forEach(([a1, b1]) => ctx.fillRect(e.x + a1, e.y + b1, 2, 2)); if (e.def.rng) dotted(ctx, e.x, e.y, Math.round(e.def.rng * (1 + 0.1 * ((e.lv || 1) - 1))), 'n1'); if (e.def.rad) dotted(ctx, e.x, e.y, e.def.rad, 'b1'); }
+        if (ui.selB === e.id) { ctx.fillStyle = P.n1; (big ? [[-25, -25], [23, -25], [-25, 23], [23, 23]] : [[-13, -13], [11, -13], [-13, 11], [11, 11]]).forEach(([a1, b1]) => ctx.fillRect(e.x + a1, e.y + b1, 2, 2)); if (e.def.rng) dotted(ctx, e.x, e.y, Math.round(e.def.rng * (1 + 0.1 * ((e.lv || 1) - 1)) * (e.spec && e.spec.rngMul ? e.spec.rngMul : 1)), 'n1'); if (e.def.rad) dotted(ctx, e.x, e.y, e.def.rad, 'b1'); }
       } else {
         const x0 = Math.round(e.x), y0 = Math.round(e.y);
         if (e.k === 'u') {

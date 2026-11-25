@@ -505,6 +505,20 @@
     ['전투를 마치면 최근 10판의 연대기가 이곳에 기록됩니다.', 'Your last 10 completed battles are recorded here.', '戦闘を終えると直近10戦の年代記がここに記録されます。'],
     ['클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Shift+F1~F3 부대 지정(F1~F3 선택) · Z 위치 고수 · Q W R Y 소환 · T 영웅 · X 영웅 기술 · B V 승급 · C 각인 · K 동맹 원군 · Shift+2~5 멀티 긴급 파병 · 소환소나 제단을 누르면 집결지 지정', 'Click/drag select (double-click same type, Ctrl+A all) → click floor to post · Shift+F1-F3 set group (F1-F3 select) · Z hold · Q W R Y summon · T hero · X skill · B V promote · C imprint · K ally aid · Shift+2-5 quick-send in multi · click circle/altar for rally', 'クリック/ドラッグ選択(ダブルクリック同種, Ctrl+A全体) → 床クリック配置 · Shift+F1~F3部隊登録(F1~F3選択) · Z位置固定 · Q W R Y召喚 · T英雄 · Xスキル · B V昇格 · C刻印 · K同盟援軍 · Shift+2~5マルチ即時派遣 · 召喚所/祭壇クリックで集結地'],
     ['A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · H J L 함정 · 거점 위는 체력 +25% · 고른 탑 표적 전환 · U 강화 (Lv.2 탑 U→1/2 특화) · P 심장 공명 · Del 철거', 'A S D F G → click tile (Shift: repeat) · buildings on floor, barricades on road · H J L traps · +25% HP on platforms · cycle tower target · U upgrade (Lv.2 tower: U→1/2 spec) · P Heart Pulse · Del demolish', 'A S D F G → マスをクリック(Shift連続) · 建物は床、防壁は道 · H J L 罠 · 拠点上は耐久+25% · 塔の標的切替 · U強化 (Lv.2塔はU→1/2特化) · P心臓共鳴 · Del撤去'],
+    // ── UI/UX 전면 정돈(출전 편성 · HUD 툴팁 · 인게임 확인 모달 · 피해 빈 상태) ──
+    ['출전 편성', 'Battle Setup', '出陣編成'], ['방식', 'Mode', '方式'], ['전장', 'Stage', '戦場'], ['보상', 'Reward', '報酬'],
+    ['멀티 · 요새 ', 'Allied · Fortresses ', 'マルチ · 要塞 '], ['솔로 · 동맹 ', 'Solo · Ally ', 'ソロ · 同盟 '],
+    ['지형 시너지', 'Maze Synergy', '地形シナジー'], ['각인 공명', 'Sigil Resonance', '刻印共鳴'],
+    ['각인 2개를 새긴 유닛이 추가 공명 효과를 발동 중', 'Units with 2 imprints activate bonus resonance effects', '刻印を2つ刻んだユニットが追加共鳴効果を発動中'],
+    ['획득한 전리품', 'Collected Spoils', '獲得した戦利品'], ['활성 시련의 맹약', 'Active Trial Oaths', '有効な試練の誓約'],
+    ['아군 요새 지원 공로 · 아군 전체 공격력 +', 'Allied defense merit · All allies ATK +', '味方要塞支援の功績 · 全味方攻撃力 +'],
+    ['대륙 지도', 'Continent Map', '大陸マップ'], ['모든 요새의 전황을 한눈에 본다 · Tab 또는 휠', 'View all fortresses at a glance · Tab or Mouse Wheel', '全要塞の戦況を一望する · Tabまたはホイール'],
+    ['긴급 파병 ·', 'Quick Dispatch ·', '緊急派遣 ·'], ['예비 병력 2기를 즉시 파견한다 · 단축키 Shift+', 'Immediately dispatch 2 reserve units · Shortcut Shift+', '予備兵力2体を即時派遣する · Shift+'],
+    ['여유 있는 동맹 요새에서 병력을 부른다 · 단축키 K', 'Call reinforcements from allied fortresses · Shortcut K', '余裕のある同盟要塞から援軍を呼ぶ · Kキー'],
+    ['아직 기록된 피해가 없습니다', 'No damage recorded yet', 'まだ記録されたダメージがありません'],
+    ['전투 포기', 'Abandon Battle', '戦闘放棄'], ['포기하고 나갈까요? 이번 판의 보상은 받을 수 없습니다.', 'Abandon this battle? You will forfeit rewards for this run.', '放棄して退出しますか？この戦いの報酬は得られません。'],
+    ['포기 · Enter', 'Abandon · Enter', '放棄 · Enter'], ['취소 · Esc', 'Cancel · Esc', 'キャンセル · Esc'],
+    ['저장 초기화', 'Reset Save Data', 'セーブ初期化'], ['초기화 · Enter', 'Reset · Enter', '初期化 · Enter'],
   ];
 
   // 숫자·이름이 끼는 문장. 사전보다 먼저 적용한다. [정규식, 영어, 일본어]
