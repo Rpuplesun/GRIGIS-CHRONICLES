@@ -66,5 +66,33 @@
       gate(ctx, t);
       LANDS.forEach((l, i) => { if (t > i * 0.35) flag(ctx, l[1] + (i === 0 ? -20 : 0), l[2] + (i === 0 ? 16 : 0), l[3], t, i); });
     }
+    if (kind === 'ending_gate') { // 게이트가 빛에 삼켜지며 닫히고 오염이 정화된다
+      const shrink = Math.max(0, 1 - t * 0.25);
+      const pur = Math.min(180, t * 55);
+      for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) {
+        if (own[px + py * W] < 0) continue;
+        const d = Math.hypot(px - CX, (py - CY) * 1.4);
+        if (d > pur && d < 120 && BAYER[(px & 3) + (py & 3) * 4] < 6) { ctx.fillStyle = P.p4; ctx.fillRect(px, py, 1, 1); }
+        else if (Math.abs(d - pur) < 8 && BAYER[(px & 3) + (py & 3) * 4] < 10) { ctx.fillStyle = P.g1; ctx.fillRect(px, py, 1, 1); }
+      }
+      if (shrink > 0.08) {
+        const w = Math.max(2, Math.round(14 * shrink)), h = Math.max(2, Math.round(16 * shrink));
+        ctx.fillStyle = P.K; ctx.fillRect(CX - (w >> 1) - 1, CY - (h >> 1) - 1, w + 2, h + 2);
+        ctx.fillStyle = P.W; ctx.fillRect(CX - (w >> 1), CY - (h >> 1), w, h);
+      }
+      const ray = ((t * 6) | 0) % 2;
+      ctx.fillStyle = P.g1;
+      for (let k = -24; k <= 24; k += 2) { ctx.fillRect(CX + k, CY + (ray ? 0 : 1), 1, 1); ctx.fillRect(CX + (ray ? 0 : 1), CY + k, 1, 1); }
+      ctx.fillStyle = P.W; ctx.fillRect(CX - 2, CY - 2, 5, 5);
+    }
+    if (kind === 'ending_dawn') { // 정화된 대륙 위로 다섯 깃발과 금빛 여명이 떠오른다
+      LANDS.forEach((l, i) => flag(ctx, l[1] + (i === 0 ? -20 : 0), l[2] + (i === 0 ? 16 : 0), l[3], t, i));
+      for (let i = 0; i < 28; i++) {
+        const px = ((hash(i, 11) * W + Math.sin(t + i) * 6) % W + W) % W | 0;
+        const py = ((hash(i, 29) * H - t * (10 + (i % 4) * 4)) % H + H) % H | 0;
+        ctx.fillStyle = P[i % 3 === 0 ? 'W' : i % 2 === 0 ? 'g1' : 'g2'];
+        ctx.fillRect(px, py, i % 5 === 0 ? 2 : 1, i % 5 === 0 ? 2 : 1);
+      }
+    }
   };
 })();

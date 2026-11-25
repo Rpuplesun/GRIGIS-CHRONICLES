@@ -519,6 +519,23 @@
     ['전투 포기', 'Abandon Battle', '戦闘放棄'], ['포기하고 나갈까요? 이번 판의 보상은 받을 수 없습니다.', 'Abandon this battle? You will forfeit rewards for this run.', '放棄して退出しますか？この戦いの報酬は得られません。'],
     ['포기 · Enter', 'Abandon · Enter', '放棄 · Enter'], ['취소 · Esc', 'Cancel · Esc', 'キャンセル · Esc'],
     ['저장 초기화', 'Reset Save Data', 'セーブ初期化'], ['초기화 · Enter', 'Reset · Enter', '初期化 · Enter'],
+    // ── 스팀 출시 마감(전투 숫자 · 점진 해금 · 악마성 엔딩 · 데스크톱 종료) ──
+    ['전투 숫자', 'Damage numbers', 'ダメージ数値'],
+    ['첫 승리 후 추가 교리 해금', 'Clear any stage once to unlock extra doctrines', '初勝利で追加教義を解放'],
+    ['첫 승리 후 해금 · 최대 3개 선택 시 영혼석 보상 상승', 'Unlocks after your first victory · pick up to 3 for bonus Soul Shards', '初勝利で解放 · 最大3つ選択で魂石報酬が上昇'],
+    ['해금 · 종족 교리 & 시련의 맹약', 'Unlocked · Race Doctrines & Trial Oaths', '解放 · 種族教義＆試練の誓約'],
+    ['엔딩 보기', 'Watch Ending', 'エンディングを見る'], ['엔딩', 'Ending', 'エンディング'], ['마치기', 'Finish', '終える'],
+    ['게임 종료', 'Quit Game', 'ゲーム終了'], ['종료 · Enter', 'Quit · Enter', '終了 · Enter'], ['종료', 'Quit', '終了'],
+    ['그리기스 연대기를 종료할까요?', 'Exit Grigis Chronicles?', 'グリギス年代記を終了しますか？'],
+    ['악마 대군주가 쓰러지자, 심연의 게이트가 빛과 함께 닫혔다.', 'As the Demon Overlord fell, the Abyssal Gate sealed in a blaze of light.', '悪魔大君主が倒れると、深淵のゲートは光とともに閉ざされた。'],
+    ['대륙을 짓누르던 붉은 안개가 서서히 걷히기 시작했다.', 'The crimson haze that weighed upon the continent began to lift.', '大陸を覆っていた紅の霧が、静かに晴れ始めた。'],
+    ['다섯 깃발이 나란히 펄럭이며 그리기스에 새 아침이 밝았다.', 'Five banners flew side by side as a new dawn broke over Grigis.', '五つの旗が並び翻り、グリギスに新たな朝が訪れた。'],
+    ['불타던 요새와 회랑에 다시 노래가 울려 퍼졌고,', 'Song returned to the scorched fortresses and drowned halls,', '燃えていた要塞と回廊に再び歌声が響き渡り、'],
+    ['대륙의 심장은 그 어느 때보다 힘차게 고동쳤다.', 'and the Heart of the continent beat stronger than ever before.', '大陸の心臓はこれまで以上に力強く脈打った。'],
+    ['훗날 기록관들은 이 전쟁을 그리기스 연대기라 적었다.', 'Chroniclers would later name this war the Grigis Chronicles,', '後の記録官たちはこの戦いをグリギス年代記と記した。'],
+    ['그리고 그 첫머리에 사령관, 당신의 이름을 남겼다.', 'and inscribe your name, Commander, upon its very first page.', 'そしてその冒頭に、司令官であるあなたの名を刻んだ。'],
+    ['그리기스 연대기 — 완결', 'GRIGIS CHRONICLES — FIN', 'グリギス年代記 — 完結'],
+    ['플레이해 주셔서 감사합니다, 사령관님.', 'Thank you for playing, Commander.', 'プレイしていただきありがとうございました、司令官。'],
   ];
 
   // 숫자·이름이 끼는 문장. 사전보다 먼저 적용한다. [정규식, 영어, 일본어]

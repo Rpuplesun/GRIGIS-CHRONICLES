@@ -376,4 +376,11 @@ kbd{font:inherit;font-size:22px;color:var(--dim)}
 #codex .body::-webkit-scrollbar-track,#ach .achlist::-webkit-scrollbar-track,#result>div::-webkit-scrollbar-track{background:var(--edge)}
 #codex .body::-webkit-scrollbar-thumb,#ach .achlist::-webkit-scrollbar-thumb,#result>div::-webkit-scrollbar-thumb{background:var(--ln);border:2px solid var(--edge)}
 #codex .body::-webkit-scrollbar-thumb:hover,#ach .achlist::-webkit-scrollbar-thumb:hover,#result>div::-webkit-scrollbar-thumb:hover{background:var(--acc)}
+.oathrow.locked{padding:6px 12px;background:var(--edge);border:2px solid var(--pn3)}
+.oathrow.locked small{flex-basis:auto;margin:0 0 0 8px}
+#title .tacts{display:inline-flex;align-items:center;gap:22px;justify-content:center}
+#title .texit{font-size:34px;padding:18px 36px 22px}
+#settings .vol{margin:0 0 24px;font-size:36px}
+#story{z-index:80}
+
 

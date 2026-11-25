@@ -45,12 +45,12 @@
     x.fillStyle = P[col]; n = n || 48;
     for (let a = 0; a < n; a++) x.fillRect(Math.round(cx + Math.cos((a / n) * 6.283) * r), Math.round(cy + Math.sin((a / n) * 6.283) * r), 1, 1);
   }
-  const FONT = { 0: '111101101101111', 1: '010110010010111', 2: '111001111100111', 3: '111001111001111', 4: '101101111001001', 5: '111100111001111', 6: '111100111101111', 7: '111001010010010', 8: '111101111101111', 9: '111101111001111', '+': '000010111010000' };
+  const FONT = { 0: '111101101101111', 1: '010110010010111', 2: '111001111100111', 3: '111001111001111', 4: '101101111001001', 5: '111100111001111', 6: '111100111101111', 7: '111001010010010', 8: '111101111101111', 9: '111101111001111', '+': '000010111010000', '!': '010010010000010' };
   function num(x, s, cx, cy, col) {
     let px = cx - s.length * 2;
-    for (const ch of s) { const g = FONT[ch]; for (let i = 0; i < 15; i++) if (g[i] === '1') { x.fillStyle = P.K; x.fillRect(px + (i % 3) + 1, cy + ((i / 3) | 0) + 1, 1, 1); } for (let i = 0; i < 15; i++) if (g[i] === '1') { x.fillStyle = P[col]; x.fillRect(px + (i % 3), cy + ((i / 3) | 0), 1, 1); } px += 4; }
+    for (const ch of s) { const g = FONT[ch]; if (!g) continue; for (let i = 0; i < 15; i++) if (g[i] === '1') { x.fillStyle = P.K; x.fillRect(px + (i % 3) + 1, cy + ((i / 3) | 0) + 1, 1, 1); } for (let i = 0; i < 15; i++) if (g[i] === '1') { x.fillStyle = P[col]; x.fillRect(px + (i % 3), cy + ((i / 3) | 0), 1, 1); } px += 4; }
   }
-  function drawFx(x, f) {
+  function drawFx(x, f, ui) {
     const p = 1 - f.t / f.T, X = Math.round(f.x), Y = Math.round(f.y); // p: 0→1
     const vfx = (name, ox, oy, flip) => { const n = DD.frames('v_' + name).length; DD.blit(x, 'v_' + name, Math.min(n - 1, (p * n) | 0), X + (ox || 0), Y + (oy || 0), flip); };
     if (f.k === 'dust') return vfx('puff', 0, 5);
@@ -63,6 +63,7 @@
     if (f.k === 'hero') vfx('burst', 0, 5);
     if (f.k === 'corpse') { const n = DD.frames(f.s).length; DD.blit(x, f.s, Math.min(n - 1, 9 + ((p * 3) | 0)), X, Y + 3, f.face < 0); }
     else if (f.k === 'gold') num(x, '+' + f.n, X, Y - ((p * 5) | 0) * 2, 'g1');
+    else if (f.k === 'dmg') { if (!ui || ui.nums !== false) num(x, String(f.n) + (f.sfx || ''), X, Y - ((p * 6) | 0), f.c || 'W'); }
     else if (f.k === 'crit') { x.fillStyle = P.g1; const s = (p * 4) | 0; x.fillRect(X - 2 - s, Y - 2 - s, 2, 2); x.fillRect(X + 1 + s, Y - 2 - s, 2, 2); x.fillStyle = P.W; x.fillRect(X, Y - 3 - s, 1, 3); }
     else if (f.k === 'block') { x.fillStyle = P.s1; const s = (p * 3) | 0; x.fillRect(X - 2, Y - s, 5, 1); x.fillStyle = P.s3; x.fillRect(X - 1, Y + 1 - s, 3, 1); }
     else if (f.k === 'interrupt') { const r = Math.round(10 + p * 26); dotted(x, X, Y, r, 'b1', 20); dotted(x, X, Y, Math.max(4, r - 6), 'W', 12); }
@@ -296,7 +297,7 @@
     if (ui.ping) { const a = (performance.now() - ui.ping.r) / 400; if (a < 1) dotted(ctx, Math.round(ui.ping.x), Math.round(ui.ping.y), 3 + Math.round(a * 8), 'n1', 12); else ui.ping = null; } // 이동 지점 표시
     for (const u of d.units) if (ui.sel.has(u.id)) { ctx.fillStyle = P.n1; ctx.fillRect(Math.round(u.hx) - 1, Math.round(u.hy), 3, 1); ctx.fillRect(Math.round(u.hx), Math.round(u.hy) - 1, 1, 3); } // 고른 유닛이 지키는 자리
     for (const s of d.shots) drawShot(ctx, s);
-    for (const f of d.fx) drawFx(ctx, f);
+    for (const f of d.fx) drawFx(ctx, f, ui);
     motes(ctx, TT, G.st);
     if (ui.edit) { // 길 편집: 칸 모서리 점, 청사진, 악마의 최단 경로, 커서 칸
       if (d.blueprint) {

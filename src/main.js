@@ -1,25 +1,33 @@
 // 화면(UI)·입력·저장. 게임 규칙은 sim.js, 수치는 data.js.
 (function () {
   const DD = window.DD, C = DD.C, $ = (s) => document.querySelector(s);
+  const DESK = window.DD_DESKTOP || null;
   const SAVE_KEY = 'dungeon_dep_save_v1', RUN_KEY = 'dungeon_dep_run_v1';
   let save;
-  try { save = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { /* 저장 불가 환경 */ }
+  try {
+    const deskRaw = DESK && DESK.loadSaveSync ? DESK.loadSaveSync() : null;
+    const lsRaw = localStorage.getItem(SAVE_KEY);
+    save = JSON.parse(deskRaw || lsRaw || 'null');
+    if (DESK && !deskRaw && lsRaw && save && save.races) DESK.writeSave(lsRaw);
+  } catch (e) { /* 저장 불가 환경 */ }
   if (!save || !save.races) save = { races: {} };
   DD.RACE_IDS.forEach((r) => (save.races[r] = save.races[r] || { shards: 0, meta: {}, stage: 0 }));
   save.seen = save.seen || {};
   save.ach = save.ach || {};
   save.codex = save.codex || { demons: {}, bosses: {}, heroes: {}, legends: {} };
   save.history = Array.isArray(save.history) ? save.history : [];
-  save.opt = Object.assign({ vol: 0.6, bgm: 0.5, flash: true, sharp: true }, save.opt); // vol = 효과음, bgm = 배경음악
+  save.opt = Object.assign({ vol: 0.6, bgm: 0.5, flash: true, sharp: true, nums: true }, save.opt); // vol = 효과음, bgm = 배경음악
   DD.Audio.setVol(save.opt.vol); DD.Music.setVol(save.opt.bgm);
-  const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* 무시 */ } };
-  const loadRunSnap = () => { try { const s = JSON.parse(localStorage.getItem(RUN_KEY)); return s && s.v === 1 && Array.isArray(s.dungeons) && s.dungeons.length ? s : null; } catch (e) { return null; } };
-  const saveRunSnap = () => { if (!G || G.tutorial || G.over) return; try { const s = DD.saveSnapshot(G); if (s) localStorage.setItem(RUN_KEY, JSON.stringify(s)); } catch (e) { /* 저장 불가 환경 */ } };
-  const clearRunSnap = () => { try { localStorage.removeItem(RUN_KEY); } catch (e) { /* 무시 */ } };
+  const persist = () => { const raw = JSON.stringify(save); try { localStorage.setItem(SAVE_KEY, raw); } catch (e) { /* 무시 */ } if (DESK && DESK.writeSave) DESK.writeSave(raw); };
+  const loadRunSnap = () => { try { const raw = (DESK && DESK.loadRunSync ? DESK.loadRunSync() : null) || localStorage.getItem(RUN_KEY); const s = JSON.parse(raw); return s && s.v === 1 && Array.isArray(s.dungeons) && s.dungeons.length ? s : null; } catch (e) { return null; } };
+  const saveRunSnap = () => { if (!G || G.tutorial || G.over) return; try { const s = DD.saveSnapshot(G); if (s) { const raw = JSON.stringify(s); localStorage.setItem(RUN_KEY, raw); if (DESK && DESK.writeRun) DESK.writeRun(raw); } } catch (e) { /* 저장 불가 환경 */ } };
+  const clearRunSnap = () => { try { localStorage.removeItem(RUN_KEY); } catch (e) { /* 무시 */ } if (DESK && DESK.clearRun) DESK.clearRun(); };
+  if (DESK && DESK.syncAchievements) { const doneAchs = Object.keys(save.ach).filter((k) => save.ach[k]); if (doneAchs.length) DESK.syncAchievements(doneAchs); }
   window.addEventListener('beforeunload', saveRunSnap);
   const icon = (id, m) => { const f = DD.frames(id)[0]; return `<img class="px" src="${DD.icon(id)}" style="width:${f[2] * m}px;height:${f[3] * m}px">`; };
   const ic = (id) => `<img class="px ic" src="${DD.icon(id)}" alt="">`; // UI 시트의 아이콘(글자 높이에 맞춘다)
   const pct = (v) => Math.round(v * 100);
+  const anyCleared = () => DD.RACE_IDS.some((r) => { const rs = save.races[r]; return rs && (rs.stage > 0 || (rs.rec && Object.keys(rs.rec).length > 0)); });
 
   // ───────── 메뉴 ─────────
   const menu = Object.assign({ race: 'human', mode: 'solo', allies: 3, diff: 1, ally: null, doctrines: {}, oaths: [] }, save.menu); menu.endless = false;
@@ -38,10 +46,14 @@
   const fmtMeta = (m) => (lv) => '+' + (m.unit === '%' ? pct(m.per * lv) + '%' : m.per * lv);
   function drawMenu() {
     const rs = save.races[menu.race], R = DD.RACES[menu.race], best = rs.best || {}, rec = rs.rec || {}, endl = rs.endless || {}, DF = DD.DIFFS[menu.diff];
-    const xm = (v) => '×' + v, cleared = !!rec[menu.stage]; if (!cleared) menu.endless = false; // 무한 침공은 깬 스테이지에서만
+    const xm = (v) => '×' + v, cleared = !!rec[menu.stage], advOn = anyCleared();
+    if (!cleared) menu.endless = false; // 무한 침공은 깬 스테이지에서만
+    if (!advOn) { menu.oaths = []; menu.doctrines[menu.race] = 0; } // 첫 승리 전에는 교리·맹약을 잠가 초반 피로도를 줄인다
     if (menu.stage > rs.stage) menu.stage = rs.stage;
     const rSnap = loadRunSnap(), rD = rSnap && rSnap.dungeons[rSnap.human || 0];
     const resumeBtn = rD && DD.RACES[rD.race] ? `<button class="on resume" data-m="resume:1">이어하기 · ${DD.RACES[rD.race].name} W${rSnap.wave || 0}</button>` : '';
+    const endBtn = save.endingSeen ? '<button data-m="ending:1">엔딩</button>' : '';
+    const exitBtn = DESK ? '<button data-m="exit:1">종료</button>' : '';
     $('#menu').innerHTML = `
       <header><h1>${DD.TITLE.name}</h1><p class="sub">${DD.TITLE.sub}${DD.DEMO ? ' · 데모' : ''}${save.bonusGold ? ` · <span class="gold">전쟁 자금 ●${save.bonusGold} (다음 출전에 지급)</span>` : ''}</p></header>
       <section class="races"><h2>종족 <span class="row">
@@ -53,15 +65,18 @@
           <b class="rname"><img class="px crest" src="art/crest_${id}.png" alt="">${r.name}</b><small>${r.trait}</small><small class="gold">${ic('ui_shard')} ${save.races[id].shards} · 스테이지 ${save.races[id].stage + 1}</small>
         </button>`; }).join('')}</div>
         ${(() => {
-          const docs = DD.DOCTRINES[menu.race], di = menu.doctrines[menu.race] || 0;
+          const docs = DD.DOCTRINES[menu.race], di = advOn ? (menu.doctrines[menu.race] || 0) : 0;
           const allyRow = menu.mode === 'solo' ? `<div class="grp2"><span class="lbl">동맹 원정</span><button class="${!menu.ally ? 'on' : ''}" data-m="ally:">없음</button>${DD.RACE_IDS.filter((id) => id !== menu.race).map((id) => `<button class="${menu.ally === id ? 'on' : ''}" data-m="ally:${id}">${DD.RACES[id].name}</button>`).join('')}${menu.ally ? `<small>${DD.ALLY_PERK[menu.ally]}</small>` : '<small>지원 부대 선택</small>'}</div>` : '';
-          return `<div class="subpick"><div class="grp2"><span class="lbl">교리</span>${docs.map((dc, i) => `<button class="${di === i ? 'on' : ''}" data-m="doc:${i}">${dc.name}</button>`).join('')}<small>${docs[di].desc}</small></div>${allyRow}</div>`;
+          return `<div class="subpick"><div class="grp2"><span class="lbl">교리</span>${docs.map((dc, i) => `<button class="${di === i ? 'on' : ''}" ${!advOn && i > 0 ? 'disabled' : ''} data-m="doc:${i}">${dc.name}</button>`).join('')}<small>${advOn ? docs[di].desc : '첫 승리 후 추가 교리 해금'}</small></div>${allyRow}</div>`;
         })()}</section>
       ${(() => {
-        const stId = DD.stageOrder(menu.race)[menu.stage], noHaz = !DD.HAZ[stId], effOaths = menu.oaths.filter((id) => id !== 'wildhaz' || !noHaz);
+        const stId = DD.stageOrder(menu.race)[menu.stage], noHaz = !DD.HAZ[stId], effOaths = advOn ? menu.oaths.filter((id) => id !== 'wildhaz' || !noHaz) : [];
+        const oathBox = advOn
+          ? `<div class="oathrow"><span class="lbl">시련의 맹약</span>${DD.OATHS.map((o) => { const dis = o.id === 'wildhaz' && noHaz; return `<button class="${!dis && menu.oaths.includes(o.id) ? 'on' : ''}" ${dis ? 'disabled' : ''} data-m="oath:${o.id}" title="${dis ? '이 스테이지에는 지형 현상이 없다' : `${o.desc} (영혼석 +${Math.round(o.sh * 100)}%)`}"><img class="px ic" src="art/oath_${o.id}.png" alt="">${o.name}</button>`; }).join('')}<small>${effOaths.length ? effOaths.map((id) => DD.OATHS.find((o) => o.id === id).desc).join(' · ') : '최대 3개 선택 · 난이도와 영혼석 보상 상승'}</small></div>`
+          : `<div class="oathrow locked"><span class="lbl">시련의 맹약</span><small>첫 승리 후 해금 · 최대 3개 선택 시 영혼석 보상 상승</small></div>`;
         return `<section><h2>스테이지 <span class="row"><span class="lbl">난이도</span>${DD.DIFFS.map((x, i) => `<button class="${menu.diff === i ? 'on' : ''}" data-m="diff:${i}">${x.name}</button>`).join('')}</span></h2>
         <p class="diffnote"><span class="dn">악마 체력 ${xm(DF.hp)} · 공격 ${xm(DF.atk)} · 골드 ${xm(DF.gold)} · <span class="gold">영혼석 ${xm(DF.shard)}${effOaths.length ? ` ×${DD.oathShardMul(effOaths).toFixed(2)}` : ''}</span></span> <button class="endl ${menu.endless ? 'on' : ''}" ${cleared && !DD.DEMO ? '' : 'disabled'} data-m="endless:1" title="">∞ 무한 침공${cleared ? '' : ' · 클리어 후'}</button></p>
-        <div class="oathrow"><span class="lbl">시련의 맹약</span>${DD.OATHS.map((o) => { const dis = o.id === 'wildhaz' && noHaz; return `<button class="${!dis && menu.oaths.includes(o.id) ? 'on' : ''}" ${dis ? 'disabled' : ''} data-m="oath:${o.id}" title="${dis ? '이 스테이지에는 지형 현상이 없다' : `${o.desc} (영혼석 +${Math.round(o.sh * 100)}%)`}"><img class="px ic" src="art/oath_${o.id}.png" alt="">${o.name}</button>`; }).join('')}<small>${effOaths.length ? effOaths.map((id) => DD.OATHS.find((o) => o.id === id).desc).join(' · ') : '최대 3개 선택 · 난이도와 영혼석 보상 상승'}</small></div>`; })()}<div class="cards c3">${DD.stageOrder(menu.race).map((id, i) => { const st = DD.stageOf(menu.race, i), lock = i > rs.stage, demo = DD.DEMO && i > 0, ec = DD.entCount(i, menu.diff, false, menu.oaths.includes('extraent')); return `
+        ${oathBox}`; })()}<div class="cards c3">${DD.stageOrder(menu.race).map((id, i) => { const st = DD.stageOf(menu.race, i), lock = i > rs.stage, demo = DD.DEMO && i > 0, ec = DD.entCount(i, menu.diff, false, advOn && menu.oaths.includes('extraent')); return `
         <button class="card ${menu.stage === i ? 'on' : ''}" ${lock || demo ? 'disabled' : ''} data-m="stage:${i}">
           <b>${i + 1}. ${st.name}</b><small>${demo ? '정식 버전에서' : lock ? '잠김' : st.desc} · 악마 ×${st.mul}</small><small>${[st.mods[menu.race] || !(ec > 1) ? modText(st, menu.race) : '', ec > 1 ? `입구 ${ec}` : '', DD.layoutOf(i) === 'center' ? '심장 중앙' : ''].filter(Boolean).join(' · ')}</small>${rec[i] ? `<small class="rec"><span class="stars">${'★'.repeat(rec[i].s)}${'☆'.repeat(3 - rec[i].s)}</span> ${DD.DIFFS[rec[i].d].name}${endl[i] ? ` · ∞ ${endl[i]}` : ''}</small>` : best[i] ? `<small class="rec">${best[i] > C.WAVES ? '✔ 클리어' : `최고 웨이브 ${best[i]}/${C.WAVES}`}</small>` : ''}
         </button>`; }).join('')}</div></section>
@@ -69,12 +84,12 @@
         <button class="card" ${max || rs.shards < cost ? 'disabled' : ''} data-m="meta:${m.k}">
           <b>${m.name}</b><small>Lv.${lv}/${DD.META_MAX} · ${fmt(lv)}${max ? '' : ` → <span class="good">${fmt(lv + 1)}</span>`}</small><small class="gold">${max ? '최대' : ic('ui_shard') + ' ' + cost}</small>
         </button>`; }).join('')}</div>${(() => {
-        const stObj = DD.stageOf(menu.race, menu.stage), di = menu.doctrines[menu.race] || 0, dc = DD.DOCTRINES[menu.race][di];
-        const stId = DD.stageOrder(menu.race)[menu.stage], effO = menu.oaths.filter((id) => id !== 'wildhaz' || DD.HAZ[stId]);
+        const stObj = DD.stageOf(menu.race, menu.stage), di = advOn ? (menu.doctrines[menu.race] || 0) : 0, dc = DD.DOCTRINES[menu.race][di];
+        const stId = DD.stageOrder(menu.race)[menu.stage], effO = advOn ? menu.oaths.filter((id) => id !== 'wildhaz' || DD.HAZ[stId]) : [];
         const modeTxt = menu.mode === 'multi' ? `멀티 · 요새 ${menu.allies}` : menu.ally ? `솔로 · 동맹 ${DD.RACES[menu.ally].name}` : '솔로';
         return `<div class="brief"><h3>출전 편성</h3><div><b>종족</b>${R.name} · ${dc.name}</div><div><b>방식</b>${modeTxt}</div><div><b>전장</b>${stObj.name} (${DF.name}${menu.endless ? ' · 무한' : ''})</div><div><b>보상</b><span class="gold">${ic('ui_shard')} ×${(DF.shard * DD.oathShardMul(effO)).toFixed(2)}</span>${effO.length ? ` · 맹약 ${effO.length}` : ''}</div></div>`;
       })()}</section>
-      <footer><button class="start" data-m="start:1">출전</button>${resumeBtn}<button data-m="story:1">이야기</button><button data-m="tutorial:1">튜토리얼</button><button data-m="codex:1">연대기</button><button data-m="ach:1">업적 ${DD.ACH.filter((a) => save.ach[a.id]).length}/${DD.ACH.length}</button><button data-m="settings:1">설정</button>
+      <footer><button class="start" data-m="start:1">출전</button>${resumeBtn}<button data-m="story:1">이야기</button>${endBtn}<button data-m="tutorial:1">튜토리얼</button><button data-m="codex:1">연대기</button><button data-m="ach:1">업적 ${DD.ACH.filter((a) => save.ach[a.id]).length}/${DD.ACH.length}</button><button data-m="settings:1">설정</button>${exitBtn}
         <details class="help"><summary>조작법</summary><div class="helpbox">
         <p><b>유닛</b> 클릭·드래그 선택(더블클릭 같은 유닛, Ctrl+A 전체) → 바닥 클릭 배치 · Shift+F1~F3 부대 지정(F1~F3 선택) · Z 위치 고수 · Q W R Y 소환 · T 영웅 · X 영웅 기술 · B V 승급 · C 각인 · K 동맹 원군 · Shift+2~5 멀티 긴급 파병 · 소환소나 제단을 누르면 집결지 지정</p>
         <p><b>건물</b> A S D F G → 칸 클릭(Shift 연속) · 건물은 바닥, 방벽은 길 위 · H J L 함정 · 거점 위는 체력 +25% · 고른 탑 표적 전환 · U 강화 (Lv.2 탑 U→1/2 특화) · P 심장 공명 · Del 철거</p>
@@ -99,6 +114,8 @@
     else if (k === 'start') { save.menu = { race: menu.race, mode: menu.mode, allies: menu.allies, diff: menu.diff, ally: menu.ally, doctrines: menu.doctrines, oaths: menu.oaths }; persist(); return startGame(); }
     else if (k === 'resume') return resumeGame();
     else if (k === 'story') return showStory(showMenu);
+    else if (k === 'ending') return showEnding(showMenu);
+    else if (k === 'exit') return askConfirm('게임 종료', '그리기스 연대기를 종료할까요?', '종료', () => { if (DESK) DESK.quit(); });
     else if (k === 'settings') return openSettings();
     else if (k === 'codex') return showCodex('races');
     else if (k === 'ach') return showAch();
@@ -112,7 +129,7 @@
   const me = () => G.dungeons[G.human];
 
   function bootGame(isResume) {
-    ui = { sel: new Set(), selB: null, specPick: null, ghost: null, box: null, view: G.human || 0, build: -1, veil: 16, flash: save.opt.flash, edit: false, tool: 1, hover: null, rally: null, insp: null, seenD: new Set(), heroReady: false, busy: false, hitstop: 0, showDps: false, groups: [[], [], []] };
+    ui = { sel: new Set(), selB: null, specPick: null, ghost: null, box: null, view: G.human || 0, build: -1, veil: 16, flash: save.opt.flash, nums: save.opt.nums !== false, edit: false, tool: 1, hover: null, rally: null, insp: null, seenD: new Set(), heroReady: false, busy: false, hitstop: 0, showDps: false, groups: [[], [], []] };
     DD.Audio.ambience(G.st.id); DD.Audio.preload(); DD.Music.play(G.st.id); DD.Music.preload(['boss', 'victory', 'defeat']); ui.music = G.st.id;
     speed = 1; paused = false; acc = 0; lastHtml = {}; dlg = null; drawDlg(); setGoal('');
     for (const id of ['#title', '#story', '#menu', '#result']) $(id).hidden = true;
@@ -131,8 +148,9 @@
   }
   function startGame(tutorial) {
     const race = tutorial ? 'human' : menu.race, others = DD.RACE_IDS.filter((r) => r !== race);
-    const effOaths = tutorial ? [] : menu.oaths.filter((id) => id !== 'wildhaz' || DD.HAZ[DD.stageOrder(race)[menu.stage]]);
-    const players = [{ race, meta: save.races[race].meta, doctrine: tutorial ? 0 : (menu.doctrines[race] || 0), ally: tutorial || menu.mode !== 'solo' ? null : menu.ally, layout: tutorial ? null : (save.lay || {})[DD.layoutOf(menu.stage) + DD.entCount(menu.stage, menu.diff, false, effOaths.includes('extraent'))], bonusGold: tutorial ? 0 : save.bonusGold || 0 }];
+    const advOn = anyCleared();
+    const effOaths = tutorial || !advOn ? [] : menu.oaths.filter((id) => id !== 'wildhaz' || DD.HAZ[DD.stageOrder(race)[menu.stage]]);
+    const players = [{ race, meta: save.races[race].meta, doctrine: tutorial || !advOn ? 0 : (menu.doctrines[race] || 0), ally: tutorial || menu.mode !== 'solo' ? null : menu.ally, layout: tutorial ? null : (save.lay || {})[DD.layoutOf(menu.stage) + DD.entCount(menu.stage, menu.diff, false, effOaths.includes('extraent'))], bonusGold: tutorial ? 0 : save.bonusGold || 0 }];
     if (!tutorial && menu.mode === 'multi') for (let i = 0; i < menu.allies - 1; i++) players.push({ race: others[i], bot: true });
     if (!tutorial && save.bonusGold) { save.bonusGold = 0; persist(); }
     if (!tutorial) clearRunSnap();
@@ -190,24 +208,27 @@
     DD.Music.play('title'); DD.Music.preload(['menu']);
     const rs0 = document.documentElement.style; for (const k of ['panel', 'btn_gold', 'btn_dark', 'btn_blue']) rs0.setProperty('--ui-' + k.replace('_', '-'), `url(${DD.icon('ui_' + k)})`); // UI 시트의 패널·버튼을 CSS 테두리 그림으로
     $('#loading').hidden = true; $('#title').hidden = false;
-    $('#title').innerHTML = `<div><h1>${DD.TITLE.name}</h1><div class="en">${DD.TITLE.ko}</div><p>${DD.TITLE.sub}${DD.DEMO ? ' · 데모' : ''}</p><button class="start" id="begin">게임 시작</button><div class="langs">${langRow()}</div></div>`;
+    $('#title').innerHTML = `<div><h1>${DD.TITLE.name}</h1><div class="en">${DD.TITLE.ko}</div><p>${DD.TITLE.sub}${DD.DEMO ? ' · 데모' : ''}</p><div class="tacts"><button class="start" id="begin">게임 시작</button>${DESK ? '<button class="texit" id="titleexit">게임 종료</button>' : ''}</div><div class="langs">${langRow()}</div></div>`;
     $('#begin').onclick = () => { DD.Audio.play('click'); $('#title').hidden = true; if (!save.tutorialDone) showStory(() => startGame(true)); else showMenu(); };
+    if ($('#titleexit')) $('#titleexit').onclick = () => { DD.Audio.play('click'); askConfirm('게임 종료', '그리기스 연대기를 종료할까요?', '종료', () => { if (DESK) DESK.quit(); }); };
   }
-  function showStory(onEnd) {
-    let i = 0, t0 = 0, raf = 0; const el = $('#story'); $('#menu').hidden = true; el.hidden = false; DD.Music.play('title');
-    const src = (k) => (k === 'capsule' ? 'art/capsule.webp' : DD.PROLOGUE_ART[k] ? `art/prologue_${k}.webp` : null);
-    DD.STORY.forEach((sl) => { const u = src(sl.art); if (u) new Image().src = u; }); // 넘길 때 빈 화면이 보이지 않게 미리 받는다
+  function playCutscene(slides, bgm, endLabel, onEnd, markKey) {
+    let i = 0, t0 = 0, raf = 0; const el = $('#story'); $('#menu').hidden = true; el.hidden = false; DD.Music.play(bgm);
+    const src = (k) => (k === 'capsule' ? 'art/capsule.webp' : k === 'victory' ? 'art/victory.webp' : DD.PROLOGUE_ART[k] ? `art/prologue_${k}.webp` : null);
+    slides.forEach((sl) => { const u = src(sl.art); if (u) new Image().src = u; }); // 넘길 때 빈 화면이 보이지 않게 미리 받는다
     const draw = () => {
-      const sl = DD.STORY[i], u = src(sl.art); cancelAnimationFrame(raf);
-      el.innerHTML = `<div class="art">${u ? `<img class="map" src="${u}">` : '<canvas class="px map" width="320" height="160"></canvas>'}</div><div class="txt">${sl.lines.map((l, n) => `<p style="animation-delay:${n * 1.1}s">${l}</p>`).join('')}</div><div class="nav"><button id="skip">건너뛰기</button><button id="next" class="on">${i === DD.STORY.length - 1 ? '시작' : '다음 ▸'}</button></div>`;
-      $('#next').onclick = () => { DD.Audio.play('click'); if (++i >= DD.STORY.length) end(); else draw(); }; $('#skip').onclick = end;
+      const sl = slides[i], u = src(sl.art); cancelAnimationFrame(raf);
+      el.innerHTML = `<div class="art">${u ? `<img class="map" src="${u}">` : '<canvas class="px map" width="320" height="160"></canvas>'}</div><div class="txt">${sl.lines.map((l, n) => `<p style="animation-delay:${n * 1.1}s">${l}</p>`).join('')}</div><div class="nav"><button id="skip">건너뛰기</button><button id="next" class="on">${i === slides.length - 1 ? endLabel : '다음 ▸'}</button></div>`;
+      $('#next').onclick = () => { DD.Audio.play('click'); if (++i >= slides.length) end(); else draw(); }; $('#skip').onclick = end;
       if (u) return;
       const cx = el.querySelector('canvas').getContext('2d'); t0 = performance.now();
       const tick = (now) => { DD.prologue(cx, sl.art, (now - t0) / 1000); raf = requestAnimationFrame(tick); }; tick(t0);
     };
-    const end = () => { cancelAnimationFrame(raf); el.hidden = true; save.storySeen = 1; persist(); onEnd(); };
+    const end = () => { cancelAnimationFrame(raf); el.hidden = true; if (markKey) { save[markKey] = 1; persist(); } onEnd(); };
     draw();
   }
+  function showStory(onEnd) { playCutscene(DD.STORY, 'title', '시작', onEnd, 'storySeen'); }
+  function showEnding(onEnd) { playCutscene(DD.ENDING, 'victory', '마치기', onEnd, 'endingSeen'); }
 
   function toast(t, cls) { const e = document.createElement('div'); e.textContent = t; if (cls) e.className = cls; const f = $('#feed'); f.prepend(e); while (f.children.length > 4) f.lastChild.remove(); setTimeout(() => e.remove(), 4000); }
   function banner(title, sub, boss) { $('#banner').innerHTML = `<div class="${boss ? 'boss' : ''}"><b>${title}</b><span>${sub}</span></div>`; }
@@ -608,13 +629,13 @@
       const who = (i) => (i === G.human ? '내 요새' : G.dungeons[i].R.name);
       if (e.t === 'wave') { DD.Audio.play(e.w % 5 === 0 ? 'boss' : 'wave'); if (e.w % 5 === 0) ui.shake = 0.5; saveRunSnap(); } else if (e.t === 'fall') DD.Audio.play('fall');
       if (e.t === 'wave') banner('WAVE ' + e.w, e.w % 5 === 0 ? (DD.BOSS[e.w] && !G.tutorial ? `${DD.BOSS_GIM[DD.BOSS[e.w]].name} — ${DD.BOSS_GIM[DD.BOSS[e.w]].desc}` : '악마 군주가 온다') : (e.mut ? `변이 · ${DD.MUTS[e.mut].name}${e.mut2 ? ' + ' + DD.MUTS[e.mut2].name : ''} — ${DD.MUTS[e.mut].desc}` : '악마 침공') + (G.thrust[e.w] != null ? ` · 주공 ${DD.gateName(me().ents[G.thrust[e.w]])}` : ''), e.w % 5 === 0);
-      else if (e.t === 'merge' && e.d === G.human) { if (e.legend) { banner(e.name, '전설 유닛 탄생'); DD.Audio.play('legend'); } else toast(`승급 · ${e.name}`, 'good'); }
+      else if (e.t === 'merge' && e.d === G.human) { if (e.legend) { ui.hitstop = Math.max(ui.hitstop, 0.1); ui.shake = Math.max(ui.shake || 0, 0.35); banner(e.name, '전설 유닛 탄생'); DD.Audio.play('legend'); } else toast(`승급 · ${e.name}`, 'good'); }
       else if (e.t === 'imprint' && e.d === G.human) { DD.Audio.play('imprint'); toast(`각인 · ${DD.SIGS[e.sig].name} ${e.name} — ${DD.SIGS[e.sig].desc}`, 'good'); if (e.combo) toast(`공명 발동 · ${e.combo.name} — ${e.combo.desc}`, 'good'); }
       else if (e.t === 'bossDead' && e.d === ui.view) { ui.hitstop = 0.16; ui.shake = 0.6; }
-      else if (e.t === 'bossInterrupt' && e.d === ui.view) { toast('군주 시전 차단!', 'good'); DD.Audio.play('interrupt'); }
-      else if (e.t === 'bossPhase' && e.d === ui.view) { ui.shake = 0.45; toast(e.sealed ? `군주 광폭! 탑 ${e.sealed}기 봉인 (X·P로 해제)` : '군주 2페이즈 돌입!', 'bad'); }
+      else if (e.t === 'bossInterrupt' && e.d === ui.view) { ui.hitstop = Math.max(ui.hitstop, 0.06); toast('군주 시전 차단!', 'good'); DD.Audio.play('interrupt'); }
+      else if (e.t === 'bossPhase' && e.d === ui.view) { ui.hitstop = Math.max(ui.hitstop, 0.1); ui.shake = 0.45; toast(e.sealed ? `군주 광폭! 탑 ${e.sealed}기 봉인 (X·P로 해제)` : '군주 2페이즈 돌입!', 'bad'); }
       else if (e.t === 'spec' && e.d === G.human) { ui.shake = 0.25; toast(`타워 특화 · ${e.name}`, 'good'); }
-      else if (e.t === 'pulse' && e.d === G.human) { ui.shake = 0.5; banner(DD.HEART_SKILLS[e.race].name, DD.HEART_SKILLS[e.race].desc); }
+      else if (e.t === 'pulse' && e.d === G.human) { ui.hitstop = Math.max(ui.hitstop, 0.08); ui.shake = 0.5; banner(DD.HEART_SKILLS[e.race].name, DD.HEART_SKILLS[e.race].desc); }
       else if (e.t === 'skill' && e.d === G.human) { ui.shake = Math.max(ui.shake || 0, 0.22); }
       else if (e.t === 'event' && e.d === G.human) { DD.Audio.play('event'); lastHtml = {}; hudT = 0; }
       else if (e.t === 'eventDone' && e.d === G.human) { toast(`전령 · ${e.pick}`, 'good'); }
@@ -702,7 +723,7 @@
     if (save.history.length > 10) save.history.length = 10;
   }
   function finish() {
-    const d = me(), rs = save.races[d.race];
+    const d = me(), rs = save.races[d.race], wasAdv = anyCleared();
     clearRunSnap();
     syncCodex(d);
     if (G.endless) return finishEndless();
@@ -722,6 +743,10 @@
     if (!G.tutorial && !G.quit) { rs.best = rs.best || {}; rs.best[G.stage] = Math.max(rs.best[G.stage] || 0, G.win ? C.WAVES + 1 : d.wavesCleared); }
     if (tut) { save.tutorialDone = 1; save.bonusGold = DD.TUTORIAL_GOLD; unlocked = `<p class="gold">튜토리얼 완료 보상 · 전쟁 자금 ●${DD.TUTORIAL_GOLD}</p><p>이끌 종족을 고르십시오, 사령관.</p>`; }
     else if (!G.tutorial && G.win && rs.stage === G.stage && G.stage < 5) { rs.stage++; unlocked = DD.DEMO ? '<p>데모는 여기까지. 다른 종족도 기다립니다.</p>' : `<p class="good">해금 · ${DD.stageOf(d.race, rs.stage).name}</p>`; }
+    if (!G.tutorial && G.win && !G.quit && !wasAdv) unlocked += '<p class="good">해금 · 종족 교리 &amp; 시련의 맹약</p>';
+    const isFinalWin = !G.tutorial && G.win && !G.quit && G.stage === 5;
+    const firstEnding = isFinalWin && !save.endingSeen;
+    if (firstEnding) save.endingSeen = 1;
     if (!G.tutorial) { (save.lay = save.lay || {})[G.layout + d.ents.length] = Array.from(d.grid); delete save.layout; } // 다음 판에도 같은 길로 시작한다(입구 수별로 기억)
     persist();
     DD.Audio.stopAmbience(); if (G.quit) DD.Music.stop(); else DD.Music.play(G.win ? 'victory' : 'defeat', { fade: 0.4 });
@@ -735,9 +760,11 @@
       ${dmgHtml(d)}
       ${chronHtml(d)}
       <p class="gold">${ic('ui_shard')} 영혼석 +${sh}${sh && !G.tutorial ? ` (보유 ${rs.shards})` : ''}</p>${achLine}${unlocked}${tipL ? `<p class="tip">팁 · ${tipL}</p>` : ''}
-      ${nextOk ? '<button id="next2" class="on">다음 스테이지 ▸</button> ' : ''}${tut || G.tutorial ? '' : `<button id="again" class="${nextOk ? '' : 'on'}">다시 도전</button> `}<button id="back">${tut ? '종족 선택' : '돌아가기'}</button>
+      ${isFinalWin ? '<button id="watchEnd" class="on">엔딩 보기</button> ' : ''}${nextOk ? '<button id="next2" class="on">다음 스테이지 ▸</button> ' : ''}${tut || G.tutorial ? '' : `<button id="again" class="${nextOk || isFinalWin ? '' : 'on'}">다시 도전</button> `}<button id="back">${tut ? '종족 선택' : '돌아가기'}</button>
       <small>Enter · ${nextOk ? '다음 스테이지' : tut || G.tutorial ? '종족 선택' : '다시 도전'}</small></div>`;
-    $('#result').hidden = false;
+    if (firstEnding) { $('#game').hidden = true; showEnding(() => { $('#result').hidden = false; }); }
+    else $('#result').hidden = false;
+    if ($('#watchEnd')) $('#watchEnd').onclick = () => { $('#result').hidden = true; $('#game').hidden = true; showEnding(() => { $('#result').hidden = false; }); };
     if ($('#again')) $('#again').onclick = () => startGame();
     if ($('#next2')) $('#next2').onclick = () => { menu.stage = G.stage + 1; startGame(); };
     $('#back').onclick = () => { G = null; $('#game').hidden = true; $('#result').hidden = true; showMenu(); };
@@ -766,7 +793,7 @@
   function grantAch(d, rs, win) {
     if (G.tutorial || G.quit) return '';
     const got = DD.ACH.filter((a) => !save.ach[a.id] && a.test({ G, d, win, save })); if (!got.length) return '';
-    got.forEach((a) => { save.ach[a.id] = 1; rs.shards += a.sh; });
+    got.forEach((a) => { save.ach[a.id] = 1; rs.shards += a.sh; if (DESK && DESK.unlockAchievement) DESK.unlockAchievement(a.id); });
     return got.map((a) => `<p class="ach">${ic('ui_gradeSSR')} 업적 · <b>${a.name}</b> <span class="gold">${ic('ui_shard')} +${a.sh}</span></p>`).join('');
   }
   function showCodex(tab) {
@@ -857,11 +884,13 @@
   let setWasPaused = false;
   function drawSettings() {
     const o = save.opt, row = (k, name) => `<label class="vol"><span>${name}</span><input type="range" min="0" max="100" step="5" value="${Math.round(o[k] * 100)}" data-o="${k}"><b>${Math.round(o[k] * 100)}</b></label>`;
+    const isFs = DESK && DESK.isFullscreenSync ? DESK.isFullscreenSync() : !!document.fullscreenElement;
     $('#settings').innerHTML = `<div class="box"><h2>설정</h2>${row('bgm', '배경음악')}${row('vol', '효과음')}
       <label class="vol"><span>피격 번쩍임</span><button class="${o.flash ? 'on' : ''}" data-o="flash">${o.flash ? '켜짐' : '꺼짐'}</button></label>
       <label class="vol"><span>픽셀 선명하게</span><button class="${o.sharp !== false ? 'on' : ''}" data-o="sharp">${o.sharp !== false ? '켜짐' : '꺼짐'}</button></label>
+      <label class="vol"><span>전투 숫자</span><button class="${o.nums !== false ? 'on' : ''}" data-o="nums">${o.nums !== false ? '켜짐' : '꺼짐'}</button></label>
       <div class="vol"><span>언어</span><span class="langs">${langRow()}</span></div>
-      <div class="vol"><span>화면</span><span class="langs"><button class="${document.fullscreenElement ? 'on' : ''}" data-o="fs">전체 화면</button></span></div>
+      <div class="vol"><span>화면</span><span class="langs"><button class="${isFs ? 'on' : ''}" data-o="fs">전체 화면</button></span></div>
       <div class="vol"><span>저장</span><span class="langs"><button data-o="reset">처음부터 다시</button></span></div>
       <button class="close" data-o="close">닫기 · Esc</button></div>`;
   }
@@ -883,11 +912,15 @@
     DD.Audio.play('click');
     if (b.dataset.o === 'flash') { save.opt.flash = !save.opt.flash; if (ui) ui.flash = save.opt.flash; persist(); drawSettings(); }
     else if (b.dataset.o === 'sharp') { save.opt.sharp = !(save.opt.sharp !== false); persist(); resize(); drawSettings(); }
+    else if (b.dataset.o === 'nums') { save.opt.nums = !(save.opt.nums !== false); if (ui) ui.nums = save.opt.nums; persist(); drawSettings(); }
     else if (b.dataset.o === 'close') closeSettings();
-    else if (b.dataset.o === 'fs') { const el = document.documentElement; (document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen ? el.requestFullscreen() : Promise.reject()).then(drawSettings, () => {}); }
-    else if (b.dataset.o === 'reset') askConfirm('저장 초기화', '모든 진행을 지우고 처음부터 다시 할까요?', '초기화', () => { try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(RUN_KEY); } catch (e) { /* 무시 */ } location.reload(); });
+    else if (b.dataset.o === 'fs') {
+      if (DESK && DESK.toggleFullscreen) DESK.toggleFullscreen().then(drawSettings, () => {});
+      else { const el = document.documentElement; (document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen ? el.requestFullscreen() : Promise.reject()).then(drawSettings, () => {}); }
+    }
+    else if (b.dataset.o === 'reset') askConfirm('저장 초기화', '모든 진행을 지우고 처음부터 다시 할까요?', '초기화', () => { try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(RUN_KEY); } catch (e) { /* 무시 */ } Promise.resolve(DESK && DESK.resetAll ? DESK.resetAll() : null).finally(() => location.reload()); });
   });
-  DD.debug = { get G() { return G; }, menu, startGame, resumeGame, saveRunSnap, loadRunSnap, save, get script() { return script; }, get dlg() { return dlg; } };
+  DD.debug = { get G() { return G; }, menu, startGame, resumeGame, saveRunSnap, loadRunSnap, showEnding, drawMenu, save, get script() { return script; }, get dlg() { return dlg; } };
   resize();
   DD.artReady(showTitle);
 })();

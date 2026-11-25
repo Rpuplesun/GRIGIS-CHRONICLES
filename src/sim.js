@@ -825,6 +825,14 @@
       if (src && dealt > 0) {
         const cat = src.k === 'b' ? (src.def.kind === 'trap' ? 'traps' : 'towers') : src.hero ? 'heroes' : 'units';
         d.stats[cat] += dealt; const nm = src.def.name; d.stats.top[nm] = (d.stats.top[nm] || 0) + dealt;
+        const rn = Math.round(dealt);
+        if (rn >= 1 && d.fx.length < 90) {
+          const isCrit = !!(opts && opts.crit), isPierce = pierce >= 0.4 && arm > 0, isBig = rn >= 45 || t.def.spr === 'd_boss' || t.elite;
+          if (isCrit || isPierce || isBig || G.rnd() < 0.2) {
+            const colN = isCrit ? 'g1' : isPierce ? 't1' : rn >= 70 ? 'o1' : 'W';
+            fx(d, 'dmg', t.x + (G.rnd() - 0.5) * 10, t.y - 11 - G.rnd() * 4, isCrit || isBig ? 0.52 : 0.4, { n: rn, c: colN, sfx: isCrit ? '!' : '' });
+          }
+        }
       }
     }
     t.hp -= amt; t.hit = 0.12; if (t.k === 'h') { d.alarmT = 3; if (amt > 0) d.heartE = Math.min(100, (d.heartE || 0) + amt * 0.08); } // 심장이 맞으면 근처 병력이 달려온다
@@ -893,8 +901,9 @@
     // 상성: 중장갑은 범위 공격에 강하고 단일 공격에 약하다. 떼로 오는 악마는 범위 공격에 약하다
     const typeMul = (x) => (x.k !== 'd' || src.k === 'd' ? 1 : x.def.heavy ? (splash ? 0.8 : 1.2) : x.def.light && splash ? 1.2 : 1);
     const tm = typeMul(t);
-    if (tm > 1 && G.rnd() < 0.3) fx(d, 'crit', t.x, t.y - 12, 0.22);
-    hurt(G, d, src, t, amt * tm, opts);
+    const isCrit = tm > 1 && G.rnd() < 0.35;
+    if (isCrit) fx(d, 'crit', t.x, t.y - 12, 0.22);
+    hurt(G, d, src, t, amt * tm, isCrit ? Object.assign({ crit: true }, opts) : opts);
     if (splash) {
       const list = src.k === 'd' ? d.units : d.demons;
       for (const o of list) if (o !== t && d2(o, t) < splash * splash && !(o.k === 'd' && o.def.fly && src.k === 'u' && src.def.rng <= 30)) {
