@@ -1,8 +1,8 @@
 // 아틀라스(사용자 제공 아트, tools/slice_art.py 산출물)에서 프레임을 꺼낸다.
 (function () {
   const DD = window.DD, A = DD.ATLAS, img = new Image();
-  const LMS = ['watch', 'lava', 'wind', 'root', 'vortex', 'rift'], lmImgs = {}, pushImgs = [null, null];
-  let ready = false, left = 1 + LMS.length + 2; const cbs = [];
+  const LMS = ['watch', 'lava', 'wind', 'root', 'vortex', 'rift'], lmImgs = {}, pushImgs = [null, null], wyvImgs = [null, null];
+  let ready = false, left = 1 + LMS.length + 4; const cbs = [];
   const done = () => { if (--left <= 0 && !ready) { ready = true; cbs.splice(0).forEach((f) => f()); } };
   img.onload = done;
   img.src = A.img;
@@ -17,12 +17,16 @@
     im.onload = () => { if (im.naturalWidth > 0) pushImgs[i] = im; done(); };
     im.onerror = done;
     im.src = 'art/trap_push_' + i + '.png';
+    const wm = new Image();
+    wm.onload = () => { if (wm.naturalWidth > 0) wyvImgs[i] = wm; done(); };
+    wm.onerror = done;
+    wm.src = 'art/d_wyvern_' + i + '.png';
   });
   DD.artReady = (f) => (ready ? f() : cbs.push(f));
   DD.lmImg = (id) => lmImgs[id] || null;
   const BIDX = { b_unlock1: 0, b_unlock2: 1, b_tower: 2, b_wall: 3, b_special: 4 };
   const keyOf = (id) => { if (id.indexOf('@') < 0) return id; const [s, r] = id.split('@'); return 'b_' + r + '_' + BIDX[s]; };
-  DD.frames = (id) => (id === 'trap_push' ? [[0, 0, 24, 24, 12], [0, 0, 24, 24, 12]] : A.frames[keyOf(id)] || A.frames.t_void);
+  DD.frames = (id) => (id === 'trap_push' ? [[0, 0, 24, 24, 12], [0, 0, 24, 24, 12]] : id === 'd_wyvern' ? [[0, 0, 28, 28, 14], [0, 0, 28, 28, 14]] : A.frames[keyOf(id)] || A.frames.t_void);
   const cache = {};
   function makePushTrap(i, mode) {
     const c = document.createElement('canvas'); c.width = 24; c.height = 24;
@@ -42,15 +46,16 @@
   DD.frame = function (id, i, mode) {
     const k = id + '|' + i + '|' + (mode || 0);
     if (cache[k]) return cache[k];
-    if (id === 'trap_push') {
-      const pi = pushImgs[i ? 1 : 0];
-      if (!pi) return (cache[k] = makePushTrap(i, mode));
+    if (id === 'trap_push' || id === 'd_wyvern') {
+      const sz = id === 'd_wyvern' ? 28 : 24;
+      const pi = (id === 'd_wyvern' ? wyvImgs : pushImgs)[i ? 1 : 0];
+      if (!pi) return id === 'trap_push' ? makePushTrap(i, mode) : DD.frame('d_bat', 0, mode);
       const c = document.createElement('canvas'), x = c.getContext('2d');
-      c.width = 24; c.height = 24; x.imageSmoothingEnabled = false;
-      if (mode & 1) { x.translate(24, 0); x.scale(-1, 1); }
-      x.drawImage(pi, 0, 0, 24, 24);
-      if (mode & 2) { x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = '#fff'; x.fillRect(0, 0, 24, 24); }
-      c.ax = 12;
+      c.width = sz; c.height = sz; x.imageSmoothingEnabled = false;
+      if (mode & 1) { x.translate(sz, 0); x.scale(-1, 1); }
+      x.drawImage(pi, 0, 0, sz, sz);
+      if (mode & 2) { x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = '#fff'; x.fillRect(0, 0, sz, sz); }
+      c.ax = sz >> 1;
       return (cache[k] = c);
     }
     const fr = DD.frames(id), f = fr[Math.min(i, fr.length - 1)], c = document.createElement('canvas'), x = c.getContext('2d');

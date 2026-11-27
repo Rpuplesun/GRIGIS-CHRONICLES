@@ -1,6 +1,7 @@
 // 게임 데이터 (브라우저·Node 공용). 수치 조정은 이 파일만 고치면 된다.
 (function (g) {
   const DD = (g.DD = g.DD || {});
+  DD.VERSION = '1.0.0'; // package.json의 version과 맞춘다
   // 던전은 24px 타일 격자. 안쪽 21×13칸, 입구는 아래 가운데, 심장은 위 가운데.
   DD.C = {
     TILE: 24, GW: 27, GH: 18, OX: 24, OY: 24, W: 696, H: 480,
@@ -152,15 +153,16 @@
   };
 
   DD.DEMONS = {
-    imp: { name: '임프', hp: 42, atk: 6, rng: 12, as: 0.9, spd: 34, gold: 7, light: true, spr: 'd_imp', desc: '약하지만 떼로 몰려온다 · 범위 공격에 약하다' },
-    brute: { name: '악귀', hp: 170, atk: 16, rng: 15, as: 1.2, spd: 20, gold: 15, mat: 3, heavy: true, spr: 'd_brute', desc: '중장갑 · 범위 공격에 강하고 단일 공격에 약하다 · 자재(◆)를 흘린다' },
-    hound: { name: '지옥견', hp: 62, atk: 9, rng: 13, as: 0.7, spd: 54, gold: 8, light: true, spr: 'd_hound', desc: '매우 빠르다 · 범위 공격에 약하다 · 길을 길게 늘여 붙잡자' },
-    bat: { name: '가고일', hp: 38, atk: 3, rng: 12, as: 1.0, spd: 36, gold: 9, fly: true, spr: 'd_bat', desc: '비행 · 길을 무시하고 심장으로 직진 · 원거리 공격과 탑만 닿는다' },
+    imp: { name: '임프', hp: 42, atk: 6, rng: 12, as: 0.9, spd: 34, gold: 7, light: true, squeeze: true, spr: 'd_imp', desc: '약하지만 떼로 몰려온다 · 벽 없는 1칸 바닥 틈새를 가로지른다 · 벽으로 막자' },
+    brute: { name: '악귀', hp: 170, atk: 16, rng: 15, as: 1.2, spd: 20, gold: 15, mat: 3, heavy: true, spr: 'd_brute', desc: '중장갑 · 길 전체를 정직하게 돌아온다 · 범위 공격에 강하고 단일 공격에 약하다 · 자재(◆)를 흘린다' },
+    hound: { name: '지옥견', hp: 62, atk: 9, rng: 13, as: 0.7, spd: 54, gold: 8, light: true, vault: true, spr: 'd_hound', desc: '매우 빠르다 · 1칸 벽·틈새를 뛰어넘어 지름길로 질주 · 2칸 간격으로 떼어 두자' },
+    bat: { name: '가고일', hp: 38, atk: 3, rng: 12, as: 1.0, spd: 36, gold: 9, fly: true, spr: 'd_bat', desc: '경량 비행 · 길과 벽을 무시하고 심장으로 직진 · 원거리 공격과 탑만 닿는다' },
+    wyvern: { name: '심연 비룡', hp: 155, atk: 14, rng: 46, as: 1.35, spd: 25, gold: 18, mat: 4, fly: true, heavy: true, spr: 'd_wyvern', desc: '정예 비행 · 벽과 길을 넘어 날며 원거리 화염을 뿜는다 · 대공 화력 필수' },
     warlock: { name: '흑마술사', hp: 72, atk: 14, rng: 72, as: 1.4, spd: 22, gold: 13, mat: 3, spr: 'd_warlock', desc: '원거리 · 길가 건물을 부순다 · 벽으로 시야를 막자' },
-    boss: { name: '악마 군주', hp: 1500, atk: 40, rng: 20, as: 1.4, spd: 15, gold: 200, mat: 30, splash: 16, heavy: true, spr: 'd_boss', desc: '중장갑 · 광역 공격 · 건물도 부순다 · 다섯 웨이브마다' },
+    boss: { name: '악마 군주', hp: 1500, atk: 40, rng: 20, as: 1.4, spd: 15, gold: 200, mat: 30, splash: 16, heavy: true, spr: 'd_boss', desc: '중장갑 · 광역 공격 · 길 전체를 돌아오며 건물도 부순다 · 다섯 웨이브마다' },
   };
   // 처치 골드와 방어력(한 대 맞을 때마다 깎는 피해). 방어력은 웨이브가 갈수록 오른다 → 한 방이 약한 유닛은 뒤로 갈수록 힘을 못 쓴다
-  { const GOLD = { imp: 5, hound: 6, brute: 13, warlock: 11, bat: 7 }, ARM = { imp: 1, hound: 1, bat: 1, warlock: 2, brute: 4, boss: 6 };
+  { const GOLD = { imp: 5, hound: 6, brute: 13, warlock: 11, bat: 7, wyvern: 18 }, ARM = { imp: 1, hound: 1, bat: 1, warlock: 2, wyvern: 3, brute: 4, boss: 6 };
     for (const k in GOLD) DD.DEMONS[k].gold = GOLD[k]; for (const k in ARM) DD.DEMONS[k].arm = ARM[k]; }
   DD.armAt = (t, w) => DD.DEMONS[t].arm * (0.5 + 0.1 * w);
   // 웨이브 w(1~20)의 구성
@@ -169,9 +171,10 @@
     const add = (t, n) => { for (let i = 0; i < n; i++) l.push(t); };
     add('imp', 5 + 2 * w);
     if (w >= 3) add('brute', Math.floor(w * 0.8));
+    if (w >= 4) add('bat', Math.max(1, Math.floor((w - 2) / 3)));
     if (w >= 5) add('hound', w - 3);
     if (w >= 7) add('warlock', Math.floor(w / 2));
-    if (w >= 6) add('bat', Math.floor(w / 5));
+    if (w >= 8) add('wyvern', Math.max(1, Math.floor((w - 5) / 4)));
     if (w % 5 === 0) add('boss', 1);
     return l;
   };

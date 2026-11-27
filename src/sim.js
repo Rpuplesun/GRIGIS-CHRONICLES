@@ -921,16 +921,48 @@
     return [e.x + (dx / l) * s, e.y + (dy / l) * s];
   }
   const wallAt = (d, x, y) => { const cx = tx(x), cy = ty(y); return inG(cx, cy) && d.grid[key(cx, cy)] === 2; };
-  function clearLine(d, ax, ay, bx, by) { // 두 점 사이에 벽 타일이 없는가
-    const dx = bx - ax, dy = by - ay, n = Math.ceil(Math.hypot(dx, dy) / 6);
-    for (let i = 1; i <= n; i++) if (wallAt(d, ax + (dx * i) / n, ay + (dy * i) / n)) return false;
+  function clearLine(d, ax, ay, bx, by) { // 두 점 사이에 벽 타일이 없는가(모서리 걸림 방지를 위해 ±3px 여유 검사)
+    const dx = bx - ax, dy = by - ay, l = Math.hypot(dx, dy);
+    if (l < 1) return !wallAt(d, bx, by);
+    const n = Math.ceil(l / 5), ox = (-dy / l) * 3, oy = (dx / l) * 3;
+    for (let i = 1; i <= n; i++) {
+      const px = ax + (dx * i) / n, py = ay + (dy * i) / n;
+      if (wallAt(d, px, py) || wallAt(d, px + ox, py + oy) || wallAt(d, px - ox, py - oy)) return false;
+    }
     return true;
   }
+  function openNear(d, cx, cy) { // 벽 속에 갇힌 유닛을 가장 가까운 빈 칸 중심으로 빼낸다
+    for (let r = 1; r <= 3; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+      const ax = cx + dx, ay = cy + dy;
+      if (inG(ax, ay) && d.grid[key(ax, ay)] !== 2) return [tcx(ax), tcy(ay)];
+    }
+    return null;
+  }
+  function nearestRoad(d, cx, cy) { // 길 밖으로 밀려난 악마를 입구가 아니라 가장 가까운 유효 길 칸으로 복귀시킨다
+    let best = null, bd = Infinity;
+    for (let r = 1; r <= 4; r++) {
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        const ax = cx + dx, ay = cy + dy;
+        if (!inG(ax, ay)) continue;
+        const dv = d.dist[key(ax, ay)];
+        if (dv >= 0) {
+          const sc = (dx * dx + dy * dy) * 1000 + dv;
+          if (sc < bd) { bd = sc; best = [ax, ay]; }
+        }
+      }
+      if (best) return best;
+    }
+    return d.path && d.path.length ? d.path[d.path.length - 1] : d.ents[0];
+  }
   function navTarget(d, u, x, y) { // 벽에 막히면 벽이 아닌 칸을 따라 돌아가는 다음 지점을 준다. 길이 없으면 null
-    if (!d.walls || clearLine(d, u.x, u.y, x, y)) { u.nav = null; return [x, y]; }
+    if (wallAt(d, u.x, u.y)) { u.nav = null; return openNear(d, tx(u.x), ty(u.y)); }
+    if (!d.walls || clearLine(d, u.x, u.y, x, y)) { u.nav = null; u.navFailT = 0; return [x, y]; }
     const gx = tx(x), gy = ty(y), k = d.ver + ':' + gx + ',' + gy;
-    if (!u.nav || u.navK !== k) {
-      u.navK = k; u.nav = [];
+    const stale = u.nav && u.nav.length && !clearLine(d, u.x, u.y, tcx(u.nav[0][0]), tcy(u.nav[0][1]));
+    const emptyRetry = u.nav && !u.nav.length && (u.navFailT || 0) <= 0;
+    if (!u.nav || u.navK !== k || stale || emptyRetry) {
+      u.navK = k; u.nav = []; u.navFailT = 0;
       const sx = tx(u.x), sy = ty(u.y), from = new Int16Array(GW * GH).fill(-1), q = [[sx, sy]];
       if (inG(sx, sy) && inG(gx, gy) && d.grid[key(gx, gy)] !== 2) {
         from[key(sx, sy)] = key(sx, sy);
@@ -939,20 +971,24 @@
           for (const [dx, dy] of NB) { const ax = cx + dx, ay = cy + dy; if (inG(ax, ay) && d.grid[key(ax, ay)] !== 2 && from[key(ax, ay)] < 0) { from[key(ax, ay)] = key(cx, cy); q.push([ax, ay]); } }
         }
         if (from[key(gx, gy)] >= 0) for (let c = key(gx, gy); c !== key(sx, sy); c = from[c]) u.nav.unshift([c % GW, (c / GW) | 0]);
-      }
+        else u.navFailT = 0.5;
+      } else u.navFailT = 0.5;
     }
     while (u.nav.length > 1 && clearLine(d, u.x, u.y, tcx(u.nav[1][0]), tcy(u.nav[1][1]))) u.nav.shift(); // 곧장 갈 수 있는 지점까지 건너뛴다
     if (!u.nav.length) return null;
-    if (u.nav.length > 1 && Math.hypot(tcx(u.nav[0][0]) - u.x, tcy(u.nav[0][1]) - u.y) < 3) u.nav.shift();
+    if (u.nav.length > 1 && Math.hypot(tcx(u.nav[0][0]) - u.x, tcy(u.nav[0][1]) - u.y) < 4) u.nav.shift();
     return u.nav.length === 1 && clearLine(d, u.x, u.y, x, y) ? [x, y] : [tcx(u.nav[0][0]), tcy(u.nav[0][1])];
   }
   function moveUnit(d, u, x, y, spd) { // 유닛은 자유롭게 걷되 벽 타일은 넘지 못하고, 막히면 돌아간다
+    if (u.navFailT > 0) u.navFailT -= DT;
     const tg = navTarget(d, u, x, y); u.mv = false;
-    if (!tg) return;
+    if (!tg) return false;
     const p = step2(u, tg[0], tg[1], spd);
-    if (!p) return;
-    if (!wallAt(d, p[0], p[1]) || wallAt(d, u.x, u.y)) { u.x = p[0]; u.y = p[1]; u.mv = true; }
-    else if (!wallAt(d, p[0], u.y)) { u.x = p[0]; u.mv = true; } else if (!wallAt(d, u.x, p[1])) { u.y = p[1]; u.mv = true; }
+    if (!p) return true;
+    if (!wallAt(d, p[0], p[1]) || wallAt(d, u.x, u.y)) { u.x = p[0]; u.y = p[1]; u.mv = true; return true; }
+    if (!wallAt(d, p[0], u.y) && Math.abs(p[0] - u.x) > 0.05) { u.x = p[0]; u.mv = true; u.nav = null; return true; }
+    if (!wallAt(d, u.x, p[1]) && Math.abs(p[1] - u.y) > 0.05) { u.y = p[1]; u.mv = true; u.nav = null; return true; }
+    u.nav = null; return false;
   }
   const prog = (d, e) => { const cx = tx(e.x), cy = ty(e.y), v = inG(cx, cy) ? d.dist[key(cx, cy)] : -1; return v < 0 ? 999 : v; }; // 심장까지 남은 칸
   const roadAt = (d, x, y) => { const cx = tx(x), cy = ty(y); return inG(cx, cy) ? d.grid[key(cx, cy)] === 1 : DD.entOutside(d.ents, cx, cy); };
@@ -1026,12 +1062,40 @@
   function demonStep(G, d, e) {
     if (e.gim) bossGim(G, d, e);
     if (e.slowT > 0) e.slowT -= DT; if (e.shredT > 0) e.shredT -= DT;
+    if (e.jumpCd > 0) e.jumpCd -= DT;
     if (e.burnT > 0) { e.burnT -= DT; e.hp = Math.max(1, e.hp - e.burnDps * DT); }
+    if (e.jump) { // 틈새 침투(임프) · 벽 도약(지옥견) 진행 중
+      e.jump.t += DT;
+      const p = Math.min(1, e.jump.t / e.jump.T);
+      e.x = e.jump.x0 + (e.jump.x1 - e.jump.x0) * p;
+      e.y = e.jump.y0 + (e.jump.y1 - e.jump.y0) * p;
+      e.jumpZ = Math.sin(p * Math.PI) * e.jump.h;
+      e.face = e.jump.x1 >= e.jump.x0 ? 1 : -1;
+      e.mv = true;
+      if (p >= 1) {
+        e.x = e.jump.x1; e.y = e.jump.y1; e.jumpZ = 0; e.jump = null;
+        fx(d, 'dust', e.x, e.y, 0.28, { c: 's' });
+      }
+      return;
+    }
     if (e.stun > 0) { e.stun -= DT; e.mv = false; return; } // 영웅의 대지 강타에 기절
-    if (e.def.fly) { // 비행: 길도 벽도 유닛도 무시하고 심장으로
-      const h = d.heart, reach = e.def.rng + h.r; e.face = h.x >= e.x ? 1 : -1;
-      if (d2(e, h) <= reach * reach) { e.mv = false; if (e.cd <= 0) { e.cd = e.def.as; e.atkT = 0.3; strike(G, d, e, h, e.atk, 0, 'p2'); } }
-      else { const p = step2(e, h.x, h.y, e.def.spd * (e.spd || 1)); e.mv = !!p; if (p) { e.x = p[0]; e.y = p[1]; } }
+    if (e.def.fly) { // 비행: 길도 벽도 함정도 무시하고 하늘로 직진 (심연 비룡은 비행 중 원거리 화염 공격)
+      const h = d.heart, airRanged = e.def.rng > 30;
+      if (airRanged && (e.rt <= 0 || (e.tg && e.tg.hp <= 0))) {
+        e.rt = 0.4; e.tg = null;
+        const u = nearest(e, d.units.filter((x) => x.def.rng > 30), e.def.rng + 14);
+        const b = !u ? nearest(e, d.blds.filter((x) => x.def.kind === 'tower'), e.def.rng + 14) : null;
+        e.tg = u || b || null;
+      }
+      const at = airRanged && e.tg && e.tg.hp > 0 && d2(e, e.tg) <= (e.def.rng + e.tg.r + 12) ** 2 ? e.tg : null;
+      const t = at || h, reach = e.def.rng + t.r; e.face = t.x >= e.x ? 1 : -1;
+      if (d2(e, t) <= reach * reach) {
+        e.mv = false;
+        if (e.cd <= 0) { e.cd = e.def.as; e.atkT = 0.3; strike(G, d, e, t, e.atk, 0, e.def.spr === 'd_wyvern' ? 'r1' : 'p2'); }
+      } else {
+        const p = step2(e, h.x, h.y, e.def.spd * (e.spd || 1));
+        e.mv = !!p; if (p) { e.x = p[0]; e.y = p[1]; }
+      }
       return;
     }
     { // 함정·지형·종족 길 시너지(용암벽·침수 회랑·정령 결계선)
@@ -1068,6 +1132,30 @@
         if (tr.def.slow) { const sl = tr.def.slow - 0.1 * ((tr.lv || 1) - 1); e.slow *= e.def.spr === 'd_boss' ? (1 + sl) / 2 : sl; if (tr.lv >= 3) { e.shredT = 2; e.shred = Math.max(e.shred || 0, 0.25); } }
         if (tr.def.dmg && !tr.def.push) { e.tt = (e.tt || 0) - DT; if (e.tt <= 0) { e.tt = tr.def.every; tr.hit = 0.3; hurt(G, d, tr, e, tr.def.dmg * lvMul(tr) * (1 + 0.15 * d.up.bld) * d.mod.atk, { pierce: tr.def.pierce || 0 }); fx(d, 'hit', e.x, e.y - 3, 0.17, { c: 'W' }); if (e.hp <= 0) return; } }
       }
+      // 몬스터별 미로·벽 지름길 기믹: 임프는 벽 없는 1칸 바닥 틈새 통과, 지옥견은 1칸 벽·틈새 도약 (중장갑 악귀·군주는 불가)
+      if ((e.def.squeeze || e.def.vault) && (e.jumpCd || 0) <= 0 && inG(tcx0, tcy0)) {
+        const dv0 = d.dist[key(tcx0, tcy0)], minSave = e.def.vault ? 6 : 5;
+        if (dv0 > minSave && !(tr && tr.def.kind === 'wall')) {
+          let bestL = null, bestDv = dv0 - minSave + 1;
+          for (const [dx, dy] of NB) {
+            const mx = tcx0 + dx, my = tcy0 + dy, lx = tcx0 + dx * 2, ly = tcy0 + dy * 2;
+            if (!inG(mx, my) || !inG(lx, ly)) continue;
+            const mg = d.grid[key(mx, my)];
+            if (mg === 1 || DD.isFixed(mx, my)) continue; // 이미 길이나 시설이면 건너뛸 필요 없음
+            if (e.def.squeeze && !e.def.vault && mg !== 0) continue; // 임프는 벽(2)에 막힌다!
+            if (d.grid[key(lx, ly)] !== 1) continue;
+            const ldv = d.dist[key(lx, ly)];
+            if (ldv >= 0 && ldv < bestDv) { bestDv = ldv; bestL = [lx, ly]; }
+          }
+          if (bestL) {
+            e.tg = null;
+            e.jump = { x0: e.x, y0: e.y, x1: tcx(bestL[0]), y1: tcy(bestL[1]), t: 0, T: e.def.vault ? 0.48 : 0.42, h: e.def.vault ? 18 : 11 };
+            e.jumpCd = e.def.vault ? 5.5 : 4.5;
+            fx(d, 'dust', e.x, e.y, 0.24, { c: e.def.vault ? 'g1' : 's' });
+            return;
+          }
+        }
+      }
     }
     const ranged = e.def.rng > 30, boss = e.def.spr === 'd_boss';
     if (e.rt <= 0 || (e.tg && e.tg.hp <= 0)) {
@@ -1084,17 +1172,32 @@
       }
     }
     let t = e.tg;
-    if (!t) { // 길을 따라 심장으로
-      const cx = tx(e.x), cy = ty(e.y), en = d.ents[e.ent || 0] || d.ents[0]; let nx = en[0], ny = en[1];
+    if (!t) { // 길을 따라 심장으로 (벽 코너 걸림·길 이탈 복구 보강)
+      const cx = tx(e.x), cy = ty(e.y), en = d.ents[e.ent || 0] || d.ents[0]; let nx = en[0], ny = en[1], found = false;
       if (inG(cx, cy)) {
         const dv = d.dist[key(cx, cy)];
-        for (const [dx, dy] of NB) { const ax = cx + dx, ay = cy + dy; if (inG(ax, ay) && d.dist[key(ax, ay)] === dv - 1 && dv > 0) { nx = ax; ny = ay; break; } }
+        if (dv > 0) {
+          for (const [dx, dy] of NB) { const ax = cx + dx, ay = cy + dy; if (inG(ax, ay) && d.dist[key(ax, ay)] === dv - 1) { nx = ax; ny = ay; found = true; break; } }
+        } else if (dv === 0) {
+          t = d.heart; found = true;
+        } else {
+          // 길 밖으로 살짝 벗어난 경우 입구로 되돌아가지 않고 가장 가까운 유효 길 칸으로 복귀
+          const nr = nearestRoad(d, cx, cy); nx = nr[0]; ny = nr[1]; found = true;
+        }
       }
-      if (DD.facAt(nx, ny) === 'h') t = d.heart;
-      else {
-        const blk = [d.occ[key(nx, ny)], inG(cx, cy) && d.occ[key(cx, cy)]].find((b) => b && b.def.kind !== 'trap'); // 함정은 막지 않는다
+      if (!t && (DD.facAt(nx, ny) === 'h' || (found && inG(nx, ny) && d.dist[key(nx, ny)] === 0 && DD.facAt(nx, ny) === 'h'))) t = d.heart;
+      if (!t) {
+        const blk = [inG(nx, ny) && d.occ[key(nx, ny)], inG(cx, cy) && d.occ[key(cx, cy)]].find((b) => b && b.def.kind !== 'trap'); // 함정은 막지 않는다
         if (blk && blk.hp > 0) t = blk; // 바리케이드
-        else { const p = step2(e, tcx(nx), tcy(ny), e.def.spd * (e.spd || 1) * (e.slow || 1)); e.mv = !!p; if (p) { e.x = p[0]; e.y = p[1]; } return; }
+        else {
+          const sp = e.def.spd * (e.spd || 1) * (e.slow || 1);
+          let p = step2(e, tcx(nx), tcy(ny), sp);
+          // 90도 코너에서 벽 쪽으로 살짝 깎고 들어가려 할 때 현재 길 타일 중심으로 먼저 정렬
+          if (p && inG(cx, cy) && d.dist[key(cx, cy)] >= 0 && !roadAt(d, p[0], p[1])) {
+            p = step2(e, tcx(cx), tcy(cy), sp) || p;
+          }
+          e.mv = !!p; if (p) { e.x = p[0]; e.y = p[1]; } return;
+        }
       }
     }
     const reach = e.def.rng + t.r;
@@ -1173,7 +1276,8 @@
         }
         if (!u.tg) {
           let bd = (u.hold ? ur + 6 : Math.max(ur + 12, 64)) ** 2;
-          for (const e of d.demons) { if (e.hp <= 0 || (e.def.fly && !ranged)) continue; const q = d2(u, e); if (q < bd && (u.hold || d2(e, home) < 110 * 110) && (!ranged || e.def.fly || los(d, u, e))) { bd = q; u.tg = e; } }
+          const onRampart = ranged && nearWall(d, tx(u.x), ty(u.y));
+          for (const e of d.demons) { if (e.hp <= 0 || (e.def.fly && !ranged)) continue; const q = d2(u, e); if (q < bd && (u.hold || d2(e, home) < 110 * 110) && (!ranged || e.def.fly || onRampart || los(d, u, e))) { bd = q; u.tg = e; } }
         }
         if (!u.tg && !u.hold && !heal && d.alarmT > 0 && d2(u, d.heart) < 240 * 240) { // 심장 구원: 심장을 치는 악마에게 달려간다
           let bd = Infinity;
@@ -1193,7 +1297,7 @@
             if (ally) { t.hp = Math.min(t.mhp, t.hp + heal * o.mod.atk * (1 + 0.1 * o.up.atk) * o.mod.healMul); shoot(d, u, t, 'heal', 'n1'); fx(d, 'heal', t.x, t.y - 12, 0.4, { c: 'n1' }); snd(d, 'heal'); }
             else strike(G, d, u, t, unitAtk(G, d, u), u.def.splash || (has(u, 'burst') ? 12 : 0), uCol);
           }
-        } else if (!u.hold) moveUnit(d, u, t.x, t.y, u.def.spd * spdMul);
+        } else if (!u.hold) { if (!moveUnit(d, u, t.x, t.y, u.def.spd * spdMul)) { u.tg = null; u.rt = 0.35; } }
         else moveUnit(d, u, u.hx, u.hy, u.def.spd * spdMul);
       } else moveUnit(d, u, u.hx, u.hy, u.def.spd * spdMul);
       if (u.atkT > 0) u.atkT -= DT;
@@ -1264,9 +1368,13 @@
       if (e.atkT > 0) e.atkT -= DT;
       e.px = e.x; e.py = e.y;
     }
+    for (const u of d.units) { u.px = u.x; u.py = u.y; }
     sep(d.units, 11); sep(d.demons, 9);
-    for (const e of d.demons) if (!roadAt(d, e.x, e.y)) { e.x = e.px; e.y = e.py; } // 밀려도 길 밖으로는 나가지 않는다
-    for (const e of d.units) { e.x = Math.max(C.OX + 4, Math.min(C.OX + GW * T - 4, e.x)); e.y = Math.max(C.OY + 6, Math.min(C.OY + GH * T - 2, e.y)); }
+    for (const e of d.demons) if (!e.def.fly && !e.jump && !roadAt(d, e.x, e.y)) { e.x = e.px; e.y = e.py; } // 밀려도 길 밖으로는 나가지 않는다
+    for (const u of d.units) {
+      if (wallAt(d, u.x, u.y) && !wallAt(d, u.px, u.py)) { u.x = u.px; u.y = u.py; } // 밀려도 벽 속으로는 들어가지 않는다
+      u.x = Math.max(C.OX + 4, Math.min(C.OX + GW * T - 4, u.x)); u.y = Math.max(C.OY + 6, Math.min(C.OY + GH * T - 2, u.y));
+    }
     // 정리
     if (d.demons.some((e) => e.hp <= 0)) d.demons = d.demons.filter((e) => e.hp > 0);
     if (d.units.some((u) => u.hp <= 0)) {
@@ -1486,6 +1594,7 @@
         }),
         demons: d.demons.map((e) => {
           const o = Object.assign({}, e); delete o.def; delete o.tg;
+          if (o.jump) { o.x = o.jump.x1; o.y = o.jump.y1; o.jumpZ = 0; delete o.jump; }
           o._dk = demonKeys.find((k) => DD.DEMONS[k] === e.def) || 'imp';
           return o;
         }),

@@ -160,6 +160,7 @@
     return c;
   }
   function animFrame(e, TT, n) {
+    if (n === 2) return ((TT * 6 + e.id) | 0) % 2;
     if (n < 6) return 0;
     const an = n >= 10 && e.k === 'u' ? 4 : 3;
     if (e.atkT > 0) return 6 + Math.min(an - 1, ((1 - e.atkT / 0.3) * an) | 0);
@@ -168,13 +169,20 @@
   }
   function spr(x, e, id, TT, flash) {
     const n = DD.frames(id).length, X = Math.round(e.x), Y = Math.round(e.y);
-    const big = e.k === 'u' && e.def.legend, fly = e.k === 'd' && e.def.fly, lift = fly ? 8 : 0;
-    shadow(x, X, Y, e.r > 8 || big ? 22 : fly ? 8 : 12);
+    const big = e.k === 'u' && e.def.legend, fly = e.k === 'd' && e.def.fly;
+    const bob = fly ? Math.round(Math.sin(TT * 7 + e.id) * 2) : 0;
+    const lift = fly ? (id === 'd_wyvern' ? 16 : 12) + bob : Math.round(e.jumpZ || 0);
+    const shR = e.r > 8 || big ? 22 : fly ? (id === 'd_wyvern' ? 13 : 8) : Math.max(6, 12 - Math.round(lift * 0.25));
+    shadow(x, X, Y, shR);
+    if (e.jump) { // 틈새 침투 / 벽 도약 시 잔상 표시
+      x.fillStyle = e.def.vault ? P.g1 : P.s;
+      x.fillRect(X - 1, Y - Math.round(lift * 0.5), 2, 2);
+    }
     let c;
     if (e.elite) { // 우두머리 악마는 크게, 머리 위에 붉은 표식
-      x.save(); x.translate(X, Y + 3); x.scale(1.3, 1.3); c = DD.blit(x, id, animFrame(e, TT, n), 0, 0, e.face < 0, flash && e.hit > 0.06); x.restore(); c = { height: Math.round(c.height * 1.3) };
+      x.save(); x.translate(X, Y + 3 - lift); x.scale(1.3, 1.3); c = DD.blit(x, id, animFrame(e, TT, n), 0, 0, e.face < 0, flash && e.hit > 0.06); x.restore(); c = { height: Math.round(c.height * 1.3) + lift };
       x.fillStyle = P.K; x.fillRect(X - 3, Y - c.height - 6, 7, 4); x.fillStyle = P.r1; x.fillRect(X - 2, Y - c.height - 5, 5, 2); x.fillStyle = P.g1; x.fillRect(X, Y - c.height - 5 - (((TT * 3) | 0) & 1), 1, 2);
-    } else if (big || fly) { // 전설 유닛은 크게, 비행 악마는 띄워서 다른 색으로
+    } else if (big || lift > 0) { // 전설 유닛은 크게, 비행·도약 악마는 띄워서
       c = DD.blit(x, id, animFrame(e, TT, n), X, Y + 3 - lift, e.face < 0, flash && e.hit > 0.06);
       if (big) { x.fillStyle = P.g1; x.fillRect(X - 1, Y - c.height - 3 - (((TT * 3) | 0) & 1), 3, 2); }
       c = { height: c.height + lift };

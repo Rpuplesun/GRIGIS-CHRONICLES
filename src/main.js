@@ -245,10 +245,33 @@
   // 핫바 칸 하나. tip은 마우스를 올리면 정보 줄에 뜬다.
   // 핫바 칸 하나. tip은 마우스를 올리면 오른쪽 설명 상자에 뜬다.
   const spotOf = () => (script.goal && script.steps[script.i] ? script.steps[script.i].hl : null);
-  const slot = (act, body, tip, o) => `<button class="slot ${o.on ? 'on' : ''} ${o.cls || ''} ${spotOf() === act ? 'spot' : ''}" data-a="${act}" data-tip="${tip.replace(/"/g, '&quot;')}" ${o.dim ? 'data-dim="1"' : ''}>${o.key ? `<kbd>${o.key}</kbd>` : ''}${body}</button>`;
+  const slot = (act, body, tip, o) => { const key = o.key ? kl(o.key) : '', gl = body.includes('class="glyph"') && !/\bshort\b/.test(o.cls || ''); // gl: 큰 기호 + 이름 칸, klong: 긴 단축키 딱지(Esc·^Z)
+    return `<button class="slot ${o.on ? 'on' : ''} ${o.cls || ''} ${gl ? 'gl' : ''} ${key.length > 1 ? 'klong' : ''} ${spotOf() === act ? 'spot' : ''}" data-a="${act}" data-tip="${tip.replace(/"/g, '&quot;')}" ${o.dim ? 'data-dim="1"' : ''}>${key ? `<kbd>${key}</kbd>` : ''}${body}</button>`; };
   const grp = (name, slots, cls) => `<div class="grp ${cls || ''}"><h3>${name}</h3><div class="slots">${slots}</div></div>`;
   const nextWave = () => { if ((!G.endless && G.wave >= C.WAVES)) return '마지막 웨이브'; const c = {}, mu = DD.MUTS[G.muts[G.wave + 1]], mu2 = G.muts2 && DD.MUTS[G.muts2[G.wave + 1]]; const bg = DD.BOSS_GIM[DD.BOSS[G.wave + 1]]; DD.waveList(G.wave + 1).forEach((t) => (c[t] = (c[t] || 0) + 1)); return Object.keys(c).map((t) => { const m = t === 'boss' && bg && !G.tutorial ? Object.assign({}, DD.DEMONS[t], bg, DD.ATLAS.frames['d_lord_' + DD.BOSS[G.wave + 1]] ? { spr: 'd_lord_' + DD.BOSS[G.wave + 1] } : {}) : DD.DEMONS[t]; const ar = Math.round(DD.armAt(t, G.wave + 1)); return `<span class="${m.fly ? 'fly' : ''}" data-tip="<b>${m.name} ×${c[t]}</b>방어 ${ar}<br>${m.desc}">${icon(m.spr, 2)}${c[t]}</span>`; }).join(' ') + (G.thrust[G.wave + 1] != null ? ` <span class="thr" data-tip="<b>주공 · ${DD.gateName(me().ents[G.thrust[G.wave + 1]])} 입구</b>다음 웨이브의 악마 열에 여섯이 이 입구로 온다">주공 ${DD.gateName(me().ents[G.thrust[G.wave + 1]])}</span>` : '') + (mu ? ` <span class="mut" data-tip="<b>변이 · ${mu.name}</b>${mu.desc}">${mu.name}</span>` : '') + (mu2 ? ` <span class="mut" data-tip="<b>이중 변이 · ${mu2.name}</b>${mu2.desc}">${mu2.name}</span>` : ''); };
   const UKEY = ['Q', 'W', 'R', 'Y'], BKEY = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'L'];
+  // ───────── 조작 키 바꾸기 ─────────
+  // 동작은 기본 자판 위치(ev.code)로 부르고, save.opt.keys가 { 동작: 실제 자판 }으로 바꿔 준다. 두 동작이 같은 자판을 쓰지 않게 맞바꾼다.
+  const KEYACTS = [['KeyQ', '유닛 소환 1'], ['KeyW', '유닛 소환 2'], ['KeyR', '유닛 소환 3'], ['KeyY', '유닛 소환 4'], ['KeyT', '영웅 소환'], ['KeyX', '영웅 기술 · 벽 쌓기'], ['KeyB', '승급 (첫째 길)'], ['KeyV', '승급 (둘째 길)'], ['KeyC', '각인 · 지우기'], ['KeyZ', '위치 고수 · 길 깔기'], ['KeyU', '건물 강화'], ['KeyN', '다음 웨이브 부르기'],
+    ['KeyA', '건물 1'], ['KeyS', '건물 2'], ['KeyD', '건물 3'], ['KeyG', '건물 4'], ['KeyF', '방벽'], ['KeyH', '함정 1'], ['KeyJ', '함정 2'], ['KeyL', '함정 3'], ['KeyE', '길 편집'], ['KeyP', '심장 공명'], ['KeyK', '동맹 호출 · 지원 요청'], ['KeyM', '대륙 지도']];
+  const KEYOK = /^(Key[A-Z]|Comma|Period|Semicolon|Quote|BracketLeft|BracketRight|Slash|Backslash|Backquote|Minus|Equal)$/;
+  const KEYLBL = { Comma: ',', Period: '.', Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']', Slash: '/', Backslash: '\\', Backquote: '`', Minus: '-', Equal: '=' };
+  let keyInv = null, keyWait = null, keyMsg = '', setView = 'main';
+  const keyOf = (a) => (save.opt.keys && KEYOK.test(save.opt.keys[a] || '') ? save.opt.keys[a] : a); // 동작 → 실제 자판
+  const keyLbl = (a) => { const c = keyOf(a); return KEYLBL[c] || c.replace(/^Key/, ''); };
+  const kl = (letter) => (/^[A-Z]$/.test(letter) ? keyLbl('Key' + letter) : letter); // 칸에 붙는 단축키 딱지
+  function mapKey(code) { // 실제 자판 → 동작. 다른 데로 옮겨 간 기본 자판은 아무 일도 하지 않는다
+    if (!keyInv) { keyInv = {}; KEYACTS.forEach(([a]) => { keyInv[a] = null; }); KEYACTS.forEach(([a]) => { keyInv[keyOf(a)] = a; }); }
+    return code in keyInv ? keyInv[code] : code;
+  }
+  function setKey(a, code) {
+    const keys = (save.opt.keys = save.opt.keys || {}), old = keyOf(a), other = KEYACTS.find(([b]) => b !== a && keyOf(b) === code);
+    if (other) keys[other[0]] = old;
+    keys[a] = code;
+    Object.keys(keys).forEach((k) => { if (keys[k] === k) delete keys[k]; });
+    keyInv = null; persist(); lastHtml = {};
+  }
+  function resetKeys() { delete save.opt.keys; keyInv = null; persist(); lastHtml = {}; }
   const escTip = (s) => String(s).replace(/"/g, '&quot;');
   function synHtml(d) {
     if (ui.world || G.tutorial) return '';
@@ -276,7 +299,7 @@
     const d = me(), R = d.R, own = d.units.filter((u) => u.own === d.i).length, hp = d.heart.hp / d.heart.mhp;
     const next = G.nextWaveIn(), span = G.wave === 0 ? C.FIRST_WAVE : C.WAVE_T;
     set('#top', `<div class="stage"><img class="px ic" src="art/crest_${d.race}.png" alt="">${G.st.name} · ${R.name}${G.diff !== 1 ? ' · ' + G.D.name : ''}</div><div class="timer">${G.endless ? '∞' : mmss(G.endT - G.t)}</div>
-      <div class="wave"><b>WAVE ${G.wave}<small style="display:inline">${G.endless ? ' 무한' : '/' + C.WAVES}</small></b><small>다음 ${mmss(next)}</small></div>${DD.canCall(G) ? `<button class="call" data-a="callwave:1"><kbd>N</kbd> ${(!G.endless && G.wave >= C.WAVES) ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'} <span class="gold">+●${DD.callBonus(G)}</span></button>` : `<button class="call" disabled><kbd>N</kbd> ${(!G.endless && G.wave >= C.WAVES) ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'}</button>`}
+      <div class="wave"><b>WAVE ${G.wave}<small style="display:inline">${G.endless ? ' 무한' : '/' + C.WAVES}</small></b><small>다음 ${mmss(next)}</small></div>${DD.canCall(G) ? `<button class="call" data-a="callwave:1"><kbd>${kl('N')}</kbd> ${(!G.endless && G.wave >= C.WAVES) ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'} <span class="gold">+●${DD.callBonus(G)}</span></button>` : `<button class="call" disabled><kbd>${kl('N')}</kbd> ${(!G.endless && G.wave >= C.WAVES) ? '기다리지 않고 끝내기' : '다음 웨이브 부르기'}</button>`}
       <div class="nextw">${nextWave()}</div>
       <div class="prog"><i style="width:${Math.round(Math.max(0, 1 - next / span) * 50) * 2}%"></i></div>
       <div class="res"><span class="gold">${ic('ui_coin')} ${Math.floor(d.gold)}</span><span class="mat">${ic('ui_crate')} ${Math.floor(d.mat)}</span><span class="pop">${ic('ui_pop')} 인구 ${own}/${d.pop}</span></div>
@@ -289,7 +312,7 @@
         const qs = x.alive && x.bot ? `<span class="qsend" data-a="quicksend:${x.i}" data-tip="${escTip(`<b>긴급 파병 · ${x.R.name}</b>예비 병력 2기를 즉시 파견한다 · 단축키 Shift+${x.i + 1}`)}">⚡지원</span>` : '';
         return `<button class="${ui.view === x.i && !ui.world ? 'on' : ''} ${x.alive ? '' : 'dead'} ${danger ? 'danger' : ''}" data-a="view:${x.i}">${x.i + 1} ${x.i === G.human ? '나' : x.R.name} <small>${x.alive ? '♥' + pct(x.heart.hp / x.heart.mhp) + '%' : '함락'}</small>${qs}</button>`;
       }).join('')
-      + (G.dungeons.some((x) => x.i !== G.human && x.alive && x.bot) ? `<button data-a="sos:1" ${d.sosCd > 0 ? 'disabled' : ''} data-tip="<b>지원 요청</b>여유 있는 동맹 요새에서 병력을 부른다 · 단축키 K">지원 요청 <kbd>K</kbd>${d.sosCd > 0 ? ' ' + mmss(d.sosCd) : ''}</button>` : ''));
+      + (G.dungeons.some((x) => x.i !== G.human && x.alive && x.bot) ? `<button data-a="sos:1" ${d.sosCd > 0 ? 'disabled' : ''} data-tip="<b>지원 요청</b>여유 있는 동맹 요새에서 병력을 부른다 · 단축키 K">지원 요청 <kbd>${kl('K')}</kbd>${d.sosCd > 0 ? ' ' + mmss(d.sosCd) : ''}</button>` : ''));
     else set('#allies', '');
     const sb = synHtml(d); set('#synbar', sb); $('#synbar').hidden = !sb;
     const gc = DD.gridCount(ui.draft ? ui.draft.grid : d.grid), no = (c) => d.gold < c.g || d.mat < c.m;
@@ -538,12 +561,23 @@
   // 단축키는 ev.code(자판 위치)로 읽는다: 한글 입력 상태·Caps Lock·Shift와 상관없이 듣는다
   const UCODE = ['KeyQ', 'KeyW', 'KeyR', 'KeyY'], BCODE = ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyL'], TCODE = { KeyZ: 1, KeyX: 2, KeyC: 0 };
   const SCODE = { Digit1: 1, Digit2: 2, Digit3: 4, Numpad1: 1, Numpad2: 2, Numpad3: 4 };
-  window.addEventListener('keydown', (ev) => {
-    const k = ev.code, ctrl = ev.ctrlKey || ev.metaKey, enter = k === 'Enter' || k === 'NumpadEnter';
+  window.addEventListener('keydown', onKeyDown);
+  function onKeyDown(ev) {
+    const ctrl = ev.ctrlKey || ev.metaKey, k = ctrl ? ev.code : mapKey(ev.code), enter = k === 'Enter' || k === 'NumpadEnter';
     if (!$('#confirm').hidden) { if (k === 'Escape' && !ev.repeat) { ev.preventDefault(); closeConfirm(false); } else if (enter && !ev.repeat) { ev.preventDefault(); closeConfirm(true); } return; }
     if (!$('#codex').hidden) { if (k === 'Escape' || enter) { DD.Audio.play('click'); $('#codex').hidden = true; } return; }
     if (!$('#ach').hidden) { if (k === 'Escape' || enter) { DD.Audio.play('click'); $('#ach').hidden = true; } return; }
-    if (!$('#settings').hidden) { if (k === 'Escape' && !ev.repeat) closeSettings(); return; }
+    if (!$('#settings').hidden) {
+      if (keyWait) { // 조작 키 바꾸기: 다음에 누른 자판을 받는다
+        ev.preventDefault();
+        if (ev.code === 'Escape') keyWait = null;
+        else if (KEYOK.test(ev.code)) { setKey(keyWait, ev.code); keyWait = null; keyMsg = ''; DD.Audio.play('click'); }
+        else { keyMsg = '글자·기호 키만 쓸 수 있습니다'; DD.Audio.play('err'); }
+        drawSettings(); return;
+      }
+      if (ev.code === 'Escape' && !ev.repeat) { if (setView !== 'main') { setView = 'main'; drawSettings(); } else closeSettings(); }
+      return;
+    }
     if (!$('#menu').hidden) { const oh = $('#menu .help[open]'); if (k === 'Escape' && oh) oh.removeAttribute('open'); return; }
     if (!$('#story').hidden) { if (k === 'Space' || enter) { ev.preventDefault(); $('#next').click(); } else if (k === 'Escape') $('#skip').click(); return; }
     if (!$('#result').hidden) { if (enter && !ev.repeat) { ev.preventDefault(); const b = $('#next2') || $('#again') || $('#back'); if (b) b.click(); } return; }
@@ -609,7 +643,7 @@
       }
     }
     else if ((k === 'Delete' || k === 'Backspace') && mine && ui.selB) { ev.preventDefault(); act({ a: 'sell', id: ui.selB }); ui.selB = null; ui.specPick = null; }
-  });
+  }
 
   const K = 3; // 캔버스는 언제나 3배(2088×1440)로 그린다
   function resize() {
@@ -882,21 +916,44 @@
   });
   // ───────── 설정(배경음악·효과음 음량, 번쩍임). 메뉴의 설정 버튼, 게임 중 ⚙ 또는 Esc ─────────
   let setWasPaused = false;
+  const WINSIZES = [[1280, 720], [1600, 900], [1920, 1080], [2560, 1440]];
   function drawSettings() {
+    const el = $('#settings');
+    if (setView === 'keys') {
+      const cell = ([a, name]) => `<div class="krow"><span>${name}</span><button class="${keyWait === a ? 'on' : ''} ${keyOf(a) !== a ? 'chg' : ''}" data-key="${a}" data-no-i18n>${keyWait === a ? '…' : keyLbl(a)}</button></div>`;
+      el.innerHTML = `<div class="box wide"><h2>조작 키 설정</h2><p class="hint">${keyMsg ? `<span class="bad">${keyMsg}</span>` : keyWait ? '바꿀 자판을 누르세요 · Esc 취소' : '바꿀 칸을 누른 뒤 새 자판을 누르세요 · 이미 쓰는 자판이면 서로 맞바꿉니다'}</p>
+        <div class="kgrid">${KEYACTS.map(cell).join('')}</div>
+        <p class="hint dim">Space 일시정지 · 1 2 3 배속 · F1~F3 부대 · Tab 지도 · Esc는 바꿀 수 없습니다. 설명 글 속 자판 이름은 기본값으로 나옵니다.</p>
+        <div class="acts"><button data-o="keyreset">기본값으로</button><button class="close" data-o="back">뒤로 · Esc</button></div></div>`;
+      return;
+    }
+    if (setView === 'credits') {
+      el.innerHTML = `<div class="box wide credits"><h2>제작 정보</h2>
+        <p class="ver" data-no-i18n>GRIGIS CHRONICLES · v${DD.VERSION}</p>
+        <h3>글꼴</h3><p data-no-i18n>Galmuri11 · Galmuri14 — © 2019–2025 Lee Minseo · SIL Open Font License 1.1<br>DotGothic16 — © 2020 The DotGothic16 Project Authors · SIL Open Font License 1.1</p>
+        <h3>소리</h3><p>배경음악과 효과음은 CC0 악기 녹음으로 만들었습니다.</p><p data-no-i18n>VSCO 2 Community Edition (Versilian Studios) · VCSL — CC0 1.0<br>Freesound: jayroo9 · Coral_Island_Studios · musicalmorsels — CC0 1.0</p>
+        <h3>생성형 AI 사용 고지</h3><p>이 게임의 그림(캐릭터·건물·타일·초상·상점 이미지)은 생성형 AI 도구로 만든 뒤 사람이 고르고 다듬었습니다. 코드·글·음악을 만드는 데에도 AI 도구를 썼습니다.</p>
+        <h3>함께 쓴 것</h3><p data-no-i18n>Electron · steamworks.js — MIT License</p>
+        <div class="acts"><button class="close" data-o="back">뒤로 · Esc</button></div></div>`;
+      return;
+    }
     const o = save.opt, row = (k, name) => `<label class="vol"><span>${name}</span><input type="range" min="0" max="100" step="5" value="${Math.round(o[k] * 100)}" data-o="${k}"><b>${Math.round(o[k] * 100)}</b></label>`;
     const isFs = DESK && DESK.isFullscreenSync ? DESK.isFullscreenSync() : !!document.fullscreenElement;
-    $('#settings').innerHTML = `<div class="box"><h2>설정</h2>${row('bgm', '배경음악')}${row('vol', '효과음')}
+    const sizes = DESK && DESK.setWindowSize ? WINSIZES.map(([w, h]) => `<button class="${!isFs && window.innerWidth === w && window.innerHeight === h ? 'on' : ''}" data-o="size" data-w="${w}" data-h="${h}" data-no-i18n>${w}×${h}</button>`).join('') : '';
+    el.innerHTML = `<div class="box"><h2>설정</h2>${row('bgm', '배경음악')}${row('vol', '효과음')}
       <label class="vol"><span>피격 번쩍임</span><button class="${o.flash ? 'on' : ''}" data-o="flash">${o.flash ? '켜짐' : '꺼짐'}</button></label>
       <label class="vol"><span>픽셀 선명하게</span><button class="${o.sharp !== false ? 'on' : ''}" data-o="sharp">${o.sharp !== false ? '켜짐' : '꺼짐'}</button></label>
       <label class="vol"><span>전투 숫자</span><button class="${o.nums !== false ? 'on' : ''}" data-o="nums">${o.nums !== false ? '켜짐' : '꺼짐'}</button></label>
       <div class="vol"><span>언어</span><span class="langs">${langRow()}</span></div>
-      <div class="vol"><span>화면</span><span class="langs"><button class="${isFs ? 'on' : ''}" data-o="fs">전체 화면</button></span></div>
-      <div class="vol"><span>저장</span><span class="langs"><button data-o="reset">처음부터 다시</button></span></div>
+      <div class="vol"><span>화면</span><span class="langs"><button class="${isFs ? 'on' : ''}" data-o="fs">전체 화면</button>${sizes}</span></div>
+      <div class="vol"><span>조작</span><span class="langs"><button data-o="keys">조작 키 설정</button></span></div>
+      <div class="vol"><span>저장</span><span class="langs"><button data-o="reset">처음부터 다시</button><button data-o="credits">제작 정보</button></span></div>
       <button class="close" data-o="close">닫기 · Esc</button></div>`;
   }
   function openSettings() {
     if (!$('#settings').hidden) return;
     if (G && !G.over) { setWasPaused = paused; paused = true; saveRunSnap(); }
+    setView = 'main'; keyWait = null; keyMsg = '';
     drawSettings(); $('#settings').hidden = false; if (G) { lastHtml = {}; drawHud(); }
   }
   function closeSettings() { $('#settings').hidden = true; if (G && !G.over) { paused = setWasPaused; lastHtml = {}; drawHud(); } }
@@ -907,9 +964,15 @@
   });
   $('#settings').addEventListener('change', (ev) => { if (ev.target.dataset.o === 'vol') DD.Audio.play('click'); persist(); });
   $('#settings').addEventListener('click', (ev) => {
+    const kb = ev.target.closest('button[data-key]');
+    if (kb) { DD.Audio.play('click'); keyWait = keyWait === kb.dataset.key ? null : kb.dataset.key; keyMsg = ''; drawSettings(); return; }
     const b = ev.target.closest('button[data-o]');
-    if (!b) { if (ev.target.id === 'settings') closeSettings(); return; } // 바깥을 누르면 닫는다
+    if (!b) { if (ev.target.id === 'settings' && !keyWait) closeSettings(); return; } // 바깥을 누르면 닫는다
     DD.Audio.play('click');
+    if (b.dataset.o === 'keys' || b.dataset.o === 'credits') { setView = b.dataset.o; keyWait = null; keyMsg = ''; drawSettings(); return; }
+    if (b.dataset.o === 'back') { setView = 'main'; keyWait = null; keyMsg = ''; drawSettings(); return; }
+    if (b.dataset.o === 'keyreset') { resetKeys(); keyWait = null; keyMsg = ''; drawSettings(); return; }
+    if (b.dataset.o === 'size') { DESK.setWindowSize(+b.dataset.w, +b.dataset.h).then(() => setTimeout(drawSettings, 150), () => {}); return; }
     if (b.dataset.o === 'flash') { save.opt.flash = !save.opt.flash; if (ui) ui.flash = save.opt.flash; persist(); drawSettings(); }
     else if (b.dataset.o === 'sharp') { save.opt.sharp = !(save.opt.sharp !== false); persist(); resize(); drawSettings(); }
     else if (b.dataset.o === 'nums') { save.opt.nums = !(save.opt.nums !== false); if (ui) ui.nums = save.opt.nums; persist(); drawSettings(); }
