@@ -20,10 +20,10 @@
   DD.Audio.setVol(save.opt.vol); DD.Music.setVol(save.opt.bgm);
   const persist = () => { const raw = JSON.stringify(save); try { localStorage.setItem(SAVE_KEY, raw); } catch (e) { /* 무시 */ } if (DESK && DESK.writeSave) DESK.writeSave(raw); };
   const loadRunSnap = () => { try { const raw = (DESK && DESK.loadRunSync ? DESK.loadRunSync() : null) || localStorage.getItem(RUN_KEY); const s = JSON.parse(raw); return s && s.v === 1 && Array.isArray(s.dungeons) && s.dungeons.length ? s : null; } catch (e) { return null; } };
-  const saveRunSnap = () => { if (!G || G.tutorial || G.over) return; try { const s = DD.saveSnapshot(G); if (s) { const raw = JSON.stringify(s); localStorage.setItem(RUN_KEY, raw); if (DESK && DESK.writeRun) DESK.writeRun(raw); } } catch (e) { /* 저장 불가 환경 */ } };
+  const saveRunSnap = (sync) => { if (!G || G.tutorial || G.over) return; try { const s = DD.saveSnapshot(G); if (s) { const raw = JSON.stringify(s); localStorage.setItem(RUN_KEY, raw); if (DESK) { if (sync && DESK.writeRunSync) DESK.writeRunSync(raw); else if (DESK.writeRun) DESK.writeRun(raw); } } } catch (e) { /* 저장 불가 환경 */ } };
   const clearRunSnap = () => { try { localStorage.removeItem(RUN_KEY); } catch (e) { /* 무시 */ } if (DESK && DESK.clearRun) DESK.clearRun(); };
   if (DESK && DESK.syncAchievements) { const doneAchs = Object.keys(save.ach).filter((k) => save.ach[k]); if (doneAchs.length) DESK.syncAchievements(doneAchs); }
-  window.addEventListener('beforeunload', saveRunSnap);
+  window.addEventListener('beforeunload', () => saveRunSnap(true));
   const icon = (id, m) => { const f = DD.frames(id)[0]; return `<img class="px" src="${DD.icon(id)}" style="width:${f[2] * m}px;height:${f[3] * m}px">`; };
   const ic = (id) => `<img class="px ic" src="${DD.icon(id)}" alt="">`; // UI 시트의 아이콘(글자 높이에 맞춘다)
   const pct = (v) => Math.round(v * 100);
@@ -693,7 +693,7 @@
   }
   function dmgHtml(d, showEmpty) {
     const s = d.stats; if (!s) return '';
-    const rows = [['유닛', s.units], ['탑', s.towers], ['영웅', s.heroes], ['함정', s.traps]].filter((r) => r[1] > 0);
+    const rows = [['유닛', s.units], ['방어탑', s.towers], ['영웅', s.heroes], ['함정', s.traps]].filter((r) => r[1] > 0);
     const tot = rows.reduce((a, r) => a + r[1], 0);
     if (!tot) return showEmpty ? '<div class="dmgbars"><h3>피해 기여도</h3><div class="dpsempty">아직 기록된 피해가 없습니다</div></div>' : '';
     const top = Object.entries(s.top || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);

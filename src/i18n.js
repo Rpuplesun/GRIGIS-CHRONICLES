@@ -300,7 +300,7 @@
     ['되돌리기', 'Undo', '元に戻す'], ['마지막으로 칠한 것을 되돌린다 · Ctrl+Z', 'Undoes the last stroke · Ctrl+Z', '最後に塗ったものを戻す · Ctrl+Z'],
     ['취소', 'Cancel', 'キャンセル'], ['고친 것을 버리고 나간다', 'Discards your changes and exits', '変更を捨てて戻る'], ['✔ E로 적용', '✔ Press E to apply', '✔ Eで適用'],
     // ── 패널·정보 줄 ──
-    ['· 보유', '· Owned', '· 所持'], ['· 사거리', '· Range', '· 射程'], ['· 치유', '· Heal', '· 回復'], ['· 범위', '· Area', '· 範囲'], ['· 간격', '· Interval', '· 間隔'], ['· 원거리', '· Ranged', '· 遠距離'], ['· 처치', '· Kills', '· 撃破'],
+    ['· 보유', '· Owned', '· 所持'], ['· 사거리', '· Range', '· 射程'], ['· 치유사', '· Healer', '· 回復役'], ['· 치유', '· Heal', '· 回復'], ['· 범위', '· Area', '· 範囲'], ['· 간격', '· Interval', '· 間隔'], ['· 원거리', '· Ranged', '· 遠距離'], ['· 처치', '· Kills', '· 撃破'], ['방어탑', 'Towers', 'タワー'],
     ['준비!', 'Ready!', '準備OK'], ['영웅 소환 준비 · T', 'Hero ready · T', '英雄召喚の準備完了 · T'], ['영웅 소환', 'Summon Hero', '英雄召喚'], ['누가 올지는 모른다', 'No telling who will come', '誰が来るかはわからない'],
     ['길 위에만 세운다 · 악마를 붙잡아 둔다', 'Built on roads only · holds demons in place', '道の上にのみ建てる · 悪魔を足止めする'], ['바닥에 세운다', 'Built on floor tiles', '床に建てる'],
     ['강화하면 등급↑ 대기↓', 'Upgrading raises hero grades and shortens the wait', '強化で等級↑ 待機↓'], ['영웅 제단', 'Hero Altar', '英雄の祭壇'], ['소환소', 'Summoning Circle', '召喚陣'],
@@ -597,7 +597,8 @@
   const KEY = 'grigis_lang';
   const q = /[?&]lang=(ko|en|ja)/.exec(location.search), nav = (navigator.language || 'en').slice(0, 2);
   let saved = null; try { saved = localStorage.getItem(KEY); } catch (e) { /* 저장 불가 환경 */ }
-  DD.lang = (q && q[1]) || (DD.LANGS[saved] ? saved : DD.LANGS[nav] ? nav : 'en');
+  let steamLang = null; try { const si = window.DD_DESKTOP && window.DD_DESKTOP.steamInfoSync ? window.DD_DESKTOP.steamInfoSync() : null; if (si && si.lang && DD.LANGS[si.lang]) steamLang = si.lang; } catch (e) { /* 무시 */ }
+  DD.lang = (q && q[1]) || (DD.LANGS[saved] ? saved : steamLang || (DD.LANGS[nav] ? nav : 'en'));
   function node(n) {
     if (n.nodeType === 3) { const src = n.__ko !== undefined && n.__out === n.nodeValue ? n.__ko : n.nodeValue; if (!HANGUL.test(src)) return; const out = DD.tr(src); n.__ko = src; n.__out = out; if (out !== n.nodeValue) n.nodeValue = out; }
     else if (n.nodeType === 1) {
